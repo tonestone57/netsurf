@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 
 #ifdef __amigaos4__
 /* Custom StringView class */
@@ -1091,19 +1092,19 @@ static nserror ami_set_options(struct nsoption_s *defaults)
 	nsoption_set_bool(bitmap_fonts, true);
 #endif
 
-	sprintf(temp, "%s/Cookies", current_user_dir);
+	snprintf(temp, sizeof(temp), "%s/Cookies", current_user_dir);
 	nsoption_setnull_charp(cookie_file, 
 			       (char *)strdup(temp));
 
-	sprintf(temp, "%s/Hotlist", current_user_dir);
+	snprintf(temp, sizeof(temp), "%s/Hotlist", current_user_dir);
 	nsoption_setnull_charp(hotlist_file, 
 			       (char *)strdup(temp));
 
-	sprintf(temp, "%s/URLdb", current_user_dir);
+	snprintf(temp, sizeof(temp), "%s/URLdb", current_user_dir);
 	nsoption_setnull_charp(url_file,
 			       (char *)strdup(temp));
 
-	sprintf(temp, "%s/FontGlyphCache", current_user_dir);
+	snprintf(temp, sizeof(temp), "%s/FontGlyphCache", current_user_dir);
 	nsoption_setnull_charp(font_unicode_file,
 			       (char *)strdup(temp));
 
@@ -6608,7 +6609,7 @@ int main(int argc, char** argv)
 	}
 
 	ami_mime_init("PROGDIR:Resources/mimetypes");
-	sprintf(temp, "%s/mimetypes.user", current_user_dir);
+	snprintf(temp, sizeof(temp), "%s/mimetypes.user", current_user_dir);
 	ami_mime_init(temp);
 
 #ifdef __amigaos4__
