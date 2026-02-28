@@ -795,7 +795,7 @@ static bool ami_gui_check_resource(char *fullpath, const char *file)
 	bool found = false;
 	char *remapped;
 	BPTR lock = 0;
-	size_t fullpath_len = 1024;
+	size_t fullpath_len = fullpath_size;
 
 	ami_gui_map_filename(&remapped, fullpath, file, "Resource.map");
 	netsurf_mkpath(&fullpath, &fullpath_len, 2, fullpath, remapped);
@@ -812,25 +812,29 @@ static bool ami_gui_check_resource(char *fullpath, const char *file)
 	return found;
 }
 
-bool ami_locate_resource(char *fullpath, const char *file)
+bool ami_locate_resource(char *fullpath, size_t fullpath_size, const char *file)
 {
+
+	if (fullpath == NULL || fullpath_size == 0) return false;
+	fullpath[0] = '\0';
+
 	struct Locale *locale;
 	int i;
 	bool found = false;
 	char *remapped = NULL;
-	size_t fullpath_len = 1024;
+	size_t fullpath_len = fullpath_size;
 
 	/* Check NetSurf user data area first */
 
 	if(current_user_dir != NULL) {
-		strcpy(fullpath, current_user_dir);
+		strlcpy(fullpath, current_user_dir, fullpath_size);
 		found = ami_gui_check_resource(fullpath, file);
 		if(found) return true;
 	}
 
 	/* Check current theme directory */
 	if(nsoption_charp(theme)) {
-		strcpy(fullpath, nsoption_charp(theme));
+		strlcpy(fullpath, nsoption_charp(theme), fullpath_size);
 		found = ami_gui_check_resource(fullpath, file);
 		if(found) return true;
 	}
@@ -840,7 +844,7 @@ bool ami_locate_resource(char *fullpath, const char *file)
 	locale = OpenLocale(NULL);
 
 	for(i=0;i<10;i++) {
-		strcpy(fullpath, "PROGDIR:Resources/");
+		strlcpy(fullpath, "PROGDIR:Resources/", fullpath_size);
 
 		if(locale->loc_PrefLanguages[i]) {
 			if(ami_gui_map_filename(&remapped, "PROGDIR:Resources",
@@ -860,7 +864,7 @@ bool ami_locate_resource(char *fullpath, const char *file)
 		/* If not found yet, check in PROGDIR:Resources/en,
 		 * might not be in user's preferred languages */
 
-		strcpy(fullpath, "PROGDIR:Resources/en/");
+		strlcpy(fullpath, "PROGDIR:Resources/en/", fullpath_size);
 		found = ami_gui_check_resource(fullpath, file);
 	}
 
@@ -869,7 +873,7 @@ bool ami_locate_resource(char *fullpath, const char *file)
 	if(!found) {
 		/* Lastly check directly in PROGDIR:Resources */
 
-		strcpy(fullpath, "PROGDIR:Resources/");
+		strlcpy(fullpath, "PROGDIR:Resources/", fullpath_size);
 		found = ami_gui_check_resource(fullpath, file);
 	}
 
@@ -1181,7 +1185,7 @@ static nsurl *gui_get_resource_url(const char *path)
 	char buf[1024];
 	nsurl *url = NULL;
 
-	if(ami_locate_resource(buf, path) == false)
+	if(ami_locate_resource(buf, sizeof(buf), path) == false)
 		return NULL;
 
 	netsurf_path_to_nsurl(buf, &url);
@@ -4066,7 +4070,7 @@ static bool ami_gui_hotlist_add(void *userdata, int level, int item,
 
 	char *iconname = ami_gui_get_cache_favicon_name(url, true);
 	if (iconname == NULL) iconname = ASPrintf("icons/content.png");
-	ami_locate_resource(menu_icon, iconname);
+	ami_locate_resource(menu_icon, sizeof(menu_icon), iconname);
 
 	tb_userdata->gw->hotlist_toolbar_lab[item] = BitMapObj,
 						IA_Scalable, TRUE,
@@ -6644,7 +6648,7 @@ int main(int argc, char** argv)
 		free(args);
 	}
 
-	if (ami_locate_resource(messages, "Messages") == false) {
+	if (ami_locate_resource(messages, sizeof(messages), "Messages") == false) {
 		ami_misc_fatal_error("Cannot open Messages file");
 		ami_nsoption_free();
 		nsoption_finalise(nsoptions, nsoptions_default);

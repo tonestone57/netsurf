@@ -143,7 +143,7 @@ void ami_menu_alloc_item(struct ami_menu_data **md, int num, UBYTE type,
 
 	if(LIB_IS_AT_LEAST((struct Library *)GadToolsBase, 53, 7)) {
 		if(icon) {
-			if(ami_locate_resource(menu_icon, icon) == true) {
+			if(ami_locate_resource(menu_icon, sizeof(menu_icon), icon) == true) {
 				md[num]->menuicon = (char *)strdup(menu_icon);
 			} else {
 				/* If the requested icon can't be found, put blank space in instead */
