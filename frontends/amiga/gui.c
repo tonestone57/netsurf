@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 
 #ifdef __amigaos4__
 /* Custom StringView class */
@@ -1222,7 +1223,7 @@ static void ami_openscreen(void)
 				{
 					char *modeid = malloc(20);
 					id = screenmodereq->sm_DisplayID;
-					sprintf(modeid, "0x%lx", id);
+					snprintf(modeid, 20, "0x%lx", id);
 					nsoption_set_charp(screen_modeid, modeid);
 					ami_nsoption_write();
 				}

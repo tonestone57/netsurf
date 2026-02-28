@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -1860,7 +1861,7 @@ static void ami_gui_opts_use(bool save)
 	if(id)
 	{
 		char *modeid = malloc(20);
-		sprintf(modeid,"0x%lx", id);
+		snprintf(modeid, 20, "0x%lx", id);
 		nsoption_set_charp(screen_modeid, modeid);
 	}
 
