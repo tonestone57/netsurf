@@ -134,6 +134,7 @@ find_sides(struct box *fl,
  * \param  min_height  Box's min height.
  * \param  max_height  Box's max height.
  */
+
 /**
  * Apply vertical margin if necessary.
  *
@@ -3281,7 +3282,6 @@ layout_line(struct box *first,
 
 		if (lh__box_is_absolute(b)) {
 			b->x = x + space_after;
-
 		} else if (lh__box_is_inline_flow(b)) {
 			assert(b->width != UNKNOWN_WIDTH);
 
