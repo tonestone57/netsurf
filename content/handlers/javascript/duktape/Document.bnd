@@ -118,6 +118,165 @@ method Document::createTextNode()
 	return 1;
 %}
 
+getter Document::title()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+	dom_string *title_str;
+	dom_node *title_node = NULL;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err != DOM_NO_ERR) || (htmlc == NULL)) {
+		return 0;
+	}
+
+	title_node = htmlc->title;
+	if (title_node == NULL) {
+		dom_nodelist *nodes;
+		err = dom_document_get_elements_by_tag_name(priv->parent.node,
+							    corestring_dom_TITLE,
+							    &nodes);
+		if (err == DOM_NO_ERR && nodes != NULL) {
+			dom_nodelist_item(nodes, 0, &title_node);
+			dom_nodelist_unref(nodes);
+		}
+	} else {
+		dom_node_ref(title_node);
+	}
+
+	if (title_node != NULL) {
+		err = dom_node_get_text_content(title_node, &title_str);
+		dom_node_unref(title_node);
+		if (err == DOM_NO_ERR && title_str != NULL) {
+			duk_push_lstring(ctx, dom_string_data(title_str),
+					 dom_string_length(title_str));
+			dom_string_unref(title_str);
+			return 1;
+		}
+	}
+
+	duk_push_string(ctx, "");
+	return 1;
+%}
+
+setter Document::title()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+	duk_size_t text_len;
+	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+	dom_string *text_str;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err != DOM_NO_ERR) || (htmlc == NULL)) {
+		return 0;
+	}
+
+	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	if (err != DOM_NO_ERR) return 0;
+
+	if (htmlc->title == NULL) {
+		dom_nodelist *nodes;
+		err = dom_document_get_elements_by_tag_name(priv->parent.node,
+							    corestring_dom_TITLE,
+							    &nodes);
+		if (err == DOM_NO_ERR && nodes != NULL) {
+			dom_nodelist_item(nodes, 0, &htmlc->title);
+			dom_nodelist_unref(nodes);
+		}
+	}
+
+	if (htmlc->title != NULL) {
+		dom_node_set_text_content(htmlc->title, text_str);
+	} else {
+		/* Create a new title element */
+		dom_node *head = NULL;
+		dom_nodelist *nodes;
+		err = dom_document_get_elements_by_tag_name(priv->parent.node,
+							    corestring_dom_HEAD,
+							    &nodes);
+		if (err == DOM_NO_ERR && nodes != NULL) {
+			dom_nodelist_item(nodes, 0, &head);
+			dom_nodelist_unref(nodes);
+		}
+
+		if (head != NULL) {
+			dom_node *title_ele;
+			dom_node *spare = NULL;
+			err = dom_document_create_element_ns(priv->parent.node,
+							     corestring_dom_html_namespace,
+							     corestring_dom_TITLE,
+							     (dom_element **)&title_ele);
+			if (err == DOM_NO_ERR) {
+				dom_node_set_text_content(title_ele, text_str);
+				dom_node_append_child(head, title_ele, &spare);
+				if (spare != NULL) {
+					dom_node_unref(spare);
+				}
+				htmlc->title = dom_node_ref(title_ele);
+				dom_node_unref(title_ele);
+			}
+			dom_node_unref(head);
+		}
+	}
+
+	dom_string_unref(text_str);
+	return 0;
+%}
+
+getter Document::URL()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, nsurl_access(llcache_handle_get_url(htmlc->base.llcache)));
+		return 1;
+	}
+	return 0;
+%}
+
+getter Document::documentURI()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, nsurl_access(llcache_handle_get_url(htmlc->base.llcache)));
+		return 1;
+	}
+	return 0;
+%}
+
+getter Document::readyState()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		if (htmlc->parse_completed) {
+			duk_push_string(ctx, "complete");
+		} else {
+			duk_push_string(ctx, "loading");
+		}
+		return 1;
+	}
+	return 0;
+%}
+
 method Document::createElement()
 %{
 	dom_node *newnode;
