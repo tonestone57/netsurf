@@ -43,7 +43,7 @@ void qjsky_init_xhr(JSContext *ctx)
 	if (qjsky_xhr_class_id == 0) {
 		JS_NewClassID(&qjsky_xhr_class_id);
 	}
-	/* Register class for this runtime */
+	/* Ensure class is registered for this runtime */
 	JS_NewClass(JS_GetRuntime(ctx), qjsky_xhr_class_id, &qjsky_xhr_class);
 
 	JSValue global = JS_GetGlobalObject(ctx);
@@ -52,7 +52,6 @@ void qjsky_init_xhr(JSContext *ctx)
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_xhr_proto_funcs, sizeof(qjsky_xhr_proto_funcs)/sizeof(qjsky_xhr_proto_funcs[0]));
 	JS_SetClassProto(ctx, qjsky_xhr_class_id, proto);
 
-	/* Fix: Correct constructor initialization (was previously NULL) */
 	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, ctor, proto);
 	JS_SetPropertyStr(ctx, global, "XMLHttpRequest", ctor);

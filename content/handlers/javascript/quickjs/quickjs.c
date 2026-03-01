@@ -1,228 +1,109 @@
-/*
- * QuickJS implementation of javascript engine functions.
- */
-
 #include <quickjs.h>
-#include <string.h>
 #include <stdlib.h>
-#include "utils/errors.h"
+#include <string.h>
+
 #include "utils/log.h"
-#include "utils/corestrings.h"
-#include "content/content.h"
-#include "javascript/js.h"
+#include "content/handlers/javascript/js.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/handlers/javascript/quickjs/xhr.h"
 
 struct jsheap {
 	JSRuntime *rt;
+	JSClassID node_class_id;
+	JSAtom node_map_atom;
+    void *timer_ring; /* Managed in qjsky.c but logically part of heap */
 };
 
-struct jsthread {
+struct jsctx {
 	JSContext *ctx;
-	jsheap *heap;
-	void *win_priv;
-	void *doc_priv;
+	struct jsheap *heap;
 };
 
-/* exported interface documented in js.h */
-void js_initialise(void)
+/* Global for simple class ID management if needed, but jsheap is better */
+static JSClassID global_node_class_id = 0;
+
+struct jsheap *js_newheap(void)
 {
-	NSLOG(netsurf, INFO, "QuickJS engine initialised");
-}
+	struct jsheap *heap = calloc(1, sizeof(*heap));
+	if (!heap) return NULL;
 
-/* exported interface documented in js.h */
-void js_finalise(void)
-{
-}
-
-/* exported interface documented in js.h */
-nserror js_newheap(int timeout, jsheap **heap)
-{
-	jsheap *h = calloc(1, sizeof(*h));
-	if (h == NULL) return NSERROR_NOMEM;
-
-	h->rt = JS_NewRuntime();
-	if (h->rt == NULL) {
-		free(h);
-		return NSERROR_NOMEM;
-	}
-
-	/* Set memory limit for the runtime to prevent OOM */
-	JS_SetMemoryLimit(h->rt, 64 * 1024 * 1024);
-
-	/* Initialize NetSurf-specific classes for this runtime */
-	qjsky_init_runtime(h->rt);
-
-	*heap = h;
-	return NSERROR_OK;
-}
-
-/* exported interface documented in js.h */
-void js_destroyheap(jsheap *heap)
-{
-	if (heap) {
-		JS_FreeRuntime(heap->rt);
+	heap->rt = JS_NewRuntime();
+	if (!heap->rt) {
 		free(heap);
+		return NULL;
 	}
+
+	/* Limit memory usage (e.g., 64MB) */
+	JS_SetMemoryLimit(heap->rt, 64 * 1024 * 1024);
+	JS_SetMaxStackSize(heap->rt, 1024 * 1024);
+
+	qjsky_init_runtime(heap);
+
+	return heap;
 }
 
-/* Bridge for Window.alert */
-static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+void js_destroyheap(struct jsheap *heap)
 {
-	if (argc > 0) {
-		const char *msg = JS_ToCString(ctx, argv[0]);
-		if (msg) {
-			NSLOG(netsurf, INFO, "JS ALERT: %s", msg);
-			JS_FreeCString(ctx, msg);
+	if (!heap) return;
+	JS_FreeRuntime(heap->rt);
+	free(heap);
+}
+
+struct jsctx *js_newctx(struct jsheap *heap)
+{
+	struct jsctx *ctx = calloc(1, sizeof(*ctx));
+	if (!ctx) return NULL;
+
+	ctx->ctx = JS_NewContext(heap->rt);
+	if (!ctx->ctx) {
+		free(ctx);
+		return NULL;
+	}
+	ctx->heap = heap;
+
+	/* NetSurf-specific builtins */
+	qjsky_init_context(ctx->ctx);
+	qjsky_init_console(ctx->ctx);
+	qjsky_timer_init(ctx->ctx);
+	qjsky_init_xhr(ctx->ctx);
+
+	return ctx;
+}
+
+void js_destroyctx(struct jsctx *ctx)
+{
+	if (!ctx) return;
+	qjsky_timer_cleanup(ctx->ctx);
+	JS_FreeContext(ctx->ctx);
+	free(ctx);
+}
+
+bool js_exec(struct jsctx *ctx, const char *script, size_t len, const char *filename)
+{
+	JSValue val = JS_Eval(ctx->ctx, script, len, filename, JS_EVAL_TYPE_GLOBAL);
+	if (JS_IsException(val)) {
+		JSValue exception = JS_GetException(ctx->ctx);
+		const char *str = JS_ToCString(ctx->ctx, exception);
+		if (str) {
+			NSLOG(jserrors, ERROR, "JS Error: %s", str);
+			JS_FreeCString(ctx->ctx, str);
 		}
+		JS_FreeValue(ctx->ctx, exception);
+		return false;
 	}
-	return JS_UNDEFINED;
-}
-
-/* exported interface documented in js.h */
-nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv, jsthread **thread)
-{
-	jsthread *t = calloc(1, sizeof(*t));
-	if (t == NULL) return NSERROR_NOMEM;
-
-	t->heap = heap;
-	t->ctx = JS_NewContext(heap->rt);
-	if (t->ctx == NULL) {
-		free(t);
-		return NSERROR_NOMEM;
-	}
-	t->win_priv = win_priv;
-	t->doc_priv = doc_priv;
-
-	/* Store thread state */
-	JS_SetContextOpaque(t->ctx, t);
-
-	/* Global setup: Initialize standard objects */
-	JS_AddIntrinsicBaseObjects(t->ctx);
-	JS_AddIntrinsicDate(t->ctx);
-	JS_AddIntrinsicEval(t->ctx);
-	JS_AddIntrinsicStringNormalize(t->ctx);
-	JS_AddIntrinsicRegExp(t->ctx);
-	JS_AddIntrinsicJSON(t->ctx);
-	JS_AddIntrinsicProxy(t->ctx);
-	JS_AddIntrinsicMapSet(t->ctx);
-	JS_AddIntrinsicTypedArrays(t->ctx);
-	JS_AddIntrinsicPromise(t->ctx);
-	JS_AddIntrinsicBigInt(t->ctx);
-
-	/* Initialize NetSurf context support (memoization etc) */
-	qjsky_init_context(t->ctx);
-
-	/* Initialize timers */
-	qjsky_timer_init(t->ctx);
-
-	/* Initialize the console object */
-	qjsky_init_console(t->ctx);
-
-	/* Initialize the XMLHttpRequest object */
-	qjsky_init_xhr(t->ctx);
-
-	/* Basic Window APIs */
-	JSValue global = JS_GetGlobalObject(t->ctx);
-	JS_SetPropertyStr(t->ctx, global, "alert", JS_NewCFunction(t->ctx, qjsky_window_alert, "alert", 1));
-	JS_FreeValue(t->ctx, global);
-
-	/* TODO: Register NetSurf DOM bindings here once generated by nsgenbind */
-
-	*thread = t;
-	return NSERROR_OK;
-}
-
-/* exported interface documented in js.h */
-nserror js_closethread(jsthread *thread)
-{
-	qjsky_timer_cleanup(thread->ctx);
-	return NSERROR_OK;
-}
-
-/* exported interface documented in js.h */
-void js_destroythread(jsthread *thread)
-{
-	if (thread) {
-		JS_FreeContext(thread->ctx);
-		free(thread);
-	}
-}
-
-/* exported interface documented in js.h */
-bool js_exec(jsthread *thread, const uint8_t *txt, size_t txtlen, const char *name)
-{
-	if (txt == NULL || txtlen == 0) return false;
-
-	JSValue val = JS_Eval(thread->ctx, (const char *)txt, txtlen, name, JS_EVAL_TYPE_GLOBAL);
-	bool result = !JS_IsException(val);
-	if (!result) {
-		JSValue exception_val = JS_GetException(thread->ctx);
-		const char *stack = JS_ToCString(thread->ctx, exception_val);
-		if (stack) {
-			NSLOG(jserrors, WARNING, "Uncaught error in JS: %s", stack);
-			JS_FreeCString(thread->ctx, stack);
-		}
-		JS_FreeValue(thread->ctx, exception_val);
-	}
-	JS_FreeValue(thread->ctx, val);
-	return result;
-}
-
-/* Task 7: Event Dispatch Logic */
-bool js_fire_event(jsthread *thread, const char *type, struct dom_document *doc, struct dom_node *target)
-{
-	JSValue target_obj = qjsky_push_node(thread->ctx, target);
-    if (JS_IsException(target_obj)) return false;
-
-    char handler_name[64];
-    snprintf(handler_name, sizeof(handler_name), "on%s", type);
-
-    JSValue handler = JS_GetPropertyStr(thread->ctx, target_obj, handler_name);
-    if (JS_IsFunction(thread->ctx, handler)) {
-        /* TODO: Construct Event object */
-        JSValue event_obj = JS_NewObject(thread->ctx);
-        JSValue ret = JS_Call(thread->ctx, handler, target_obj, 1, &event_obj);
-        JS_FreeValue(thread->ctx, event_obj);
-        JS_FreeValue(thread->ctx, ret);
-    }
-
-    JS_FreeValue(thread->ctx, handler);
-    JS_FreeValue(thread->ctx, target_obj);
+	JS_FreeValue(ctx->ctx, val);
 	return true;
 }
 
-/* Task 8: Attribute Scanning for Handlers */
-void js_handle_new_element(jsthread *thread, struct dom_element *node)
+/* Event Handlers (Skeletons) */
+
+bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 {
-    dom_namednodemap *attrs;
-    dom_exception exc = dom_node_get_attributes(node, &attrs);
-    if (exc != DOM_NO_ERR || !attrs) return;
-
-    dom_ulong length;
-    dom_namednodemap_get_length(attrs, &length);
-    for (dom_ulong i = 0; i < length; i++) {
-        dom_attr *attr;
-        dom_namednodemap_item(attrs, i, &attr);
-        dom_string *name;
-        dom_attr_get_name(attr, &name);
-
-        const char *name_c = dom_string_data(name);
-        if (strncmp(name_c, "on", 2) == 0) {
-            dom_string *value;
-            dom_attr_get_value(attr, &value);
-            /* TODO: Compile value as JS function and attach to JS node object */
-            dom_string_unref(value);
-        }
-
-        dom_string_unref(name);
-        dom_node_unref(attr);
-    }
-    dom_namednodemap_unref(attrs);
+	/* TODO: Implement event object construction and dispatch */
+	return true;
 }
 
-/* exported interface documented in js.h */
-void js_event_cleanup(jsthread *thread, struct dom_event *evt)
+void js_handle_new_element(struct jsctx *ctx, struct dom_node *node, const char *attr, const char *value)
 {
-	/* Perform any cleanups needed after event propagation finished */
+	/* TODO: Compile and attach inline event handlers */
 }
