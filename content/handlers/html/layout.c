@@ -306,8 +306,6 @@ static void layout_minmax_table(struct box *table,
 	for (cell = row->children; cell; cell = cell->next) {
 		assert(cell->type == BOX_TABLE_CELL);
 		assert(cell->style);
-		/** TODO: Handle colspan="0" correctly.
-		 *        It's currently converted to 1 in box normaisation */
 		assert(cell->columns != 0);
 
 		if (cell->columns != 1)

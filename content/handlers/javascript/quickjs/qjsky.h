@@ -25,28 +25,40 @@ struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val);
 
 /* Initialise Console API */
 void qjsky_init_console(JSContext *ctx);
+
 /* Initialise Window aliases (self, window, top) */
 void qjsky_init_window_aliases(JSContext *ctx);
+
 /* Initialise Performance API */
 void qjsky_init_performance(JSContext *ctx);
+
 /* Initialise Navigator API */
 void qjsky_init_navigator(JSContext *ctx);
+
 /* Setup Node prototype with common properties */
 void qjsky_setup_node_prototype(JSContext *ctx, JSValue proto);
+
 /* Initialise Location API */
 void qjsky_init_location(JSContext *ctx);
+
 /* Initialise History API */
 void qjsky_init_history(JSContext *ctx);
+
 /* Initialise XMLHttpRequest API */
 void qjsky_init_xhr(JSContext *ctx);
+
 /* Setup Document prototype with common properties */
 void qjsky_setup_document_prototype(JSContext *ctx, JSValue proto);
+
 /* Setup Element prototype with common properties */
 void qjsky_setup_element_prototype(JSContext *ctx, JSValue proto);
+
 /* Initialise Timer API */
 void qjsky_init_timers(JSContext *ctx);
+
 /* Setup EventTarget prototype with common properties */
 void qjsky_setup_event_target_prototype(JSContext *ctx, JSValue proto);
+
 /* Setup Element Attribute accessors */
 void qjsky_setup_element_attr_prototype(JSContext *ctx, JSValue proto);
 

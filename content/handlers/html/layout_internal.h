@@ -647,7 +647,7 @@ static inline void layout_find_dimensions(
 		}
 
 		if (*max_height != -1) {
-			/* 'false' for setwidth as this is a vertical dimension */
+			/* setwidth=false for vertical dimensions (TOP/BOTTOM) */
 			layout_handle_box_sizing(unit_len_ctx, box,
 					available_width, false, max_height);
 		}
@@ -699,7 +699,7 @@ static inline void layout_find_dimensions(
 		}
 
 		if (*min_height != 0) {
-			/* 'false' for setwidth as this is a vertical dimension */
+			/* setwidth=false for vertical dimensions (TOP/BOTTOM) */
 			layout_handle_box_sizing(unit_len_ctx, box,
 					available_width, false, min_height);
 		}

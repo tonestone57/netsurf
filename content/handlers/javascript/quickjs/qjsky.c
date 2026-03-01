@@ -62,7 +62,7 @@ static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val,
     }
 
     /* Estimate buffer size: 1024 should be plenty for typical log lines */
-    char buf[1024];
+    char buf[1024] = "";
     size_t pos = 0;
 
     for (int i = 0; i < argc; i++) {
