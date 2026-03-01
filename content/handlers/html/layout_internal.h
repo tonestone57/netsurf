@@ -160,6 +160,9 @@ static inline bool lh__have_border(
 
 static inline bool lh__box_is_absolute(const struct box *b)
 {
+	if (b->style == NULL)
+		return false;
+
 	return css_computed_position(b->style) == CSS_POSITION_ABSOLUTE ||
 	       css_computed_position(b->style) == CSS_POSITION_FIXED;
 }
@@ -168,7 +171,8 @@ static inline bool lh__flex_main_is_horizontal(const struct box *flex)
 {
 	const css_computed_style *style = flex->style;
 
-	assert(style != NULL);
+	if (style == NULL)
+		return true;
 
 	switch (css_computed_flex_direction(style)) {
 	default:                        /* Fallthrough. */
@@ -183,6 +187,9 @@ static inline bool lh__flex_main_is_horizontal(const struct box *flex)
 
 static inline bool lh__flex_direction_reversed(const struct box *flex)
 {
+	if (flex->style == NULL)
+		return false;
+
 	switch (css_computed_flex_direction(flex->style)) {
 	default:                             /* Fallthrough. */
 	case CSS_FLEX_DIRECTION_ROW_REVERSE: /* Fallthrough. */
@@ -276,6 +283,9 @@ static inline bool lh__box_size_cross_is_auto(
 	css_fixed length;
 	css_unit unit;
 
+	if (b->style == NULL)
+		return true;
+
 	if (horizontal) {
 		return css_computed_height(b->style,
 				&length, &unit) == CSS_HEIGHT_AUTO;
@@ -289,9 +299,13 @@ static inline enum css_align_self_e lh__box_align_self(
 		const struct box *flex,
 		const struct box *item)
 {
-	enum css_align_self_e align_self = css_computed_align_self(item->style);
+	enum css_align_self_e align_self = CSS_ALIGN_SELF_AUTO;
 
-	if (align_self == CSS_ALIGN_SELF_AUTO) {
+	if (item->style != NULL) {
+		align_self = css_computed_align_self(item->style);
+	}
+
+	if (align_self == CSS_ALIGN_SELF_AUTO && flex->style != NULL) {
 		align_self = css_computed_align_items(flex->style);
 	}
 
@@ -323,7 +337,8 @@ static inline void calculate_mbp_width(
 	css_fixed value = 0;
 	css_unit unit = CSS_UNIT_PX;
 
-	assert(style);
+	if (style == NULL)
+		return;
 
 	/* margin */
 	if (margin) {
@@ -388,7 +403,8 @@ static inline void layout_handle_box_sizing(
 {
 	enum css_box_sizing_e bs;
 
-	assert(box && box->style);
+	if (box == NULL || box->style == NULL)
+		return;
 
 	bs = css_computed_box_sizing(box->style);
 
@@ -431,7 +447,7 @@ static inline void layout_find_dimensions(
 		const css_unit_ctx *unit_len_ctx,
 		int available_width,
 		int viewport_height,
-		const struct box *box,
+		struct box *box,
 		const css_computed_style *style,
 		int *width,
 		int *height,
@@ -445,6 +461,41 @@ static inline void layout_find_dimensions(
 {
 	struct box *containing_block = NULL;
 	unsigned int i;
+
+	if ((box->flags & DIM_CACHED) &&
+	    box->cached_available_width == available_width &&
+	    ((viewport_height < 0 && !(box->flags & DIM_VIEWPORT_SET)) ||
+	     (box->cached_viewport_height == viewport_height))) {
+		if (width) *width = box->cached_width;
+		if (height) *height = box->cached_height;
+		if (max_width) *max_width = box->cached_max_width;
+		if (min_width) *min_width = box->cached_min_width;
+		if (max_height) *max_height = box->cached_max_height;
+		if (min_height) *min_height = box->cached_min_height;
+		if (margin) memcpy(margin, box->cached_margin, sizeof(int) * 4);
+		if (padding) memcpy(padding, box->cached_padding, sizeof(int) * 4);
+		if (border) memcpy(border, box->cached_border, sizeof(struct box_border) * 4);
+		return;
+	}
+
+	if (style == NULL) {
+		if (width) *width = AUTO;
+		if (height) *height = AUTO;
+		if (max_width) *max_width = -1;
+		if (min_width) *min_width = 0;
+		if (max_height) *max_height = -1;
+		if (min_height) *min_height = 0;
+		if (margin) memset(margin, 0, sizeof(int) * 4);
+		if (padding) memset(padding, 0, sizeof(int) * 4);
+		if (border) {
+			for (i = 0; i < 4; i++) {
+				border[i].style = CSS_BORDER_STYLE_NONE;
+				border[i].width = 0;
+				border[i].c = 0;
+			}
+		}
+		return;
+	}
 
 	if (width) {
 		if (css_computed_width_px(style, unit_len_ctx,
@@ -712,6 +763,32 @@ static inline void layout_find_dimensions(
 					 box->type == BOX_TABLE_ROW_GROUP ||
 					 box->type == BOX_TABLE_ROW))
 				border[i].width = 0;
+		}
+	}
+
+	box->flags |= DIM_CACHED;
+	box->cached_available_width = available_width;
+	if (viewport_height >= 0) {
+		box->flags |= DIM_VIEWPORT_SET;
+		box->cached_viewport_height = viewport_height;
+	} else {
+		box->flags &= ~DIM_VIEWPORT_SET;
+	}
+	box->cached_width = width ? *width : AUTO;
+	box->cached_height = height ? *height : AUTO;
+	box->cached_max_width = max_width ? *max_width : -1;
+	box->cached_min_width = min_width ? *min_width : 0;
+	box->cached_max_height = max_height ? *max_height : -1;
+	box->cached_min_height = min_height ? *min_height : 0;
+	memcpy(box->cached_margin, margin ? margin : (int[4]){0,0,0,0}, sizeof(int) * 4);
+	memcpy(box->cached_padding, padding ? padding : (int[4]){0,0,0,0}, sizeof(int) * 4);
+	if (border) {
+		memcpy(box->cached_border, border, sizeof(struct box_border) * 4);
+	} else {
+		for (i = 0; i < 4; i++) {
+			box->cached_border[i].style = CSS_BORDER_STYLE_NONE;
+			box->cached_border[i].width = 0;
+			box->cached_border[i].c = 0;
 		}
 	}
 }

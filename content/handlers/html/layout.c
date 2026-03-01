@@ -3279,7 +3279,7 @@ layout_line(struct box *first,
 
 		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
 
-			if (lh__box_is_absolute(b)) {
+		if (lh__box_is_absolute(b)) {
 			b->x = x + space_after;
 
 		} else if (lh__box_is_inline_flow(b)) {
@@ -3977,8 +3977,37 @@ bool layout_block_context(
 			cy = y;
 		}
 
+		/* Advance to next box. */
+		if (box->type == BOX_BLOCK && !box->object && !(box->iframe) &&
+				box->children) {
+			/* Down into children. */
 
+			if (box == margin_collapse) {
+				/* Current margin collapsed though to this box.
+				 * Unset margin_collapse. */
+				margin_collapse = NULL;
+			}
 
+			y = box->padding[TOP];
+			box = box->children;
+			box->y = y;
+			cy += y;
+			continue;
+		} else if (box->type == BOX_BLOCK || box->object ||
+				box->flags & IFRAME)
+			cy += box->padding[TOP];
+
+		if (box->type == BOX_BLOCK && box->height == AUTO) {
+			box->height = 0;
+			layout_block_add_scrollbar(box, BOTTOM);
+		}
+
+		cy += box->height + box->padding[BOTTOM] +
+				box->border[BOTTOM].width;
+		cx -= box->x;
+		y = box->y + box->padding[TOP] + box->height +
+				box->padding[BOTTOM] +
+				box->border[BOTTOM].width;
 
 	advance_to_next_box:
 		if (!box->next) {

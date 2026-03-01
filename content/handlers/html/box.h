@@ -88,7 +88,9 @@ typedef enum {
 	REPLACE_DIM = 1 << 9,	/* replaced element has given dimensions */
 	IFRAME      = 1 << 10,	/* box contains an iframe */
 	CONVERT_CHILDREN = 1 << 11,  /* wanted children converting */
-	IS_REPLACED = 1 << 12	/* box is a replaced element */
+	IS_REPLACED = 1 << 12,	/* box is a replaced element */
+	DIM_CACHED  = 1 << 13,	/* dimension data is cached */
+	DIM_VIEWPORT_SET = 1 << 14	/* viewport height was set in cache */
 } box_flags;
 
 
@@ -451,6 +453,20 @@ struct box {
 	 */
 	struct browser_window *iframe;
 
+	/**
+	 * Cached results from layout_find_dimensions.
+	 */
+	int cached_available_width;
+	int cached_viewport_height;
+	int cached_width;
+	int cached_height;
+	int cached_max_width;
+	int cached_min_width;
+	int cached_max_height;
+	int cached_min_height;
+	int cached_margin[4];
+	int cached_padding[4];
+	struct box_border cached_border[4];
 };
 
 
