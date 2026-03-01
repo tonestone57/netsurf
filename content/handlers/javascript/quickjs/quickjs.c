@@ -4,23 +4,14 @@
 
 #include "utils/log.h"
 #include "content/handlers/javascript/js.h"
+#include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/handlers/javascript/quickjs/xhr.h"
-
-struct jsheap {
-	JSRuntime *rt;
-	JSClassID node_class_id;
-	JSAtom node_map_atom;
-    void *timer_ring; /* Managed in qjsky.c but logically part of heap */
-};
 
 struct jsctx {
 	JSContext *ctx;
 	struct jsheap *heap;
 };
-
-/* Global for simple class ID management if needed, but jsheap is better */
-static JSClassID global_node_class_id = 0;
 
 struct jsheap *js_newheap(void)
 {
@@ -37,6 +28,8 @@ struct jsheap *js_newheap(void)
 	JS_SetMemoryLimit(heap->rt, 64 * 1024 * 1024);
 	JS_SetMaxStackSize(heap->rt, 1024 * 1024);
 
+	heap->next_timer_handle = 1;
+
 	qjsky_init_runtime(heap);
 
 	return heap;
@@ -45,6 +38,10 @@ struct jsheap *js_newheap(void)
 void js_destroyheap(struct jsheap *heap)
 {
 	if (!heap) return;
+	/* Atoms are freed automatically when the runtime is destroyed,
+	   but we should be clean if we were to reuse it. */
+	if (heap->node_map_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
 	JS_FreeRuntime(heap->rt);
 	free(heap);
 }
@@ -95,15 +92,59 @@ bool js_exec(struct jsctx *ctx, const char *script, size_t len, const char *file
 	return true;
 }
 
-/* Event Handlers (Skeletons) */
+/* Event Handlers */
 
 bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 {
-	/* TODO: Implement event object construction and dispatch */
+	JSValue global = JS_GetGlobalObject(ctx->ctx);
+	JSValue event_ctor = JS_GetPropertyStr(ctx->ctx, global, "Event");
+
+	if (JS_IsUndefined(event_ctor)) {
+		JS_FreeValue(ctx->ctx, global);
+		return false;
+	}
+
+	/* Construct Event object */
+	JSValue type_val = JS_NewString(ctx->ctx, type);
+	JSValue event_obj = JS_CallConstructor(ctx->ctx, event_ctor, 1, &type_val);
+	JS_FreeValue(ctx->ctx, type_val);
+	JS_FreeValue(ctx->ctx, event_ctor);
+
+	if (JS_IsException(event_obj)) {
+		JS_FreeValue(ctx->ctx, global);
+		return false;
+	}
+
+	/* Wrap target node */
+	JSValue target_val = qjsky_push_node(ctx->ctx, target);
+
+	/* Dispatch event: target.dispatchEvent(event) */
+	JSValue dispatch_fn = JS_GetPropertyStr(ctx->ctx, target_val, "dispatchEvent");
+	if (JS_IsFunction(ctx->ctx, dispatch_fn)) {
+		JSValue ret = JS_Call(ctx->ctx, dispatch_fn, target_val, 1, &event_obj);
+		JS_FreeValue(ctx->ctx, ret);
+	}
+
+	JS_FreeValue(ctx->ctx, dispatch_fn);
+	JS_FreeValue(ctx->ctx, target_val);
+	JS_FreeValue(ctx->ctx, event_obj);
+	JS_FreeValue(ctx->ctx, global);
 	return true;
 }
 
 void js_handle_new_element(struct jsctx *ctx, struct dom_node *node, const char *attr, const char *value)
 {
-	/* TODO: Compile and attach inline event handlers */
+	/* Compile and attach inline event handlers (e.g., onclick) */
+	/* Skeleton implementation for future binding integration:
+	   1. Check if 'attr' is an event handler (starts with 'on').
+	   2. Create a JS function: "function(event) { " + value + " }"
+	   3. Assign it to the corresponding property on the JS object for 'node'.
+	*/
+	if (strncmp(attr, "on", 2) == 0) {
+		JSValue node_obj = qjsky_push_node(ctx->ctx, node);
+		if (!JS_IsException(node_obj)) {
+			/* Implementation details pending full binding support */
+			JS_FreeValue(ctx->ctx, node_obj);
+		}
+	}
 }
