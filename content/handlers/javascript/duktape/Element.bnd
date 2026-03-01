@@ -475,8 +475,8 @@ method Element::remove()
 	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (exc == DOM_NO_ERR && parent != NULL) {
 		dom_node *old;
-		dom_node_remove_child(parent, priv->parent.node, &old);
-		dom_node_unref(old);
+		exc = dom_node_remove_child(parent, priv->parent.node, &old);
+		if (exc == DOM_NO_ERR) dom_node_unref(old);
 		dom_node_unref(parent);
 	}
 	return 0;
@@ -484,6 +484,7 @@ method Element::remove()
 
 method Element::append()
 %{
+	dom_exception exc;
 	dukky_push_generics(ctx, "mutationHelper");
 	duk_push_array(ctx);
 	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
@@ -692,7 +693,7 @@ method Element::insertAdjacentHTML()
 		if (exc != DOM_NO_ERR || ptype == DOM_DOCUMENT_NODE) {
 			dom_node_unref(parent);
 			parent = NULL;
-			goto out;
+			return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Position is invalid for this node.");
 		}
 		if (strcasecmp(position, "beforebegin") == 0) {
 			ref_child = priv->parent.node;
@@ -714,10 +715,10 @@ method Element::insertAdjacentHTML()
 	/* Migrate children from fragment body to target position */
 	while (dom_node_get_first_child(body, &child) == DOM_NO_ERR && child != NULL) {
 		struct dom_node *cref;
-		dom_node_remove_child(body, child, &cref);
-		dom_node_unref(cref);
-		dom_node_insert_before(parent, child, ref_child, &cref);
-		dom_node_unref(cref);
+		exc = dom_node_remove_child(body, child, &cref);
+		if (exc == DOM_NO_ERR) dom_node_unref(cref);
+		exc = dom_node_insert_before(parent, child, ref_child, &cref);
+		if (exc == DOM_NO_ERR) dom_node_unref(cref);
 		dom_node_unref(child);
 	}
 
@@ -1006,7 +1007,7 @@ setter Element::outerHTML()
 
 	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (exc != DOM_NO_ERR || parent == NULL) {
-		return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Element has no parent.");
+		return 0;
 	} else {
 		dom_node_type ptype;
 		exc = dom_node_get_node_type(parent, &ptype);

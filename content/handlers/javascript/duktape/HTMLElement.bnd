@@ -200,21 +200,21 @@ setter HTMLElement::innerText()
 	dom_node *child;
 	while (dom_node_get_first_child(priv->parent.node, &child) == DOM_NO_ERR && child != NULL) {
 		dom_node *old;
-		dom_node_remove_child(priv->parent.node, child, &old);
-		dom_node_unref(old);
+		exc = dom_node_remove_child(priv->parent.node, child, &old);
+		if (exc == DOM_NO_ERR) dom_node_unref(old);
 		dom_node_unref(child);
 	}
 
 	/* Create and append text node */
 	dom_node *text_node;
 	dom_document *doc;
-	dom_node_get_owner_document(priv->parent.node, &doc);
-	if (doc) {
+	exc = dom_node_get_owner_document(priv->parent.node, &doc);
+	if (exc == DOM_NO_ERR && doc != NULL) {
 		exc = dom_document_create_text_node(doc, content, &text_node);
 		if (exc == DOM_NO_ERR) {
 			dom_node *old;
-			dom_node_append_child(priv->parent.node, text_node, &old);
-			dom_node_unref(old);
+			exc = dom_node_append_child(priv->parent.node, text_node, &old);
+			if (exc == DOM_NO_ERR) dom_node_unref(old);
 			dom_node_unref(text_node);
 		}
 		dom_node_unref(doc);

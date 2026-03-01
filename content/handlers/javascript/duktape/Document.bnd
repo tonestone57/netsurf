@@ -347,6 +347,7 @@ getter Document::lastElementChild()
 
 method Document::prepend()
 %{
+	dom_exception exc;
 	dukky_push_generics(ctx, "mutationHelper");
 	duk_push_array(ctx);
 	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
@@ -362,16 +363,19 @@ method Document::prepend()
 	duk_pop(ctx);
 
 	dom_node *first;
-	dom_node_get_first_child(priv->parent.node, &first);
+	exc = dom_node_get_first_child(priv->parent.node, &first);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node *spare;
-	dom_node_insert_before(priv->parent.node, other->node, first, &spare);
+	exc = dom_node_insert_before(priv->parent.node, other->node, first, &spare);
 	if (first) dom_node_unref(first);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node_unref(spare);
 	return 0;
 %}
 
 method Document::append()
 %{
+	dom_exception exc;
 	dukky_push_generics(ctx, "mutationHelper");
 	duk_push_array(ctx);
 	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
@@ -387,7 +391,8 @@ method Document::append()
 	duk_pop(ctx);
 
 	dom_node *spare;
-	dom_node_append_child(priv->parent.node, other->node, &spare);
+	exc = dom_node_append_child(priv->parent.node, other->node, &spare);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node_unref(spare);
 	return 0;
 %}
