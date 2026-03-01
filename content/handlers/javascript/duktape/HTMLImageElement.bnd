@@ -10,38 +10,334 @@
 
 init HTMLImageElement(struct dom_html_element *html_image_element::html_element);
 
-getter HTMLImageElement::align();
-setter HTMLImageElement::align();
+getter HTMLImageElement::align()
+%{
+	dom_exception err;
+	dom_string *str;
 
-getter HTMLImageElement::alt();
-setter HTMLImageElement::alt();
+	err = dom_html_image_element_get_align((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
-getter HTMLImageElement::border();
-setter HTMLImageElement::border();
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
 
-getter HTMLImageElement::isMap();
-setter HTMLImageElement::isMap();
+setter HTMLImageElement::align()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
 
-getter HTMLImageElement::longDesc();
-setter HTMLImageElement::longDesc();
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
 
-getter HTMLImageElement::name();
-setter HTMLImageElement::name();
+	err = dom_html_image_element_set_align((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
 
-getter HTMLImageElement::src();
-setter HTMLImageElement::src();
+getter HTMLImageElement::alt()
+%{
+	dom_exception err;
+	dom_string *str;
 
-getter HTMLImageElement::useMap();
-setter HTMLImageElement::useMap();
+	err = dom_html_image_element_get_alt((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
-getter HTMLImageElement::height();
-setter HTMLImageElement::height();
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
 
-getter HTMLImageElement::hspace();
-setter HTMLImageElement::hspace();
+setter HTMLImageElement::alt()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
 
-getter HTMLImageElement::vspace();
-setter HTMLImageElement::vspace();
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
 
-getter HTMLImageElement::width();
-setter HTMLImageElement::width();
+	err = dom_html_image_element_set_alt((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::border()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_image_element_get_border((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLImageElement::border()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_image_element_set_border((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::isMap()
+%{
+	dom_exception err;
+	bool res;
+
+	err = dom_html_image_element_get_is_map((dom_html_image_element *)priv->parent.parent.parent.node, &res);
+	if (err != DOM_NO_ERR) return 0;
+
+	duk_push_boolean(ctx, res);
+	return 1;
+%}
+
+setter HTMLImageElement::isMap()
+%{
+	dom_exception err;
+	bool res = duk_to_boolean(ctx, 0);
+
+	err = dom_html_image_element_set_is_map((dom_html_image_element *)priv->parent.parent.parent.node, res);
+	if (err != DOM_NO_ERR) return 0;
+
+	return 0;
+%}
+
+getter HTMLImageElement::longDesc()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_image_element_get_long_desc((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLImageElement::longDesc()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_image_element_set_long_desc((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::name()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_image_element_get_name((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLImageElement::name()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_image_element_set_name((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::src()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_image_element_get_src((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLImageElement::src()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_image_element_set_src((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::useMap()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_image_element_get_use_map((dom_html_image_element *)priv->parent.parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLImageElement::useMap()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_image_element_set_use_map((dom_html_image_element *)priv->parent.parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLImageElement::height()
+%{
+	dom_exception err;
+	dom_ulong val;
+
+	err = dom_html_image_element_get_height((dom_html_image_element *)priv->parent.parent.parent.node, &val);
+	if (err != DOM_NO_ERR) return 0;
+
+	duk_push_uint(ctx, (duk_uint_t)val);
+	return 1;
+%}
+
+setter HTMLImageElement::height()
+%{
+	dom_exception err;
+	dom_ulong val = duk_to_uint(ctx, 0);
+
+	err = dom_html_image_element_set_height((dom_html_image_element *)priv->parent.parent.parent.node, val);
+	if (err != DOM_NO_ERR) return 0;
+
+	return 0;
+%}
+
+getter HTMLImageElement::hspace()
+%{
+	dom_exception err;
+	dom_ulong val;
+
+	err = dom_html_image_element_get_hspace((dom_html_image_element *)priv->parent.parent.parent.node, &val);
+	if (err != DOM_NO_ERR) return 0;
+
+	duk_push_uint(ctx, (duk_uint_t)val);
+	return 1;
+%}
+
+setter HTMLImageElement::hspace()
+%{
+	dom_exception err;
+	dom_ulong val = duk_to_uint(ctx, 0);
+
+	err = dom_html_image_element_set_hspace((dom_html_image_element *)priv->parent.parent.parent.node, val);
+	if (err != DOM_NO_ERR) return 0;
+
+	return 0;
+%}
+
+getter HTMLImageElement::vspace()
+%{
+	dom_exception err;
+	dom_ulong val;
+
+	err = dom_html_image_element_get_vspace((dom_html_image_element *)priv->parent.parent.parent.node, &val);
+	if (err != DOM_NO_ERR) return 0;
+
+	duk_push_uint(ctx, (duk_uint_t)val);
+	return 1;
+%}
+
+setter HTMLImageElement::vspace()
+%{
+	dom_exception err;
+	dom_ulong val = duk_to_uint(ctx, 0);
+
+	err = dom_html_image_element_set_vspace((dom_html_image_element *)priv->parent.parent.parent.node, val);
+	if (err != DOM_NO_ERR) return 0;
+
+	return 0;
+%}
+
+getter HTMLImageElement::width()
+%{
+	dom_exception err;
+	dom_ulong val;
+
+	err = dom_html_image_element_get_width((dom_html_image_element *)priv->parent.parent.parent.node, &val);
+	if (err != DOM_NO_ERR) return 0;
+
+	duk_push_uint(ctx, (duk_uint_t)val);
+	return 1;
+%}
+
+setter HTMLImageElement::width()
+%{
+	dom_exception err;
+	dom_ulong val = duk_to_uint(ctx, 0);
+
+	err = dom_html_image_element_set_width((dom_html_image_element *)priv->parent.parent.parent.node, val);
+	if (err != DOM_NO_ERR) return 0;
+
+	return 0;
+%}
