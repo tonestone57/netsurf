@@ -476,8 +476,7 @@ static inline void layout_find_dimensions(
 	    box->cached_viewport_height_css == unit_len_ctx->viewport_height &&
 	    box->cached_device_dpi == unit_len_ctx->device_dpi &&
 	    box->cached_available_width == available_width &&
-	    ((viewport_height < 0 && !(box->flags & DIM_VIEWPORT_SET)) ||
-	     (box->cached_viewport_height == viewport_height))) {
+	    box->cached_viewport_height == viewport_height) {
 		if (width) *width = box->cached_width;
 		if (height) *height = box->cached_height;
 		if (max_width) *max_width = box->cached_max_width;
@@ -574,7 +573,7 @@ static inline void layout_find_dimensions(
 
 					if (containing_block &&
 						containing_block->height != AUTO &&
-						(css_computed_position(box->style) ==
+						(css_computed_position(style) ==
 								CSS_POSITION_ABSOLUTE ||
 							cbhtype == CSS_HEIGHT_SET)) {
 						/* Box is absolutely positioned or its
@@ -792,12 +791,7 @@ static inline void layout_find_dimensions(
 		box->cached_viewport_height_css = unit_len_ctx->viewport_height;
 		box->cached_device_dpi = unit_len_ctx->device_dpi;
 		box->cached_available_width = available_width;
-		if (viewport_height >= 0) {
-			box->flags |= DIM_VIEWPORT_SET;
-			box->cached_viewport_height = viewport_height;
-		} else {
-			box->flags &= ~DIM_VIEWPORT_SET;
-		}
+		box->cached_viewport_height = viewport_height;
 		box->cached_width = l_width;
 		box->cached_height = l_height;
 		box->cached_max_width = l_max_width;

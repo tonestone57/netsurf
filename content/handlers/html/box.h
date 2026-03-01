@@ -89,8 +89,7 @@ typedef enum {
 	IFRAME      = 1 << 10,	/* box contains an iframe */
 	CONVERT_CHILDREN = 1 << 11,  /* wanted children converting */
 	IS_REPLACED = 1 << 12,	/* box is a replaced element */
-	DIM_CACHED  = 1 << 13,	/* dimension data is cached */
-	DIM_VIEWPORT_SET = 1 << 14	/* viewport height was set in cache */
+	DIM_CACHED  = 1 << 13	/* dimension data is cached */
 } box_flags;
 
 

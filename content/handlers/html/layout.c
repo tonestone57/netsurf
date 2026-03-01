@@ -241,6 +241,9 @@ static void layout_line_vertical_align(struct box *first, struct box *last,
 	struct box *d;
 
 	for (d = first; d != last; d = d->next) {
+		if (d->style == NULL)
+			continue;
+
 		if ((d->type == BOX_INLINE && d->inline_end) ||
 				d->type == BOX_BR ||
 				d->type == BOX_TEXT ||
@@ -290,12 +293,14 @@ static void layout_block_context_position_table(
 
 	*y = cy;
 	while (1) {
-		enum css_width_e wtype;
+		enum css_width_e wtype = CSS_WIDTH_AUTO;
 		css_fixed width = 0;
 		css_unit unit = CSS_UNIT_PX;
 
-		wtype = css_computed_width(box->style,
-				&width, &unit);
+		if (box->style != NULL) {
+			wtype = css_computed_width(box->style,
+					&width, &unit);
+		}
 
 		*x0 = cx;
 		x1 = cx + box->parent->width;
