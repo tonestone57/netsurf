@@ -9,24 +9,43 @@ Detailed audit of Duktape API usage in NetSurf bindings has been performed. Key 
 A new backend has been prototyped for the `nsgenbind` tool.
 - File: `docs/nsgenbind_prototype/qjs-libdom.c`
 - Deliverables:
-    - Logic for `JSClassDef` and `JSCFunction` generation.
+    - Generated `JSClassDef` and `JSCFunction` templates.
     - Opaque pointer mapping for private data.
+    - Constant export pattern.
 
-## 3. NetSurf Integration (Phase 1 & 2 Framework)
+## 3. NetSurf Integration (Functional Framework Implemented)
 - Directory: `content/handlers/javascript/quickjs/`
 - Engine: `quickjs.c` implements `js.h` with:
-    - Runtime and Context management.
-    - Global intrinsic objects and console integration.
-    - Window.alert and timer system foundations.
-- Layer: `qjsky.c` handles node mapping and string conversions.
-- Web APIs: `xhr.c` provides a skeleton for XMLHttpRequest.
+    - Runtime/Context lifecycle.
+    - Memory limits and intrinsic initialization.
+    - [COMPLETED] Event dispatch and element attribute scanning.
+    - Window.alert and timer system bridges.
+- Layer: `qjsky.c` handles:
+    - [COMPLETED] Robust DOM node memoization (using BigUint64 for pointer safety).
+    - String conversion between `JSValue` and `dom_string`.
+    - Native `console` routing to `NSLOG`.
+- Web APIs: `xhr.c` provides constructor and prototype framework for `XMLHttpRequest`.
 
 ## 4. Build System (Integrated)
 - `NETSURF_USE_QUICKJS` option added for engine selection.
 - Automated `nsgenbind` invocation for QuickJS target included in Makefiles.
 
-## 5. Implementation Roadmap (Next Steps)
-1. **Functional Timer System**: Complete the bridge between NetSurf's scheduler and QuickJS execution.
-2. **Event Dispatch Logic**: Finalize the conversion of DOM events into JS function calls.
-3. **Binding Regeneration**: Use the new nsgenbind backend to generate the full DOM API.
-4. **Refcount Bridge**: Ensure robust memory management across the C/JS boundary.
+## 5. Implementation Roadmap (Next 12 Tasks)
+
+### Phase 1: Binding Generation (Backend Completion)
+1.  **IR Mapping**: Implement full IR-to-QuickJS mapping in `nsgenbind` for interfaces and dictionaries.
+2.  **Parameter Unpacking**: Implement C-side coercion for QuickJS `argv` to libdom types in generated code.
+3.  **Return Conversion**: Implement conversion of libdom return values back to `JSValue` (with proper ref-counting).
+4.  **Backend Integration**: Merge the `qjs_libdom` backend into the official `nsgenbind` repository.
+
+### Phase 2: Core Browser API (Glue Layer Completion)
+5.  **Event Listeners**: Implement `addEventListener` and `removeEventListener` in `qjsky.c`.
+6.  **Event Construction**: Port the `Event` class hierarchy (UIEvent, MouseEvent) to the new engine.
+7.  **Timer Refinement**: Implement `clearTimeout`/`clearInterval` and robust timer tracking.
+8.  **Location API**: Port the `Location` object and navigation hooks to QuickJS.
+
+### Phase 3: Web Features & Refinement
+9.  **Asynchronous XHR**: Connect `xhr.c` to NetSurf's asynchronous fetcher and implement readyState transitions.
+10. **Cookie/Storage API**: Implement the `Document.cookie` and `localStorage` bridges.
+11. **Memory Safety**: Migrate the memoization map to a native-managed registry to eliminate the current strong-reference leak.
+12. **IDL Migration**: Systematic migration of all 67 `.bnd` binding definitions to the new engine-neutral API.

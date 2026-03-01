@@ -4,11 +4,25 @@
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "utils/log.h"
 #include "utils/corestrings.h"
+#include "utils/ring.h"
+#include "desktop/gui_internal.h"
 
 static JSClassID qjsky_node_class_id = 0;
+static JSValue qjsky_node_map_symbol = JS_UNDEFINED;
 
-/* Registry for node memoization (dom_node -> JS Object) */
-#define QJSKY_NODE_MAP "__qjsky_node_map"
+/* Timer tracking */
+typedef struct qjsky_timer_s {
+    JSContext *ctx;
+    JSValue func;
+    bool repeating;
+    int ms;
+    int handle;
+    struct qjsky_timer_s *r_next;
+    struct qjsky_timer_s *r_prev;
+} qjsky_timer_t;
+
+static qjsky_timer_t *timer_ring = NULL;
+static int next_timer_handle = 1;
 
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -35,7 +49,12 @@ void qjsky_init_context(JSContext *ctx)
 {
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue map = JS_NewMap(ctx);
-	JS_SetPropertyStr(ctx, global, QJSKY_NODE_MAP, map);
+
+    if (JS_IsUndefined(qjsky_node_map_symbol)) {
+        qjsky_node_map_symbol = JS_NewSymbol(ctx, "qjskyNodeMap", 0);
+    }
+
+	JS_SetProperty(ctx, global, JS_ValueToAtom(ctx, qjsky_node_map_symbol), map);
 	JS_FreeValue(ctx, global);
 }
 
@@ -44,10 +63,10 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	if (!node) return JS_NULL;
 
 	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue map = JS_GetPropertyStr(ctx, global, QJSKY_NODE_MAP);
+	JSValue map = JS_GetProperty(ctx, global, JS_ValueToAtom(ctx, qjsky_node_map_symbol));
 
-	/* Key for the map: use the pointer value as a float64 (safe up to 2^53) or bigint */
-	JSValue key = JS_NewFloat64(ctx, (double)(uintptr_t)node);
+	/* Key for the map: use BigUint64 for pointer precision */
+	JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)node);
 
 	/* Call map.get(key) */
 	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
@@ -62,7 +81,8 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	}
 	JS_FreeValue(ctx, existing);
 
-	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
+	/* Create object with proper class */
+	JSValue obj = JS_NewObjectClass(ctx, qjsky_node_class_id);
 	if (JS_IsException(obj)) {
 		JS_FreeValue(ctx, key);
 		JS_FreeValue(ctx, map);
@@ -73,7 +93,7 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JS_SetOpaque(obj, node);
 	dom_node_ref(node);
 
-	/* Call map.set(key, obj) */
+	/* Store in memoization map */
 	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
 	JSValue argv[2] = { key, JS_DupValue(ctx, obj) };
 	JSValue set_ret = JS_Call(ctx, set_fn, map, 2, argv);
@@ -110,6 +130,86 @@ JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str)
 	if (!str) return JS_NULL;
 	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_length(str));
 }
+
+/* Timer Support */
+
+static void qjsky_timer_cb(void *p)
+{
+    qjsky_timer_t *timer = p;
+    JSValue ret = JS_Call(timer->ctx, timer->func, JS_UNDEFINED, 0, NULL);
+    if (JS_IsException(ret)) {
+        /* Error handled by the engine's exception mechanism */
+    }
+    JS_FreeValue(timer->ctx, ret);
+
+    if (timer->repeating) {
+        guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
+    } else {
+        RING_REMOVE(timer_ring, timer);
+        JS_FreeValue(timer->ctx, timer->func);
+        free(timer);
+    }
+}
+
+static JSValue qjsky_set_timer(JSContext *ctx, int argc, JSValueConst *argv, bool repeating)
+{
+    if (argc < 2) return JS_EXCEPTION;
+
+    qjsky_timer_t *timer = malloc(sizeof(*timer));
+    if (!timer) return JS_EXCEPTION;
+
+    timer->ctx = ctx;
+    timer->func = JS_DupValue(ctx, argv[0]);
+    JS_ToInt32(ctx, &timer->ms, argv[1]);
+    timer->repeating = repeating;
+    timer->handle = next_timer_handle++;
+
+    RING_INSERT(timer_ring, timer);
+    guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
+
+    return JS_NewInt32(ctx, timer->handle);
+}
+
+static JSValue qjsky_setTimeout(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    return qjsky_set_timer(ctx, argc, argv, false);
+}
+
+static JSValue qjsky_setInterval(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    return qjsky_set_timer(ctx, argc, argv, true);
+}
+
+void qjsky_timer_init(JSContext *ctx)
+{
+    JSValue global = JS_GetGlobalObject(ctx);
+    JS_SetPropertyStr(ctx, global, "setTimeout", JS_NewCFunction(ctx, qjsky_setTimeout, "setTimeout", 2));
+    JS_SetPropertyStr(ctx, global, "setInterval", JS_NewCFunction(ctx, qjsky_setInterval, "setInterval", 2));
+    JS_FreeValue(ctx, global);
+}
+
+void qjsky_timer_cleanup(JSContext *ctx)
+{
+    qjsky_timer_t *timer;
+    qjsky_timer_t *next;
+
+    /* Safely iterate the ring and cancel timers for this context */
+    if (timer_ring == NULL) return;
+
+    timer = timer_ring;
+    do {
+        next = timer->r_next;
+        if (timer->ctx == ctx) {
+            guit->misc->schedule(-1, qjsky_timer_cb, timer);
+            JS_FreeValue(ctx, timer->func);
+            RING_REMOVE(timer_ring, timer);
+            free(timer);
+        }
+        timer = next;
+    } while (timer_ring != NULL && timer != timer_ring);
+}
+
+/* Console Integration */
 
 static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {

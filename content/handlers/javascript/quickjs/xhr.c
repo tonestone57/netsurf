@@ -1,41 +1,61 @@
+#include <stdlib.h>
 #include "content/handlers/javascript/quickjs/xhr.h"
 
-static JSClassID qjsky_xhr_class_id;
+static JSClassID qjsky_xhr_class_id = 0;
 
 static void qjsky_xhr_finalizer(JSRuntime *rt, JSValue val)
 {
-    /* Cleanup XHR state */
+	/* TODO: Cleanup XHR state */
 }
 
 static JSClassDef qjsky_xhr_class = {
-    "XMLHttpRequest",
-    .finalizer = qjsky_xhr_finalizer,
+	"XMLHttpRequest",
+	.finalizer = qjsky_xhr_finalizer,
 };
+
+static JSValue qjsky_xhr_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
+{
+	JSValue obj = JS_NewObjectProtoClass(ctx, new_target, qjsky_xhr_class_id);
+	if (JS_IsException(obj)) return obj;
+
+	/* TODO: Initialize private XHR state */
+
+	return obj;
+}
 
 static JSValue qjsky_xhr_open(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    return JS_UNDEFINED;
+	return JS_UNDEFINED;
 }
 
 static JSValue qjsky_xhr_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    return JS_UNDEFINED;
+	return JS_UNDEFINED;
 }
 
 static const JSCFunctionListEntry qjsky_xhr_proto_funcs[] = {
-    JS_CFUNC_DEF("open", 2, qjsky_xhr_open),
-    JS_CFUNC_DEF("send", 1, qjsky_xhr_send),
+	JS_CFUNC_DEF("open", 2, qjsky_xhr_open),
+	JS_CFUNC_DEF("send", 1, qjsky_xhr_send),
 };
 
 void qjsky_init_xhr(JSContext *ctx)
 {
-    JS_NewClassID(&qjsky_xhr_class_id);
-    JS_NewClass(JS_GetRuntime(ctx), qjsky_xhr_class_id, &qjsky_xhr_class);
+	if (qjsky_xhr_class_id == 0) {
+		JS_NewClassID(&qjsky_xhr_class_id);
+	}
+	/* Register class for this runtime */
+	JS_NewClass(JS_GetRuntime(ctx), qjsky_xhr_class_id, &qjsky_xhr_class);
 
-    JSValue proto = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, proto, qjsky_xhr_proto_funcs, sizeof(qjsky_xhr_proto_funcs)/sizeof(qjsky_xhr_proto_funcs[0]));
+	JSValue global = JS_GetGlobalObject(ctx);
 
-    JSValue global = JS_GetGlobalObject(ctx);
-    JS_SetPropertyStr(ctx, global, "XMLHttpRequest", JS_NewCFunction2(ctx, NULL, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0));
-    JS_FreeValue(ctx, global);
+	JSValue proto = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, proto, qjsky_xhr_proto_funcs, sizeof(qjsky_xhr_proto_funcs)/sizeof(qjsky_xhr_proto_funcs[0]));
+	JS_SetClassProto(ctx, qjsky_xhr_class_id, proto);
+
+	/* Fix: Correct constructor initialization (was previously NULL) */
+	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, ctor, proto);
+	JS_SetPropertyStr(ctx, global, "XMLHttpRequest", ctor);
+
+	JS_FreeValue(ctx, global);
 }

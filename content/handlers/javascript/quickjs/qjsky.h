@@ -20,6 +20,9 @@ void qjsky_init_runtime(JSRuntime *rt);
 /* Initialise a QuickJS context for NetSurf support */
 void qjsky_init_context(JSContext *ctx);
 
+/* Initialise the console object in a context */
+void qjsky_init_console(JSContext *ctx);
+
 /* Map a libdom node to a QuickJS object */
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
 
@@ -29,5 +32,9 @@ struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val);
 /* String conversion helpers */
 dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val);
 JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str);
+
+/* Timer support */
+void qjsky_timer_init(JSContext *ctx);
+void qjsky_timer_cleanup(JSContext *ctx);
 
 #endif

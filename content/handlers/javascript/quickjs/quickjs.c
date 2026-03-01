@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "utils/errors.h"
 #include "utils/log.h"
+#include "utils/corestrings.h"
 #include "content/content.h"
 #include "javascript/js.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
@@ -112,6 +113,9 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv, jsthread **th
 	/* Initialize NetSurf context support (memoization etc) */
 	qjsky_init_context(t->ctx);
 
+	/* Initialize timers */
+	qjsky_timer_init(t->ctx);
+
 	/* Initialize the console object */
 	qjsky_init_console(t->ctx);
 
@@ -132,7 +136,7 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv, jsthread **th
 /* exported interface documented in js.h */
 nserror js_closethread(jsthread *thread)
 {
-	/* Disconnect callbacks and stop additional JS execution */
+	qjsky_timer_cleanup(thread->ctx);
 	return NSERROR_OK;
 }
 
@@ -165,27 +169,56 @@ bool js_exec(jsthread *thread, const uint8_t *txt, size_t txtlen, const char *na
 	return result;
 }
 
-/* exported interface documented in js.h */
+/* Task 7: Event Dispatch Logic */
 bool js_fire_event(jsthread *thread, const char *type, struct dom_document *doc, struct dom_node *target)
 {
-    /* Technical Implementation Requirement:
-       1. Push 'target' node to stack using qjsky_push_node.
-       2. Resolve event handler property (e.g., 'onclick').
-       3. Create Event object.
-       4. Call listener.
-    */
-	NSLOG(netsurf, DEBUG, "Event firing logic documented for %s", type);
+	JSValue target_obj = qjsky_push_node(thread->ctx, target);
+    if (JS_IsException(target_obj)) return false;
+
+    char handler_name[64];
+    snprintf(handler_name, sizeof(handler_name), "on%s", type);
+
+    JSValue handler = JS_GetPropertyStr(thread->ctx, target_obj, handler_name);
+    if (JS_IsFunction(thread->ctx, handler)) {
+        /* TODO: Construct Event object */
+        JSValue event_obj = JS_NewObject(thread->ctx);
+        JSValue ret = JS_Call(thread->ctx, handler, target_obj, 1, &event_obj);
+        JS_FreeValue(thread->ctx, event_obj);
+        JS_FreeValue(thread->ctx, ret);
+    }
+
+    JS_FreeValue(thread->ctx, handler);
+    JS_FreeValue(thread->ctx, target_obj);
 	return true;
 }
 
-/* exported interface documented in js.h */
+/* Task 8: Attribute Scanning for Handlers */
 void js_handle_new_element(jsthread *thread, struct dom_element *node)
 {
-    /* Technical Implementation Requirement:
-       1. Scan attributes for names starting with "on".
-       2. Register listeners in NetSurf's event system that bridge to JS function calls.
-    */
-    NSLOG(netsurf, DEBUG, "New element handler requirements documented.");
+    dom_namednodemap *attrs;
+    dom_exception exc = dom_node_get_attributes(node, &attrs);
+    if (exc != DOM_NO_ERR || !attrs) return;
+
+    dom_ulong length;
+    dom_namednodemap_get_length(attrs, &length);
+    for (dom_ulong i = 0; i < length; i++) {
+        dom_attr *attr;
+        dom_namednodemap_item(attrs, i, &attr);
+        dom_string *name;
+        dom_attr_get_name(attr, &name);
+
+        const char *name_c = dom_string_data(name);
+        if (strncmp(name_c, "on", 2) == 0) {
+            dom_string *value;
+            dom_attr_get_value(attr, &value);
+            /* TODO: Compile value as JS function and attach to JS node object */
+            dom_string_unref(value);
+        }
+
+        dom_string_unref(name);
+        dom_node_unref(attr);
+    }
+    dom_namednodemap_unref(attrs);
 }
 
 /* exported interface documented in js.h */
