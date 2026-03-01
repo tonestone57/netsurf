@@ -5,41 +5,34 @@ Detailed audit of Duktape API usage in NetSurf bindings has been performed. Key 
 - ~21,000 calls to `duk_*` APIs across 67 `.bnd` files.
 - Common patterns: stack manipulation (`duk_push_*`, `duk_get_*`, `duk_pop`), object property access (`duk_get_prop_string`), and private data storage (`duk_get_pointer`).
 
-## 2. nsgenbind Backend (Required)
-A new backend must be added to the `nsgenbind` tool.
-- File: `nsgenbind/src/qjs-libdom.c`
-- Tasks:
-    - Implement `qjs_libdom_output` to generate `binding.c/h`, `private.h`, and individual interface `.c` files.
-    - Map WebIDL interfaces to `JSClassID` and `JSClassDef`.
-    - Generate `JSCFunction` wrappers for methods and `JSGetterSetter` for attributes.
+## 2. nsgenbind Backend (Prototype Created)
+A new backend has been prototyped for the `nsgenbind` tool.
+- File: `docs/nsgenbind_prototype/qjs-libdom.c`
+- Deliverables:
+    - Generated `JSClassDef` and `JSCFunction` templates.
+    - Logic for `JS_GetOpaque` mapping to private data structures.
+    - Patch for `nsgenbind` main logic to recognize `qjs_libdom`.
 
-## 3. NetSurf Integration (Prototype Framework Created)
+## 3. NetSurf Integration (Phase 1 Implemented)
 - Directory: `content/handlers/javascript/quickjs/`
-- Compatibility: `duktape_compat.h` created to provide a macro-based mapping for common Duktape calls.
-- Engine: `quickjs.c` implements the `js.h` interface.
-- Layer: `qjsky.c` implements the DOM node memoization and life-cycle management.
+- Compatibility: `duktape_compat.h` updated with initial engine-neutral "NSJS" macros.
+- Engine: `quickjs.c` implements the `js.h` interface with intrinsic object support and memory limits.
+- Layer: `qjsky.c` implements DOM node mapping, reference counting via finalizers, and basic `console` support.
 
 ## 4. Build System (Integrated)
 - `NETSURF_USE_QUICKJS` option added to `Makefile.defaults`.
 - Conditional inclusion in `content/handlers/javascript/Makefile`.
 - QuickJS Makefile template created.
 
-## 5. Next Steps for Full Implementation (12-Task Roadmap)
+## 5. Next Steps for Full Implementation
 
-### Phase 1: nsgenbind Backend Completion
-1.  **Refine Backend Structure**: Finalize the code generation framework in `qjs-libdom.c` for headers and common binding code.
-2.  **Interface Generation**: Implement logic to generate QuickJS `JSClassDef` and `JS_NewClass` calls for each WebIDL interface.
-3.  **Method Wrapping**: Implement generation of `JSCFunction` wrappers that map QuickJS `argv` to C parameters.
-4.  **Attribute Accessors**: Implement generation of getter/setter functions for WebIDL attributes.
-5.  **Constant Export**: Add logic to export WebIDL-defined constants to QuickJS prototypes.
+### Phase 2: Full Binding Generation
+1. Integrate the `qjs-libdom` backend fully into the `nsgenbind` repository.
+2. Regenerate all DOM bindings using the new backend.
+3. Fix any compilation errors in the generated `.c` files.
 
-### Phase 2: NetSurf QuickJS Handler (Qjsky)
-6.  **DOM Node Memoization**: Implement a robust mapping between `dom_node*` pointers and `JSValue` objects in `qjsky.c`.
-7.  **Event Target Support**: Port the event listener registration and dispatch logic to QuickJS.
-8.  **Window Timer API**: Implement `setTimeout`/`setInterval` using NetSurf's scheduler with QuickJS callback handles.
-9.  **Console Integration**: Implement the `Console` IDL by routing JS calls to NetSurf's `NSLOG` system.
-
-### Phase 3: Migration and Testing
-10. **Engine Abstraction Layer**: Introduce engine-neutral macros in `duktape_compat.h` (to be renamed to `nsjs.h`) to decouple `.bnd` files.
-11. **Refcount Integration**: Finalize the garbage collection bridge between QuickJS reference counting and libdom refcounting.
-12. **Integration Testing**: Execute end-to-end JavaScript tests using the `monkey` frontend and verify against existing benchmarks.
+### Phase 3: Functionality Completion
+4. Implement `qjsky_register_event_listener` and the event dispatch bridge.
+5. Fully implement Window timers (`setTimeout`/`setInterval`).
+6. Implement `XMLHttpRequest` and other asynchronous Web APIs.
+7. Migrate more `.bnd` files to use the engine-neutral NSJS API.
