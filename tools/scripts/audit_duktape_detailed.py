@@ -19,11 +19,13 @@ if os.path.exists(bnd_dir):
                     file_usage[call].add(filename)
 
 with open('docs/duktape_audit.md', 'w') as out:
-    out.write('# Duktape API Usage Audit\n\n')
+    out.write('# Duktape API Usage Audit (Top 100)\n\n')
     out.write('| API Call | Occurrences | Files |\n')
     out.write('|----------|-------------|-------|\n')
-    for call, count in duk_calls.most_common():
+    for call, count in duk_calls.most_common(100):
         files = ', '.join(sorted(list(file_usage[call])))
         if len(files) > 100:
             files = files[:97] + "..."
         out.write(f'| {call} | {count} | {files} |\n')
+
+    out.write(f'\nTotal unique Duktape symbols found: {len(duk_calls)}\n')
