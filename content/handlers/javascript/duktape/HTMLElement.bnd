@@ -152,6 +152,61 @@ setter HTMLElement::onwaiting();
 getter HTMLElement::onwheel();
 setter HTMLElement::onwheel();
 
+getter HTMLElement::innerText()
+%{
+	dom_exception exc;
+	dom_string *content;
+
+	exc = dom_node_get_text_content(priv->parent.node, &content);
+	if (exc != DOM_NO_ERR) return 0;
+
+	if (content != NULL) {
+		duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
+		dom_string_unref(content);
+		return 1;
+	}
+	duk_push_string(ctx, "");
+	return 1;
+%}
+
+setter HTMLElement::innerText()
+%{
+	dom_exception exc;
+	dom_string *content;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	exc = dom_string_create((const uint8_t *)s, slen, &content);
+	if (exc != DOM_NO_ERR) return 0;
+
+	/* Clear children */
+	dom_node *child;
+	while (dom_node_get_first_child(priv->parent.node, &child) == DOM_NO_ERR && child != NULL) {
+		dom_node *old;
+		dom_node_remove_child(priv->parent.node, child, &old);
+		dom_node_unref(old);
+		dom_node_unref(child);
+	}
+
+	/* Create and append text node */
+	dom_node *text_node;
+	dom_document *doc;
+	dom_node_get_owner_document(priv->parent.node, &doc);
+	if (doc) {
+		exc = dom_document_create_text_node(doc, content, &text_node);
+		if (exc == DOM_NO_ERR) {
+			dom_node *old;
+			dom_node_append_child(priv->parent.node, text_node, &old);
+			dom_node_unref(old);
+			dom_node_unref(text_node);
+		}
+		dom_node_unref(doc);
+	}
+
+	dom_string_unref(content);
+	return 0;
+%}
+
 getter HTMLElement::style()
 %{
 	/* Minimal implementation to avoid infinite-loop in Modernizr (c.f. #2413) */

@@ -43,7 +43,7 @@ getter Node::nodeName()
 	dom_string *str = NULL;
 	exc = dom_node_get_node_name(priv->node, &str);
 	if (exc != DOM_NO_ERR) return 0;
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -55,7 +55,7 @@ getter Node::baseURI()
 	exc = dom_node_get_base(priv->node, &base);
 	if (exc != DOM_NO_ERR) return 0;
 	assert(base != NULL);
-	duk_push_lstring(ctx, dom_string_data(base), dom_string_length(base));
+	duk_push_lstring(ctx, dom_string_data(base), dom_string_byte_length(base));
 	dom_string_unref(base);
 	return 1;
 %}
@@ -204,7 +204,7 @@ getter Node::nodeValue()
 	}
 
 	if (content != NULL) {
-		duk_push_lstring(ctx, dom_string_data(content), dom_string_length(content));
+		duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
 		dom_string_unref(content);
 		return 1;
 	}
@@ -254,6 +254,26 @@ setter Node::textContent()
 	exc = dom_node_set_text_content(priv->node, content);
 	dom_string_unref(content);
 	return 0;
+%}
+
+getter Node::parentElement()
+%{
+	dom_node *parent;
+	dom_exception exc;
+	dom_node_type type;
+
+	exc = dom_node_get_parent_node(priv->node, &parent);
+	if (exc != DOM_NO_ERR || parent == NULL) return 0;
+
+	exc = dom_node_get_node_type(parent, &type);
+	if (exc != DOM_NO_ERR || type != DOM_ELEMENT_NODE) {
+		dom_node_unref(parent);
+		return 0;
+	}
+
+	dukky_push_node(ctx, parent);
+	dom_node_unref(parent);
+	return 1;
 %}
 
 method Node::normalize()
@@ -321,7 +341,7 @@ method Node::compareDocumentPosition()
 method Node::contains()
 %{
 	dom_exception exc;
-	uint16_t ret;
+	bool result;
 
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
@@ -329,19 +349,10 @@ method Node::contains()
 	node_private_t *other = duk_get_pointer(ctx, -1);
 	duk_pop(ctx);
 
-	/* Note that inclusive descendant says *IS* or *CONTAINED_BY* */
-	if (priv->node == other->node) {
-		duk_push_boolean(ctx, true);
-		return 1;
-	}
-
-	exc = dom_node_compare_document_position(priv->node, other->node,
-			&ret);
-
+	exc = dom_node_contains(priv->node, other->node, &result);
 	if (exc != DOM_NO_ERR) return 0;
 
-	duk_push_boolean(ctx, ret == DOM_DOCUMENT_POSITION_CONTAINED_BY);
-
+	duk_push_boolean(ctx, result);
 	return 1;
 %}
 
@@ -357,7 +368,7 @@ method Node::lookupPrefix()
 	dom_string_unref(ns);
 	if (exc != DOM_NO_ERR) return 0;
 	if (pfx == NULL) return 0;
-	duk_push_lstring(ctx, dom_string_data(pfx), dom_string_length(pfx));
+	duk_push_lstring(ctx, dom_string_data(pfx), dom_string_byte_length(pfx));
 	dom_string_unref(pfx);
 	return 0;
 %}
@@ -374,7 +385,7 @@ method Node::lookupNamespaceURI()
 	dom_string_unref(pfx);
 	if (exc != DOM_NO_ERR) return 0;
 	if (ns == NULL) return 0;
-	duk_push_lstring(ctx, dom_string_data(ns), dom_string_length(ns));
+	duk_push_lstring(ctx, dom_string_data(ns), dom_string_byte_length(ns));
 	dom_string_unref(ns);
 	return 0;
 %}

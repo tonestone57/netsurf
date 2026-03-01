@@ -10,8 +10,179 @@
 
 class Element {
 	prologue %{
+#include <strings.h>
 #include <utils/corestrings.h>
 #include <dom/bindings/hubbub/parser.h>
+
+static void dukky_push_escaped_string(duk_context *ctx, dom_string *str)
+{
+	const char *data = dom_string_data(str);
+	size_t len = dom_string_byte_length(str);
+	char *escaped = malloc(len * 6 + 1);
+	if (escaped == NULL) {
+		duk_push_string(ctx, "");
+		return;
+	}
+	char *p = escaped;
+	for (size_t i = 0; i < len; i++) {
+		switch (data[i]) {
+		case '&': memcpy(p, "&amp;", 5); p += 5; break;
+		case '<': memcpy(p, "&lt;", 4); p += 4; break;
+		case '>': memcpy(p, "&gt;", 4); p += 4; break;
+		case '"': memcpy(p, "&quot;", 6); p += 6; break;
+		default: *p++ = data[i]; break;
+		}
+	}
+	*p = '\0';
+	duk_push_lstring(ctx, escaped, p - escaped);
+	free(escaped);
+}
+
+static bool dukky_is_void_element(dom_string *name)
+{
+	const char *s = dom_string_data(name);
+	size_t len = dom_string_byte_length(name);
+
+	if (len == 2 && strncasecmp(s, "br", 2) == 0) return true;
+	if (len == 2 && strncasecmp(s, "hr", 2) == 0) return true;
+	if (len == 3 && strncasecmp(s, "img", 3) == 0) return true;
+	if (len == 3 && strncasecmp(s, "col", 3) == 0) return true;
+	if (len == 3 && strncasecmp(s, "wbr", 3) == 0) return true;
+	if (len == 4 && strncasecmp(s, "area", 4) == 0) return true;
+	if (len == 4 && strncasecmp(s, "base", 4) == 0) return true;
+	if (len == 4 && strncasecmp(s, "link", 4) == 0) return true;
+	if (len == 4 && strncasecmp(s, "meta", 4) == 0) return true;
+	if (len == 5 && strncasecmp(s, "input", 5) == 0) return true;
+	if (len == 5 && strncasecmp(s, "param", 5) == 0) return true;
+	if (len == 5 && strncasecmp(s, "embed", 5) == 0) return true;
+	if (len == 5 && strncasecmp(s, "track", 5) == 0) return true;
+	if (len == 5 && strncasecmp(s, "frame", 5) == 0) return true;
+	if (len == 6 && strncasecmp(s, "source", 6) == 0) return true;
+	if (len == 7 && strncasecmp(s, "keygen", 7) == 0) return true;
+	if (len == 8 && strncasecmp(s, "basefont", 8) == 0) return true;
+	if (len == 8 && strncasecmp(s, "bgsound", 8) == 0) return true;
+
+	return false;
+}
+
+static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarridx_t *idx, int arr_idx)
+{
+	dom_node_type type;
+	dom_exception exc;
+	dom_string *node_name = NULL;
+	dom_node *child = NULL;
+	dom_node *next_child = NULL;
+
+	exc = dom_node_get_node_type(node, &type);
+	if (exc != DOM_NO_ERR) return;
+
+	switch (type) {
+	case DOM_ELEMENT_NODE:
+		exc = dom_node_get_node_name(node, &node_name);
+		if (exc != DOM_NO_ERR || node_name == NULL) return;
+
+		duk_push_string(ctx, "<");
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		duk_push_lstring(ctx, dom_string_data(node_name), dom_string_byte_length(node_name));
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+
+		/* Attributes */
+		dom_namednodemap *attrs = NULL;
+		exc = dom_node_get_attributes(node, &attrs);
+		if (exc == DOM_NO_ERR && attrs != NULL) {
+			dom_ulong len;
+			exc = dom_namednodemap_get_length(attrs, &len);
+			if (exc == DOM_NO_ERR) {
+				for (dom_ulong i = 0; i < len; i++) {
+					dom_attr *attr;
+					exc = dom_namednodemap_item(attrs, i, &attr);
+					if (exc == DOM_NO_ERR && attr != NULL) {
+						dom_string *name, *value;
+						dom_node_get_node_name(attr, &name);
+						dom_node_get_node_value(attr, &value);
+
+						duk_push_string(ctx, " ");
+						duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
+						duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						duk_push_string(ctx, "=\"");
+						duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						if (value) {
+							dukky_push_escaped_string(ctx, value);
+							duk_put_prop_index(ctx, arr_idx, (*idx)++);
+							dom_string_unref(value);
+						}
+						duk_push_string(ctx, "\"");
+						duk_put_prop_index(ctx, arr_idx, (*idx)++);
+
+						dom_string_unref(name);
+						dom_node_unref(attr);
+					}
+				}
+			}
+			dom_namednodemap_unref(attrs);
+		}
+
+		duk_push_string(ctx, ">");
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+
+		/* Check if void element */
+		if (dukky_is_void_element(node_name)) {
+			dom_string_unref(node_name);
+			return;
+		}
+
+		/* Children */
+		exc = dom_node_get_first_child(node, &child);
+		while (exc == DOM_NO_ERR && child != NULL) {
+			dukky_innerHTML_serialize(ctx, child, idx, arr_idx);
+
+			exc = dom_node_get_next_sibling(child, &next_child);
+			dom_node_unref(child);
+			child = next_child;
+		}
+
+		duk_push_string(ctx, "</");
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		duk_push_lstring(ctx, dom_string_data(node_name), dom_string_byte_length(node_name));
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		duk_push_string(ctx, ">");
+		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+
+		dom_string_unref(node_name);
+		break;
+
+	case DOM_TEXT_NODE:
+		{
+			dom_string *content;
+			exc = dom_node_get_node_value(node, &content);
+			if (exc == DOM_NO_ERR && content != NULL) {
+				dukky_push_escaped_string(ctx, content);
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+				dom_string_unref(content);
+			}
+		}
+		break;
+
+	case DOM_COMMENT_NODE:
+		{
+			dom_string *comment;
+			exc = dom_node_get_node_value(node, &comment);
+			if (exc == DOM_NO_ERR && comment != NULL) {
+				duk_push_string(ctx, "<!--");
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+				duk_push_lstring(ctx, dom_string_data(comment), dom_string_byte_length(comment));
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+				duk_push_string(ctx, "-->");
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+				dom_string_unref(comment);
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
 %};
 };
 
@@ -21,29 +192,12 @@ getter Element::firstElementChild()
 %{
 	dom_node *element;
 	dom_exception exc;
-	dom_node_type node_type;
-	dom_node *next_node;
 
-	exc = dom_node_get_first_child(((node_private_t*)priv)->node, &element);
+	exc = dom_element_get_first_element_child(((node_private_t*)priv)->node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
 
-	while (element != NULL) {
-		exc = dom_node_get_node_type(element, &node_type);
-		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
-			/* found it */
-			break;
-		}
-
-		exc = dom_node_get_next_sibling(element, &next_node);
-		dom_node_unref(element);
-		if (exc == DOM_NO_ERR) {
-			element = next_node;
-		} else {
-			element = NULL;
-		}
-	}
 	if (dukky_push_node(ctx, (dom_node *)element) == false) {
 		dom_node_unref(element);
 		return 0;
@@ -56,29 +210,12 @@ getter Element::lastElementChild()
 %{
 	dom_node *element;
 	dom_exception exc;
-	dom_node_type node_type;
-	dom_node *next_node;
 
-	exc = dom_node_get_last_child(((node_private_t*)priv)->node, &element);
+	exc = dom_element_get_last_element_child(((node_private_t*)priv)->node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
 
-	while (element != NULL) {
-		exc = dom_node_get_node_type(element, &node_type);
-		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
-			/* found it */
-			break;
-		}
-
-		exc = dom_node_get_previous_sibling(element, &next_node);
-		dom_node_unref(element);
-		if (exc == DOM_NO_ERR) {
-			element = next_node;
-		} else {
-			element = NULL;
-		}
-	}
 	if (dukky_push_node(ctx, (dom_node *)element) == false) {
 		dom_node_unref(element);
 		return 0;
@@ -91,29 +228,12 @@ getter Element::previousElementSibling()
 %{
 	dom_node *element;
 	dom_exception exc;
-	dom_node_type node_type;
-	dom_node *sib_node;
 
-	exc = dom_node_get_previous_sibling(((node_private_t *)priv)->node, &element);
+	exc = dom_element_get_previous_element_sibling(((node_private_t *)priv)->node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
 
-	while (element != NULL) {
-		exc = dom_node_get_node_type(element, &node_type);
-		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
-			/* found it */
-			break;
-		}
-
-		exc = dom_node_get_previous_sibling(element, &sib_node);
-		dom_node_unref(element);
-		if (exc == DOM_NO_ERR) {
-			element = sib_node;
-		} else {
-			element = NULL;
-		}
-	}
 	if (dukky_push_node(ctx, (dom_node *)element) == false) {
 		dom_node_unref(element);
 		return 0;
@@ -126,29 +246,12 @@ getter Element::nextElementSibling()
 %{
 	dom_node *element;
 	dom_exception exc;
-	dom_node_type node_type;
-	dom_node *sib_node;
 
-	exc = dom_node_get_next_sibling(((node_private_t *)priv)->node, &element);
+	exc = dom_element_get_next_element_sibling(((node_private_t *)priv)->node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
 
-	while (element != NULL) {
-		exc = dom_node_get_node_type(element, &node_type);
-		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
-			/* found it */
-			break;
-		}
-
-		exc = dom_node_get_next_sibling(element, &sib_node);
-		dom_node_unref(element);
-		if (exc == DOM_NO_ERR) {
-			element = sib_node;
-		} else {
-			element = NULL;
-		}
-	}
 	if (dukky_push_node(ctx, (dom_node *)element) == false) {
 		dom_node_unref(element);
 		return 0;
@@ -159,33 +262,14 @@ getter Element::nextElementSibling()
 
 getter Element::childElementCount()
 %{
-	dom_node *element;
 	dom_exception exc;
-	dom_node_type node_type;
-	dom_node *next_node;
-	duk_uint_t jsret = 0;
+	uint32_t count;
 
-	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &element);
+	exc = dom_element_get_child_element_count(((node_private_t *)priv)->node, &count);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
-
-	while (element != NULL) {
-		exc = dom_node_get_node_type(element, &node_type);
-		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
-			jsret += 1;
-		}
-
-		exc = dom_node_get_next_sibling(element, &next_node);
-		dom_node_unref(element);
-		if (exc == DOM_NO_ERR) {
-			element = next_node;
-		} else {
-			element = NULL;
-		}
-	}
-	NSLOG(netsurf, INFO, "I found %u of them", jsret);
-	duk_push_uint(ctx, jsret);
+	duk_push_uint(ctx, count);
 	return 1;
 %}
 
@@ -220,6 +304,153 @@ method Element::getElementsByTagName ()
 	return 1;
 %}
 
+method Element::remove()
+%{
+	dom_node *parent;
+	dom_exception exc;
+
+	exc = dom_node_get_parent_node(priv->parent.node, &parent);
+	if (exc == DOM_NO_ERR && parent != NULL) {
+		dom_node *old;
+		dom_node_remove_child(parent, priv->parent.node, &old);
+		dom_node_unref(old);
+		dom_node_unref(parent);
+	}
+	return 0;
+%}
+
+method Element::insertAdjacentHTML()
+%{
+	const char *position = duk_to_string(ctx, 0);
+	duk_size_t text_len;
+	const char *text = duk_to_lstring(ctx, 1, &text_len);
+	dom_hubbub_parser_params parse_params;
+	dom_hubbub_error error;
+	dom_hubbub_parser *parser = NULL;
+	struct dom_document *doc = NULL;
+	struct dom_document_fragment *fragment = NULL;
+	dom_exception exc;
+	struct dom_node *child = NULL, *html = NULL, *body = NULL;
+	struct dom_nodelist *bodies = NULL;
+	struct dom_node *parent = NULL;
+	struct dom_node *ref_child = NULL;
+
+	exc = dom_node_get_owner_document(priv->parent.node, &doc);
+	if (exc != DOM_NO_ERR) goto out;
+
+	parse_params.enc = "UTF-8";
+	parse_params.fix_enc = true;
+	parse_params.enable_script = false;
+	parse_params.msg = NULL;
+	parse_params.script = NULL;
+	parse_params.ctx = NULL;
+	parse_params.daf = NULL;
+
+	error = dom_hubbub_fragment_parser_create(&parse_params, doc, &parser, &fragment);
+	if (error != DOM_HUBBUB_OK) goto out;
+
+	error = dom_hubbub_parser_parse_chunk(parser, (const uint8_t*)text, text_len);
+	if (error != DOM_HUBBUB_OK) goto out;
+
+	error = dom_hubbub_parser_completed(parser);
+	if (error != DOM_HUBBUB_OK) goto out;
+
+	/* Get the body of the fragment */
+	exc = dom_node_get_first_child(fragment, &html);
+	if (exc != DOM_NO_ERR || html == NULL) goto out;
+	exc = dom_element_get_elements_by_tag_name(html, corestring_dom_BODY, &bodies);
+	if (exc != DOM_NO_ERR || bodies == NULL) goto out;
+	exc = dom_nodelist_item(bodies, 0, &body);
+	if (exc != DOM_NO_ERR || body == NULL) goto out;
+
+	if (strcasecmp(position, "beforebegin") == 0) {
+		exc = dom_node_get_parent_node(priv->parent.node, &parent);
+		ref_child = priv->parent.node;
+	} else if (strcasecmp(position, "afterbegin") == 0) {
+		parent = priv->parent.node;
+		exc = dom_node_get_first_child(priv->parent.node, &ref_child);
+	} else if (strcasecmp(position, "beforeend") == 0) {
+		parent = priv->parent.node;
+		ref_child = NULL;
+	} else if (strcasecmp(position, "afterend") == 0) {
+		exc = dom_node_get_parent_node(priv->parent.node, &parent);
+		exc = dom_node_get_next_sibling(priv->parent.node, &ref_child);
+	} else {
+		goto out;
+	}
+
+	if (parent == NULL) goto out;
+
+	/* Migrate children from fragment body to target position */
+	while (dom_node_get_first_child(body, &child) == DOM_NO_ERR && child != NULL) {
+		struct dom_node *cref;
+		dom_node_remove_child(body, child, &cref);
+		dom_node_unref(cref);
+		dom_node_insert_before(parent, child, ref_child, &cref);
+		dom_node_unref(cref);
+		dom_node_unref(child);
+	}
+
+out:
+	if (parser) dom_hubbub_parser_destroy(parser);
+	if (doc) dom_node_unref(doc);
+	if (fragment) dom_node_unref(fragment);
+	if (html) dom_node_unref(html);
+	if (bodies) dom_nodelist_unref(bodies);
+	if (body) dom_node_unref(body);
+	/* parent and ref_child are borrowed/unrefed appropriately if needed,
+	   but here ref_child might be from get_first_child or get_next_sibling, so needs unref if it was from those. */
+	if (strcasecmp(position, "beforebegin") == 0 || strcasecmp(position, "afterend") == 0) {
+		if (parent) dom_node_unref(parent);
+	}
+	if (strcasecmp(position, "afterbegin") == 0 || strcasecmp(position, "afterend") == 0) {
+		if (ref_child) dom_node_unref(ref_child);
+	}
+
+	return 0;
+%}
+
+method Element::hasAttributes()
+%{
+	dom_exception exc;
+	bool result;
+
+	exc = dom_element_has_attributes(priv->parent.node, &result);
+	if (exc != DOM_NO_ERR) return 0;
+
+	duk_push_boolean(ctx, result);
+	return 1;
+%}
+
+method Element::getElementsByClassName()
+%{
+	dom_nodelist *nlist = NULL;
+	dom_exception exc;
+	dom_string *class_name;
+	duk_size_t len;
+	const char *str = duk_to_lstring(ctx, 0, &len);
+
+	exc = dom_string_create((const uint8_t *)str, len, &class_name);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_element_get_elements_by_class_name(priv->parent.node,
+						     class_name, &nlist);
+	dom_string_unref(class_name);
+	if (exc != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, nlist);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nlist);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		NSLOG(dukky, DEBUG, "Unable to construct nodelist?");
+		return 0;
+	}
+
+	return 1;
+%}
+
 getter Element::id ()
 %{
 	dom_string *idstr = NULL;
@@ -233,7 +464,7 @@ getter Element::id ()
 		duk_push_lstring(ctx, "", 0);
 	} else {
 		duk_push_lstring(ctx, dom_string_data(idstr),
-				 dom_string_length(idstr));
+				 dom_string_byte_length(idstr));
 		dom_string_unref(idstr);
 	}
 	return 1;
@@ -299,7 +530,7 @@ method Element::getAttribute()
 		duk_push_null(ctx);
 	} else {
 		duk_push_lstring(ctx, dom_string_data(attr_value),
-				 dom_string_length(attr_value));
+				 dom_string_byte_length(attr_value));
 		dom_string_unref(attr_value);
 	}
 	return 1;
@@ -368,7 +599,7 @@ getter Element::className ()
 		duk_push_lstring(ctx, "", 0);
 	} else {
 		duk_push_lstring(ctx, dom_string_data(classstr),
-				 dom_string_length(classstr));
+				 dom_string_byte_length(classstr));
 		dom_string_unref(classstr);
 	}
 	return 1;
@@ -425,7 +656,137 @@ getter Element::classList ()
 
 getter Element::innerHTML()
 %{
-	duk_push_lstring(ctx, "", 0);
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	dom_node *child = NULL;
+	dom_node *next_child = NULL;
+	dom_exception exc;
+
+	exc = dom_node_get_first_child(priv->parent.node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dukky_innerHTML_serialize(ctx, child, &idx, arr_idx);
+
+		exc = dom_node_get_next_sibling(child, &next_child);
+		dom_node_unref(child);
+		child = next_child;
+	}
+
+	duk_get_prop_string(ctx, arr_idx, "join");
+	duk_dup(ctx, arr_idx);
+	duk_push_string(ctx, "");
+	duk_call_method(ctx, 1);
+	return 1;
+%}
+
+setter Element::outerHTML()
+%{
+	duk_size_t size;
+	const char *s = duk_safe_to_lstring(ctx, 0, &size);
+	dom_hubbub_parser_params parse_params;
+	dom_hubbub_error error;
+	dom_hubbub_parser *parser = NULL;
+	struct dom_document *doc = NULL;
+	struct dom_document_fragment *fragment = NULL;
+	dom_exception exc;
+	struct dom_node *child = NULL, *html = NULL, *body = NULL;
+	struct dom_nodelist *bodies = NULL;
+	struct dom_node *parent = NULL;
+	struct dom_node *next_sibling = NULL;
+
+	exc = dom_node_get_owner_document(priv->parent.node, &doc);
+	if (exc != DOM_NO_ERR) goto out;
+
+	exc = dom_node_get_parent_node(priv->parent.node, &parent);
+	if (exc != DOM_NO_ERR || parent == NULL) goto out;
+
+	exc = dom_node_get_next_sibling(priv->parent.node, &next_sibling);
+
+	parse_params.enc = "UTF-8";
+	parse_params.fix_enc = true;
+	parse_params.enable_script = false;
+	parse_params.msg = NULL;
+	parse_params.script = NULL;
+	parse_params.ctx = NULL;
+	parse_params.daf = NULL;
+
+	error = dom_hubbub_fragment_parser_create(&parse_params,
+						  doc,
+						  &parser,
+						  &fragment);
+	if (error != DOM_HUBBUB_OK) {
+		NSLOG(netsurf, ERROR, "Unable to create fragment parser!");
+		goto out;
+	}
+
+	error = dom_hubbub_parser_parse_chunk(parser, (const uint8_t*)s, size);
+	if (error != DOM_HUBBUB_OK) {
+		NSLOG(netsurf, ERROR, "Unable to parse HTML chunk");
+		goto out;
+	}
+	error = dom_hubbub_parser_completed(parser);
+	if (error != DOM_HUBBUB_OK) {
+		NSLOG(netsurf, ERROR, "Unable to complete parser");
+		goto out;
+	}
+
+	/* Walk through fragment to the body element */
+	exc = dom_node_get_first_child(fragment, &html);
+	if (exc != DOM_NO_ERR || html == NULL) goto out;
+	exc = dom_element_get_elements_by_tag_name(html, corestring_dom_BODY, &bodies);
+	if (exc != DOM_NO_ERR || bodies == NULL) goto out;
+	exc = dom_nodelist_item(bodies, 0, &body);
+	if (exc != DOM_NO_ERR || body == NULL) goto out;
+
+	/* 1. Migrate the children from fragment body to before current node */
+	exc = dom_node_get_first_child(body, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		struct dom_node *cref;
+		exc = dom_node_remove_child(body, child, &cref);
+		if (exc != DOM_NO_ERR) goto out;
+		dom_node_unref(cref);
+		exc = dom_node_insert_before(parent, child, priv->parent.node, &cref);
+		if (exc != DOM_NO_ERR) goto out;
+		dom_node_unref(cref);
+		dom_node_unref(child);
+		child = NULL;
+		exc = dom_node_get_first_child(body, &child);
+	}
+
+	/* 2. Remove current node */
+	{
+		struct dom_node *cref;
+		exc = dom_node_remove_child(parent, priv->parent.node, &cref);
+		if (exc == DOM_NO_ERR) dom_node_unref(cref);
+	}
+
+out:
+	if (parser != NULL) dom_hubbub_parser_destroy(parser);
+	if (doc != NULL) dom_node_unref(doc);
+	if (fragment != NULL) dom_node_unref(fragment);
+	if (child != NULL) dom_node_unref(child);
+	if (html != NULL) dom_node_unref(html);
+	if (bodies != NULL) dom_nodelist_unref(bodies);
+	if (body != NULL) dom_node_unref(body);
+	if (parent != NULL) dom_node_unref(parent);
+	if (next_sibling != NULL) dom_node_unref(next_sibling);
+
+	return 0;
+%}
+
+getter Element::outerHTML()
+%{
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	dukky_innerHTML_serialize(ctx, priv->parent.node, &idx, arr_idx);
+
+	duk_get_prop_string(ctx, arr_idx, "join");
+	duk_dup(ctx, arr_idx);
+	duk_push_string(ctx, "");
+	duk_call_method(ctx, 1);
 	return 1;
 %}
 
