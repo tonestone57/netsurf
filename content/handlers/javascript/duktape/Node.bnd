@@ -350,7 +350,7 @@ method Node::lookupPrefix()
 	if (pfx == NULL) return 0;
 	duk_push_lstring(ctx, dom_string_data(pfx), dom_string_byte_length(pfx));
 	dom_string_unref(pfx);
-	return 0;
+	return 1;
 %}
 
 method Node::lookupNamespaceURI()
@@ -367,7 +367,7 @@ method Node::lookupNamespaceURI()
 	if (ns == NULL) return 0;
 	duk_push_lstring(ctx, dom_string_data(ns), dom_string_byte_length(ns));
 	dom_string_unref(ns);
-	return 0;
+	return 1;
 %}
 
 

@@ -171,18 +171,11 @@ getter HTMLElement::dataset()
 
 getter HTMLElement::innerText()
 %{
-	dom_exception exc;
-	dom_string *content;
-
-	exc = dom_node_get_text_content(priv->parent.node, &content);
-	if (exc != DOM_NO_ERR) return 0;
-
-	if (content != NULL) {
-		duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
-		dom_string_unref(content);
-		return 1;
+	dukky_push_generics(ctx, "getInnerText");
+	duk_push_this(ctx);
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
 	}
-	duk_push_string(ctx, "");
 	return 1;
 %}
 

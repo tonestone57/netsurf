@@ -691,8 +691,8 @@ method Element::insertAdjacentHTML()
 		if (exc != DOM_NO_ERR || parent == NULL) goto out;
 		exc = dom_node_get_node_type(parent, &ptype);
 		if (exc != DOM_NO_ERR || ptype == DOM_DOCUMENT_NODE) {
-			dom_node_unref(parent);
-			parent = NULL;
+			if (parent) dom_node_unref(parent);
+			if (doc) dom_node_unref(doc);
 			return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Position is invalid for this node.");
 		}
 		if (strcasecmp(position, "beforebegin") == 0) {
@@ -1007,12 +1007,14 @@ setter Element::outerHTML()
 
 	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (exc != DOM_NO_ERR || parent == NULL) {
+		if (doc) dom_node_unref(doc);
 		return 0;
 	} else {
 		dom_node_type ptype;
 		exc = dom_node_get_node_type(parent, &ptype);
 		if (exc == DOM_NO_ERR && ptype == DOM_DOCUMENT_NODE) {
 			dom_node_unref(parent);
+			if (doc) dom_node_unref(doc);
 			return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Cannot set outerHTML of document element.");
 		}
 	}

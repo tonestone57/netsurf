@@ -131,32 +131,35 @@ var NetSurf = {
     },
     getElementsByClassName: function(root, classNames) {
         var names = classNames.split(/\s+/).filter(Boolean);
-        var res = [];
-        function walk(node) {
-            var child = node.firstChild;
-            while (child) {
-                if (child.nodeType === 1) { // ELEMENT_NODE
-                    var classList = child.classList;
-                    if (classList) {
-                        var matches = names.every(function(name) {
-                            return classList.contains(name);
-                        });
-                        if (matches) {
-                            res.push(child);
+        function performSearch() {
+            var res = [];
+            function walk(node) {
+                var child = node.firstChild;
+                while (child) {
+                    if (child.nodeType === 1) { // ELEMENT_NODE
+                        var classList = child.classList;
+                        if (classList) {
+                            var matches = names.every(function(name) {
+                                return classList.contains(name);
+                            });
+                            if (matches) {
+                                res.push(child);
+                            }
                         }
+                        walk(child);
                     }
+                    child = child.nextSibling;
                 }
-                walk(child);
-                child = child.nextSibling;
             }
+            walk(root);
+            return res;
         }
-        walk(root);
-
-        /* Return a pseudo-live array by defining a 'length' that re-evaluates?
-         * Truly live collections in JS are usually implemented by the engine or
-         * by re-running the selector on every access.
-         */
-        return res;
+        /* Returns a "live" collection object */
+        return {
+            get length() { return performSearch().length; },
+            item: function(idx) { return performSearch()[idx]; },
+            toString: function() { return "[object HTMLCollection]"; }
+        };
     },
     makeDatasetProxy: function(element) {
         return new Proxy({}, {
@@ -223,5 +226,30 @@ var NetSurf = {
             }
         }
         return fragment;
+    },
+    getInnerText: function(root) {
+        var res = "";
+        function walk(node) {
+            if (node.nodeType === 3) { // TEXT_NODE
+                res += node.nodeValue;
+            } else if (node.nodeType === 1) { // ELEMENT_NODE
+                var tag = node.tagName.toLowerCase();
+                if (tag === "script" || tag === "style" || tag === "head") return;
+
+                var isBlock = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr"].indexOf(tag) !== -1;
+
+                var child = node.firstChild;
+                while (child) {
+                    walk(child);
+                    child = child.nextSibling;
+                }
+
+                if (isBlock && !res.endsWith("\n")) {
+                    res += "\n";
+                }
+            }
+        }
+        walk(root);
+        return res.trim();
     }
 };
