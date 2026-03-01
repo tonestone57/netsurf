@@ -588,6 +588,175 @@ getter Document::location()
 	return 1;
 %}
 
+getter Document::firstElementChild()
+%{
+	dom_node *element;
+	dom_exception exc;
+	dom_node_type node_type;
+	dom_node *next_node;
+
+	exc = dom_node_get_first_child(priv->parent.node, &element);
+	if (exc != DOM_NO_ERR) {
+		return 0;
+	}
+
+	while (element != NULL) {
+		exc = dom_node_get_node_type(element, &node_type);
+		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
+			/* found it */
+			break;
+		}
+
+		exc = dom_node_get_next_sibling(element, &next_node);
+		dom_node_unref(element);
+		if (exc == DOM_NO_ERR) {
+			element = next_node;
+		} else {
+			element = NULL;
+		}
+	}
+	if (dukky_push_node(ctx, (dom_node *)element) == false) {
+		dom_node_unref(element);
+		return 0;
+	}
+	dom_node_unref(element);
+	return 1;
+%}
+
+getter Document::lastElementChild()
+%{
+	dom_node *element;
+	dom_exception exc;
+	dom_node_type node_type;
+	dom_node *next_node;
+
+	exc = dom_node_get_last_child(priv->parent.node, &element);
+	if (exc != DOM_NO_ERR) {
+		return 0;
+	}
+
+	while (element != NULL) {
+		exc = dom_node_get_node_type(element, &node_type);
+		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
+			/* found it */
+			break;
+		}
+
+		exc = dom_node_get_previous_sibling(element, &next_node);
+		dom_node_unref(element);
+		if (exc == DOM_NO_ERR) {
+			element = next_node;
+		} else {
+			element = NULL;
+		}
+	}
+	if (dukky_push_node(ctx, (dom_node *)element) == false) {
+		dom_node_unref(element);
+		return 0;
+	}
+	dom_node_unref(element);
+	return 1;
+%}
+
+method Document::prepend()
+%{
+	dom_exception exc;
+	dukky_push_generics(ctx, "mutationHelper");
+	duk_push_array(ctx);
+	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
+		duk_dup(ctx, i);
+		duk_put_prop_index(ctx, -2, i);
+	}
+	duk_push_this(ctx);
+	if (dukky_pcall(ctx, 2, false) != 0) return 0;
+
+	/* result is the node or fragment to prepend */
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *first;
+	exc = dom_node_get_first_child(priv->parent.node, &first);
+	if (exc != DOM_NO_ERR) return 0;
+	dom_node *spare;
+	exc = dom_node_insert_before(priv->parent.node, other->node, first, &spare);
+	if (first) dom_node_unref(first);
+	if (exc != DOM_NO_ERR) return 0;
+	dom_node_unref(spare);
+	return 0;
+%}
+
+method Document::append()
+%{
+	dom_exception exc;
+	dukky_push_generics(ctx, "mutationHelper");
+	duk_push_array(ctx);
+	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
+		duk_dup(ctx, i);
+		duk_put_prop_index(ctx, -2, i);
+	}
+	duk_push_this(ctx);
+	if (dukky_pcall(ctx, 2, false) != 0) return 0;
+
+	/* result is the node or fragment to append */
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *spare;
+	exc = dom_node_append_child(priv->parent.node, other->node, &spare);
+	if (exc != DOM_NO_ERR) return 0;
+	dom_node_unref(spare);
+	return 0;
+%}
+
+getter Document::childElementCount()
+%{
+	dom_node *element;
+	dom_exception exc;
+	dom_node_type node_type;
+	dom_node *next_node;
+	duk_uint_t jsret = 0;
+
+	exc = dom_node_get_first_child(priv->parent.node, &element);
+	if (exc != DOM_NO_ERR) {
+		return 0;
+	}
+
+	while (element != NULL) {
+		exc = dom_node_get_node_type(element, &node_type);
+		if ((exc == DOM_NO_ERR) && (node_type == DOM_ELEMENT_NODE)) {
+			jsret += 1;
+		}
+
+		exc = dom_node_get_next_sibling(element, &next_node);
+		dom_node_unref(element);
+		if (exc == DOM_NO_ERR) {
+			element = next_node;
+		} else {
+			element = NULL;
+		}
+	}
+	duk_push_uint(ctx, jsret);
+	return 1;
+%}
+
+getter Document::children()
+%{
+	dukky_push_generics(ctx, "getChildren");
+	duk_push_this(ctx);
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	/* Wrap result array in a proxy to make it look like a NodeList/HTMLCollection */
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_insert(ctx, -2);
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
 
 method Document::getElementById()
 %{
@@ -602,7 +771,7 @@ method Document::getElementById()
 		return 0;
 	}
 
-	exc = dom_document_get_element_by_id(((node_private_t *)priv)->node,
+	exc = dom_document_get_element_by_id(priv->parent.node,
 					     elementId_dom, &element);
 	dom_string_unref(elementId_dom);
 	if (exc != DOM_NO_ERR) {
@@ -623,7 +792,7 @@ getter Document::documentElement()
 	dom_exception exc;
 	dom_element *element;
 
-	exc = dom_document_get_document_element(((node_private_t *)priv)->node,
+	exc = dom_document_get_document_element(priv->parent.node,
 						&element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
@@ -652,7 +821,7 @@ method Document::getElementsByTagName()
 
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
-	err = dom_document_get_elements_by_tag_name(((node_private_t *)priv)->node,
+	err = dom_document_get_elements_by_tag_name(priv->parent.node,
 						    tag, &nodes);
 	dom_string_unref(tag);
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
@@ -672,6 +841,24 @@ method Document::getElementsByTagName()
 
 	return 1; /* The Proxy(NodeList) wrapper */
 %}
+
+method Document::getElementsByClassName()
+%{
+	dukky_push_generics(ctx, "getElementsByClassName");
+	duk_push_this(ctx);
+	duk_dup(ctx, 0);
+	if (dukky_pcall(ctx, 2, false) != 0) {
+		return 0;
+	}
+	/* Wrap result array in a proxy to make it look like a NodeList */
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_insert(ctx, -2);
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
 
 getter Document::cookie()
 %{

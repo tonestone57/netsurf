@@ -1,0 +1,18 @@
+<html>
+<head>
+<title>innerHTML Getter Test</title>
+</head>
+<body>
+<div id="test"><span>Hello</span> World<!-- comment --></div>
+<script type="text/javascript">
+  var div = document.getElementById("test");
+  var html = div.innerHTML;
+  console.log("innerHTML: " + html);
+  if (html === "<span>Hello</span> World<!-- comment -->") {
+    console.log("PASS");
+  } else {
+    console.log("FAIL: got '" + html + "'");
+  }
+</script>
+</body>
+</html>
