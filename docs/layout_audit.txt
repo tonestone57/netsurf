@@ -2,16 +2,11 @@ content/handlers/html/box_normalise.c:96:	/* TODO: Need to ignore cells spanning
 content/handlers/html/box_construct.c:421:		/* TODO: we get a url out of libcss as a lwc string, but
 content/handlers/html/box_construct.c:693:		/* TODO: we get a url out of libcss as a lwc string, but
 content/handlers/html/box_construct.c:1119:		/* TODO: Handle tabs properly */
-content/handlers/html/layout_internal.h:611:				/* TODO: handle percentage */
-content/handlers/html/layout_internal.h:633:				/* TODO: handle percentage */
 content/handlers/html/html.c:1542:	/* TODO: invert order; visit deepest box first */
 content/handlers/html/html.c:1797:		/* TODO: Sniff for text? */
 content/handlers/html/css.c:440:	/* TODO: only the first preferred stylesheets (ie.
 content/handlers/html/css.c:677:		/* TODO: We should probably pass the sheet in anyway, and let
 content/handlers/html/css.c:695:			/* TODO: Pass the sheet's full media query, instead of
-content/handlers/html/layout.c:309:		/** TODO: Handle colspan="0" correctly.
-content/handlers/html/layout.c:735:			/* TODO: handle percentage widths properly */
-content/handlers/html/layout.c:2941:			/* TODO: should we look at the content dimensions? */
 content/handlers/html/box_special.c:717:			 * TODO: really? */
 content/handlers/html/box_special.c:1043:		 * TODO: handle hidden iframes at browser_window generation
 content/handlers/html/object.c:111:		/* TODO: Any other box types need mapping? */
