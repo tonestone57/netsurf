@@ -4,6 +4,16 @@
 #include <quickjs.h>
 #include <dom/dom.h>
 
+/**
+ * qjsky javascript heap
+ */
+typedef struct jsheap jsheap;
+
+/**
+ * qjsky javascript thread
+ */
+typedef struct jsthread jsthread;
+
 /* Map a libdom node to a QuickJS object */
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
 
