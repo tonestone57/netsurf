@@ -4,18 +4,21 @@
 #include <quickjs.h>
 
 /*
- * This header is a placeholder for a compatibility layer.
- * Note: A direct 1-to-1 mapping from Duktape to QuickJS is not feasible
- * due to fundamentally different memory management (Value Stack vs Ref Counting).
+ * This header is a placeholder for a future compatibility or abstraction layer.
  *
- * This file should eventually contain an abstraction layer (NSJS) that both
- * engines can implement.
+ * NOTE: A direct 1-to-1 macro mapping from Duktape to QuickJS is not possible
+ * for most APIs because Duktape is stack-based and QuickJS uses
+ * reference-counted JSValue handles.
+ *
+ * The long-term migration strategy involves:
+ * 1. Implementing a QuickJS backend for nsgenbind.
+ * 2. Introducing a engine-neutral "NSJS" API for NetSurf.
  */
 
 typedef JSContext duk_context;
-typedef JSValue duk_ret_t; /* QuickJS functions return JSValue */
+typedef JSValue duk_ret_t;
 
-/* The following are stubs to satisfy structural requirements during analysis */
+/* Stub to allow structural compilation of generated headers */
 #define DUK_RET_TYPE_ERROR JS_EXCEPTION
 
 #endif
