@@ -23,7 +23,6 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
 /* Retrieve a libdom node from a QuickJS object */
 struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val);
 
-#endif
 /* Initialise Console API */
 void qjsky_init_console(JSContext *ctx);
 /* Initialise Window aliases (self, window, top) */
@@ -50,3 +49,5 @@ void qjsky_init_timers(JSContext *ctx);
 void qjsky_setup_event_target_prototype(JSContext *ctx, JSValue proto);
 /* Setup Element Attribute accessors */
 void qjsky_setup_element_attr_prototype(JSContext *ctx, JSValue proto);
+
+#endif
