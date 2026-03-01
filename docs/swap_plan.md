@@ -24,8 +24,22 @@ A new backend must be added to the `nsgenbind` tool.
 - Conditional inclusion in `content/handlers/javascript/Makefile`.
 - QuickJS Makefile template created.
 
-## 5. Next Steps for Full Implementation
-1. Install `bison`, `flex`, and `gperf` in the build environment to enable full library compilation.
-2. Complete the `nsgenbind` QuickJS backend implementation.
-3. Gradually migrate `.bnd` files to use the compatibility layer or a new generic JS API.
-4. Port all NetSurf "Dukky" features (Event mapping, Window timers, Console integration) to the QuickJS handler.
+## 5. Next Steps for Full Implementation (12-Task Roadmap)
+
+### Phase 1: nsgenbind Backend Completion
+1.  **Refine Backend Structure**: Finalize the code generation framework in `qjs-libdom.c` for headers and common binding code.
+2.  **Interface Generation**: Implement logic to generate QuickJS `JSClassDef` and `JS_NewClass` calls for each WebIDL interface.
+3.  **Method Wrapping**: Implement generation of `JSCFunction` wrappers that map QuickJS `argv` to C parameters.
+4.  **Attribute Accessors**: Implement generation of getter/setter functions for WebIDL attributes.
+5.  **Constant Export**: Add logic to export WebIDL-defined constants to QuickJS prototypes.
+
+### Phase 2: NetSurf QuickJS Handler (Qjsky)
+6.  **DOM Node Memoization**: Implement a robust mapping between `dom_node*` pointers and `JSValue` objects in `qjsky.c`.
+7.  **Event Target Support**: Port the event listener registration and dispatch logic to QuickJS.
+8.  **Window Timer API**: Implement `setTimeout`/`setInterval` using NetSurf's scheduler with QuickJS callback handles.
+9.  **Console Integration**: Implement the `Console` IDL by routing JS calls to NetSurf's `NSLOG` system.
+
+### Phase 3: Migration and Testing
+10. **Engine Abstraction Layer**: Introduce engine-neutral macros in `duktape_compat.h` (to be renamed to `nsjs.h`) to decouple `.bnd` files.
+11. **Refcount Integration**: Finalize the garbage collection bridge between QuickJS reference counting and libdom refcounting.
+12. **Integration Testing**: Execute end-to-end JavaScript tests using the `monkey` frontend and verify against existing benchmarks.

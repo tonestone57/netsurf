@@ -9,6 +9,7 @@
 #include "utils/log.h"
 #include "content/content.h"
 #include "javascript/js.h"
+#include "content/handlers/javascript/quickjs/qjsky.h"
 
 struct jsheap {
 	JSRuntime *rt;
@@ -44,6 +45,9 @@ nserror js_newheap(int timeout, jsheap **heap)
 
 	/* Set memory limit for the runtime to prevent OOM */
 	JS_SetMemoryLimit(h->rt, 64 * 1024 * 1024);
+
+	/* Initialize NetSurf-specific classes for this runtime */
+	qjsky_init_runtime(h->rt);
 
 	*heap = h;
 	return NSERROR_OK;

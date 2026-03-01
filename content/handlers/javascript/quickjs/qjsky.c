@@ -18,13 +18,16 @@ static JSClassDef qjsky_node_class = {
 	.finalizer = qjsky_node_finalizer,
 };
 
-JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
+void qjsky_init_runtime(JSRuntime *rt)
 {
 	if (qjsky_node_class_id == 0) {
 		JS_NewClassID(&qjsky_node_class_id);
-		JS_NewClass(JS_GetRuntime(ctx), qjsky_node_class_id, &qjsky_node_class);
 	}
+	JS_NewClass(rt, qjsky_node_class_id, &qjsky_node_class);
+}
 
+JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
+{
 	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
 	if (JS_IsException(obj)) return obj;
 
