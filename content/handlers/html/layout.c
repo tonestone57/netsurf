@@ -124,18 +124,6 @@ find_sides(struct box *fl,
 	   struct box **right);
 
 /**
- * Compute the size of an iframe with auto dimensions.
- *
- * \param  box         Box with iframe
- * \param  width       Width value in px or AUTO.  If AUTO, updated to value in px.
- * \param  height      Height value in px or AUTO. If AUTO, updated to value in px.
- * \param  min_width   Box's min width.
- * \param  max_width   Box's max width.
- * \param  min_height  Box's min height.
- * \param  max_height  Box's max height.
- */
-
-/**
  * Apply vertical margin if necessary.
  *
  * \param  box             box to apply margin to
@@ -374,6 +362,17 @@ static void layout_block_context_bfc_margins(
 }
 
 
+/**
+ * Compute the size of an iframe with auto dimensions.
+ *
+ * \param  box         Box with iframe
+ * \param  width       Width value in px or AUTO.  If AUTO, updated to value in px.
+ * \param  height      Height value in px or AUTO. If AUTO, updated to value in px.
+ * \param  min_width   Box's min width.
+ * \param  max_width   Box's max width.
+ * \param  min_height  Box's min height.
+ * \param  max_height  Box's max height.
+ */
 static void
 layout_get_iframe_dimensions(struct box *box,
 			     int *width, int *height,
