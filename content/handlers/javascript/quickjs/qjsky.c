@@ -1,10 +1,14 @@
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "utils/log.h"
 #include "utils/corestrings.h"
 
 static JSClassID qjsky_node_class_id = 0;
+
+/* Registry for node memoization (dom_node -> JS Object) */
+#define QJSKY_NODE_MAP "__qjsky_node_map"
 
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -27,15 +31,58 @@ void qjsky_init_runtime(JSRuntime *rt)
 	JS_NewClass(rt, qjsky_node_class_id, &qjsky_node_class);
 }
 
+void qjsky_init_context(JSContext *ctx)
+{
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue map = JS_NewMap(ctx);
+	JS_SetPropertyStr(ctx, global, QJSKY_NODE_MAP, map);
+	JS_FreeValue(ctx, global);
+}
+
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 {
-    /* Task 2: Node Memoization (Conceptual implementation) */
-    /* In practice, we'd store a Map in the context opaque and use it here */
+	if (!node) return JS_NULL;
+
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue map = JS_GetPropertyStr(ctx, global, QJSKY_NODE_MAP);
+
+	/* Key for the map: use the pointer value as a float64 (safe up to 2^53) or bigint */
+	JSValue key = JS_NewFloat64(ctx, (double)(uintptr_t)node);
+
+	/* Call map.get(key) */
+	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
+	JSValue existing = JS_Call(ctx, get_fn, map, 1, &key);
+	JS_FreeValue(ctx, get_fn);
+
+	if (!JS_IsUndefined(existing) && !JS_IsNull(existing)) {
+		JS_FreeValue(ctx, key);
+		JS_FreeValue(ctx, map);
+		JS_FreeValue(ctx, global);
+		return existing;
+	}
+	JS_FreeValue(ctx, existing);
+
 	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
-	if (JS_IsException(obj)) return obj;
+	if (JS_IsException(obj)) {
+		JS_FreeValue(ctx, key);
+		JS_FreeValue(ctx, map);
+		JS_FreeValue(ctx, global);
+		return obj;
+	}
 
 	JS_SetOpaque(obj, node);
 	dom_node_ref(node);
+
+	/* Call map.set(key, obj) */
+	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
+	JSValue argv[2] = { key, JS_DupValue(ctx, obj) };
+	JSValue set_ret = JS_Call(ctx, set_fn, map, 2, argv);
+	JS_FreeValue(ctx, set_fn);
+	JS_FreeValue(ctx, set_ret);
+	JS_FreeValue(ctx, key);
+
+	JS_FreeValue(ctx, map);
+	JS_FreeValue(ctx, global);
 
 	return obj;
 }
@@ -45,7 +92,7 @@ struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val)
 	return JS_GetOpaque(val, qjsky_node_class_id);
 }
 
-/* Task 1: String Conversion Helpers */
+/* String Conversion Helpers */
 
 dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val)
 {

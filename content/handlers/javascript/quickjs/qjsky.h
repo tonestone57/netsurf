@@ -17,8 +17,8 @@ typedef struct jsthread jsthread;
 /* Initialise a QuickJS runtime for NetSurf support */
 void qjsky_init_runtime(JSRuntime *rt);
 
-/* Initialise the console object in a context */
-void qjsky_init_console(JSContext *ctx);
+/* Initialise a QuickJS context for NetSurf support */
+void qjsky_init_context(JSContext *ctx);
 
 /* Map a libdom node to a QuickJS object */
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);

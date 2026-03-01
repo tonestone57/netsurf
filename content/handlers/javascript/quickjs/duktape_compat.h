@@ -4,15 +4,17 @@
 #include <quickjs.h>
 
 /*
- * Engine-Neutral Abstraction Stubs
+ * Engine-Neutral Abstraction Placeholder
  *
- * This header acts as a placeholder for engine-agnostic macros to be used
- * during the migration from Duktape to QuickJS.
+ * This header is a placeholder for a future engine-agnostic API.
  *
  * NOTE: Direct mapping of stack-based Duktape APIs to reference-counted
- * QuickJS APIs via macros is not feasible. The long-term solution involves
- * using a dedicated QuickJS backend for the nsgenbind tool to generate
- * correct C wrappers.
+ * QuickJS APIs via macros is not supported as it leads to memory management
+ * errors and scope issues (e.g. argc/argv dependencies).
+ *
+ * The migration strategy is:
+ * 1. Implement a QuickJS backend for nsgenbind to generate native QJS wrappers.
+ * 2. Refactor hand-written .bnd fragments to use an engine-neutral "NSJS" API.
  */
 
 typedef JSContext duk_context;
