@@ -7,6 +7,7 @@ content/handlers/html/html.c:1797:		/* TODO: Sniff for text? */
 content/handlers/html/css.c:440:	/* TODO: only the first preferred stylesheets (ie.
 content/handlers/html/css.c:677:		/* TODO: We should probably pass the sheet in anyway, and let
 content/handlers/html/css.c:695:			/* TODO: Pass the sheet's full media query, instead of
+content/handlers/html/layout.c:309:		/** TODO: Handle colspan="0" correctly.
 content/handlers/html/box_special.c:717:			 * TODO: really? */
 content/handlers/html/box_special.c:1043:		 * TODO: handle hidden iframes at browser_window generation
 content/handlers/html/object.c:111:		/* TODO: Any other box types need mapping? */

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "utils/log.h"
+#include "utils/utils.h"
+#include "nsutils/time.h"
 
 static JSClassID qjsky_node_class_id = 0;
 
@@ -29,6 +31,9 @@ void qjsky_init_runtime(JSRuntime *rt)
 
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 {
+	/* TODO: Implement proper prototype resolution based on node type.
+	 * Currently creating objects with JS_NULL prototype.
+	 */
 	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
 	if (JS_IsException(obj)) return obj;
 
