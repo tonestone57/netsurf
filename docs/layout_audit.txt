@@ -1,0 +1,43 @@
+content/handlers/html/box_normalise.c:96:	/* TODO: Need to ignore cells spanning from above that belong to
+content/handlers/html/box_construct.c:421:		/* TODO: we get a url out of libcss as a lwc string, but
+content/handlers/html/box_construct.c:693:		/* TODO: we get a url out of libcss as a lwc string, but
+content/handlers/html/box_construct.c:1119:		/* TODO: Handle tabs properly */
+content/handlers/html/html.c:1542:	/* TODO: invert order; visit deepest box first */
+content/handlers/html/html.c:1797:		/* TODO: Sniff for text? */
+content/handlers/html/css.c:440:	/* TODO: only the first preferred stylesheets (ie.
+content/handlers/html/css.c:677:		/* TODO: We should probably pass the sheet in anyway, and let
+content/handlers/html/css.c:695:			/* TODO: Pass the sheet's full media query, instead of
+content/handlers/html/layout.c:309:		/** TODO: Handle colspan="0" correctly.
+content/handlers/html/box_special.c:717:			 * TODO: really? */
+content/handlers/html/box_special.c:1043:		 * TODO: handle hidden iframes at browser_window generation
+content/handlers/html/object.c:111:		/* TODO: Any other box types need mapping? */
+content/handlers/html/object.c:179:			/* TODO: avoid knowledge of box internals here */
+content/handlers/html/interaction.c:536:	/* TODO: Set appropriate statusbar message */
+Summary of work performed (25 tasks):
+1. CI: Fixed CodeQL analysis by adding security-events: write permission.
+2. docs: Updated QuickJS roadmap to include 25 implementation tasks.
+3. docs: Conducted full audit of layout technical debt.
+4. content/quickjs: Implemented Phase 1 skeleton for QuickJS handler.
+5. content/quickjs: Created DOM node mapping layer with lifecycle management (qjsky).
+6. content/quickjs: Integrated console log/warn/error mapping to NSLOG (Task 9).
+7. content/quickjs: Implemented Window aliases (self, window, top) (Task 15).
+8. content/quickjs: Implemented performance.now() high-res timer (Task 19).
+9. content/quickjs: Added Navigator API stub with userAgent and platform (Task 18).
+10. content/quickjs: Implemented Node.textContent property (Task 22).
+11. content/quickjs: Added Location API stub (Task 17).
+12. content/quickjs: Added History API stub (Task 16).
+13. content/quickjs: Implemented Phase 1 XMLHttpRequest constructor and methods (Task 13).
+14. content/quickjs: Added Document.cookie property placeholder (Task 14).
+15. content/quickjs: Added Element.innerHTML property skeleton (Task 23).
+16. content/quickjs: Integrated Window Timer API (setTimeout/setInterval) (Task 8).
+17. content/quickjs: Integrated Event Target listener API (addEventListener) (Task 7).
+18. content/quickjs: Added Element attribute node access (getAttributeNode) (Task 21).
+19. layout: Fixed percentage resolution for max-height/min-height properties.
+20. layout: Applied box-sizing adjustments to min-height/max-height.
+21. layout: Enhanced table colspan="0" support for spanning remaining columns.
+22. layout: Improved IFRAME dimension resolution for percentage widths/heights.
+23. layout: Refactored height resolution logic to shared block in layout_internal.h.
+24. cleanup: Removed outdated technical debt markers for implemented features.
+25. docs: Migrated audit results to docs/layout_audit.txt.
+
+Note on layout_handle_box_sizing: The 'vertical' parameter (setwidth=false) is correctly used for height properties as it selects the TOP/BOTTOM MBP values.

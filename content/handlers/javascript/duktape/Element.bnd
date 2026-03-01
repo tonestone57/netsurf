@@ -419,6 +419,83 @@ getter Element::childElementCount()
 	return 1;
 %}
 
+getter Element::tagName()
+%{
+	dom_exception exc;
+	dom_string *str = NULL;
+	exc = dom_node_get_node_name(((node_private_t *)priv)->node, &str);
+	if (exc != DOM_NO_ERR) return 0;
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+method Element::hasAttributes()
+%{
+	dom_exception exc;
+	dom_namednodemap *map = NULL;
+	uint32_t len = 0;
+
+	exc = dom_node_get_attributes(((node_private_t *)priv)->node, &map);
+	if (exc != DOM_NO_ERR || map == NULL) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+
+	exc = dom_namednodemap_get_length(map, &len);
+	dom_namednodemap_unref(map);
+
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+
+	duk_push_boolean(ctx, len > 0);
+	return 1;
+%}
+
+getter Element::localName()
+%{
+	dom_exception exc;
+	dom_string *str = NULL;
+	exc = dom_node_get_local_name(((node_private_t *)priv)->node, &str);
+	if (exc != DOM_NO_ERR || str == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+getter Element::prefix()
+%{
+	dom_exception exc;
+	dom_string *str = NULL;
+	exc = dom_node_get_prefix(((node_private_t *)priv)->node, &str);
+	if (exc != DOM_NO_ERR || str == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+getter Element::namespaceURI()
+%{
+	dom_exception exc;
+	dom_string *str = NULL;
+	exc = dom_node_get_namespace(((node_private_t *)priv)->node, &str);
+	if (exc != DOM_NO_ERR || str == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
 method Element::getElementsByTagName ()
 %{
 	dom_nodelist *nlist = NULL;

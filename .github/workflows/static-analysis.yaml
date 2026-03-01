@@ -1,9 +1,13 @@
 name: "Static Analysis"
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   codeql:
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
     name: codeql
     permissions:
       security-events: write

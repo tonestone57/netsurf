@@ -30,7 +30,7 @@ getter HTMLCollection::length()
 
 	err = dom_html_collection_get_length(priv->coll, &len);
 
-	if (err != DOM_NO_ERR) return 0;
+	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
 	duk_push_uint(ctx, (duk_uint_t)len);
 

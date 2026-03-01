@@ -16,14 +16,98 @@ prologue HTMLElement()
 
 init HTMLElement(struct dom_html_element *html_element::element);
 
-getter HTMLElement::dir();
-setter HTMLElement::dir();
+getter HTMLElement::dir()
+%{
+	dom_exception err;
+	dom_string *str;
 
-getter HTMLElement::lang();
-setter HTMLElement::lang();
+	err = dom_html_element_get_dir((dom_html_element *)priv->parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
-getter HTMLElement::title();
-setter HTMLElement::title();
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLElement::dir()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_element_set_dir((dom_html_element *)priv->parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLElement::lang()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_element_get_lang((dom_html_element *)priv->parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLElement::lang()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_element_set_lang((dom_html_element *)priv->parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
+
+getter HTMLElement::title()
+%{
+	dom_exception err;
+	dom_string *str;
+
+	err = dom_html_element_get_title((dom_html_element *)priv->parent.parent.node, &str);
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
+
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	dom_string_unref(str);
+	return 1;
+%}
+
+setter HTMLElement::title()
+%{
+	dom_exception err;
+	dom_string *str;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_element_set_title((dom_html_element *)priv->parent.parent.node, str);
+	dom_string_unref(str);
+	return 0;
+%}
 
 getter HTMLElement::onchange();
 setter HTMLElement::onchange();
