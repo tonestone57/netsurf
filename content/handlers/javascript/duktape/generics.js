@@ -152,5 +152,71 @@ var NetSurf = {
         }
         walk(root);
         return result;
+    },
+    makeDatasetProxy: function(element) {
+        return new Proxy({}, {
+            get: function(target, name) {
+                var attrName = "data-" + name.replace(/([A-Z])/g, "-$1").toLowerCase();
+                return element.getAttribute(attrName);
+            },
+            set: function(target, name, value) {
+                var attrName = "data-" + name.replace(/([A-Z])/g, "-$1").toLowerCase();
+                element.setAttribute(attrName, value);
+                return true;
+            },
+            deleteProperty: function(target, name) {
+                var attrName = "data-" + name.replace(/([A-Z])/g, "-$1").toLowerCase();
+                element.removeAttribute(attrName);
+                return true;
+            },
+            ownKeys: function(target) {
+                var keys = [];
+                var attrs = element.attributes;
+                for (var i = 0; i < attrs.length; i++) {
+                    var name = attrs[i].name;
+                    if (name.startsWith("data-")) {
+                        var camel = name.slice(5).replace(/-([a-z])/g, function(g) { return g[1].toUpperCase(); });
+                        keys.push(camel);
+                    }
+                }
+                return keys;
+            },
+            getOwnPropertyDescriptor: function(target, name) {
+                var value = this.get(target, name);
+                if (value !== null) {
+                    return { value: value, enumerable: true, configurable: true, writable: true };
+                }
+            }
+        });
+    },
+    getChildren: function(root) {
+        var result = [];
+        var child = root.firstChild;
+        while (child) {
+            if (child.nodeType === 1) { // ELEMENT_NODE
+                result.push(child);
+            }
+            child = child.nextSibling;
+        }
+        return result;
+    },
+    mutationHelper: function(args, ownerDocument) {
+        if (args.length === 1) {
+            var arg = args[0];
+            if (typeof arg === 'string') {
+                return ownerDocument.createTextNode(arg);
+            }
+            return arg;
+        }
+        var fragment = ownerDocument.createDocumentFragment();
+        for (var i = 0; i < args.length; i++) {
+            var arg = args[i];
+            if (typeof arg === 'string') {
+                fragment.appendChild(ownerDocument.createTextNode(arg));
+            } else {
+                fragment.appendChild(arg);
+            }
+        }
+        return fragment;
     }
 };

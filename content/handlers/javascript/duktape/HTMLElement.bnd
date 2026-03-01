@@ -152,6 +152,23 @@ setter HTMLElement::onwaiting();
 getter HTMLElement::onwheel();
 setter HTMLElement::onwheel();
 
+getter HTMLElement::dataset()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(dataset));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		dukky_push_generics(ctx, "makeDatasetProxy");
+		duk_push_this(ctx);
+		if (dukky_pcall(ctx, 1, false) != 0) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(dataset));
+	}
+	return 1;
+%}
+
 getter HTMLElement::innerText()
 %{
 	dom_exception exc;
