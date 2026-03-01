@@ -648,7 +648,7 @@ static inline void layout_find_dimensions(
 
 		if (*max_height != -1) {
 			layout_handle_box_sizing(unit_len_ctx, box,
-					available_width, false, max_height);
+					available_width, true, max_height);
 		}
 	}
 
@@ -699,7 +699,7 @@ static inline void layout_find_dimensions(
 
 		if (*min_height != 0) {
 			layout_handle_box_sizing(unit_len_ctx, box,
-					available_width, false, min_height);
+					available_width, true, min_height);
 		}
 	}
 

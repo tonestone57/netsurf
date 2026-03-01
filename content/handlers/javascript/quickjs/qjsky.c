@@ -3,7 +3,7 @@
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "utils/log.h"
 #include "utils/utils.h"
-#include "nsutils/time.h"
+#include <nsutils/time.h>
 
 static JSClassID qjsky_node_class_id = 0;
 
@@ -31,10 +31,14 @@ void qjsky_init_runtime(JSRuntime *rt)
 
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 {
-	/* TODO: Implement proper prototype resolution based on node type.
-	 * Currently creating objects with JS_NULL prototype.
+	/* TODO: Implement proper prototype resolution based on node type
+	 * (e.g., using a map of node types to prototypes).
+	 * For now, using the base Node class prototype if available.
 	 */
-	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
+	JSValue proto = JS_GetClassProto(ctx, qjsky_node_class_id);
+	JSValue obj = JS_NewObjectProtoClass(ctx, proto, qjsky_node_class_id);
+	JS_FreeValue(ctx, proto);
+
 	if (JS_IsException(obj)) return obj;
 
 	JS_SetOpaque(obj, node);
@@ -52,13 +56,29 @@ struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val)
 static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val,
                                  int argc, JSValueConst *argv)
 {
+    if (argc == 0) {
+        NSLOG(netsurf, INFO, "JS:");
+        return JS_UNDEFINED;
+    }
+
+    /* Estimate buffer size: 1024 should be plenty for typical log lines */
+    char buf[1024];
+    size_t pos = 0;
+
     for (int i = 0; i < argc; i++) {
         const char *str = JS_ToCString(ctx, argv[i]);
         if (str) {
-            NSLOG(netsurf, INFO, "JS: %s", str);
+            size_t len = strlen(str);
+            if (pos + len + 1 < sizeof(buf)) {
+                if (i > 0) buf[pos++] = ' ';
+                memcpy(buf + pos, str, len);
+                pos += len;
+                buf[pos] = '\0';
+            }
             JS_FreeCString(ctx, str);
         }
     }
+    NSLOG(netsurf, INFO, "JS: %s", buf);
     return JS_UNDEFINED;
 }
 
