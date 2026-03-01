@@ -553,9 +553,9 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 	if (s != NULL) {
 		const char *val = dom_string_data(s);
 
-		/* Convert to a number, clamping to [1,1000] according to 4.9.11 */
+		/* Convert to a number, clamping to [0,1000] according to 4.9.11 */
 		if ('0' <= val[0] && val[0] <= '9')
-			box->columns = clamp(strtol(val, NULL, 10), 1, 1000);
+			box->columns = clamp(strtol(val, NULL, 10), 0, 1000);
 
 		dom_string_unref(s);
 	}
