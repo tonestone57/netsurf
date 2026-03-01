@@ -131,6 +131,13 @@ var NetSurf = {
     },
     getElementsByClassName: function(root, classNames) {
         var names = classNames.split(/\s+/).filter(Boolean);
+        if (names.length === 0) {
+            return {
+                length: 0,
+                item: function() { return null; },
+                toString: function() { return "[object HTMLCollection]"; }
+            };
+        }
         function performSearch() {
             var res = [];
             function walk(node) {
@@ -236,7 +243,17 @@ var NetSurf = {
                 var tag = node.tagName.toLowerCase();
                 if (tag === "script" || tag === "style" || tag === "head") return;
 
-                var isBlock = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr"].indexOf(tag) !== -1;
+                if (tag === "br") {
+                    res += "\n";
+                    return;
+                }
+
+                var isBlock = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"].indexOf(tag) !== -1;
+
+                /* Block start: add newline if needed */
+                if (isBlock && res.length > 0 && !res.endsWith("\n")) {
+                    res += "\n";
+                }
 
                 var child = node.firstChild;
                 while (child) {
@@ -244,6 +261,7 @@ var NetSurf = {
                     child = child.nextSibling;
                 }
 
+                /* Block end: add newline if needed */
                 if (isBlock && !res.endsWith("\n")) {
                     res += "\n";
                 }
