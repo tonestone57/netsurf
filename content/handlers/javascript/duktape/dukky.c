@@ -1516,13 +1516,13 @@ void js_handle_new_element(jsthread *thread, struct dom_element *node)
 			 */
 			goto skip_register;
 		}
-		if (dom_string_length(key) > 2) {
+		if (dom_string_byte_length(key) > 2) {
 			/* Can be on* */
 			const uint8_t *data = (const uint8_t *)dom_string_data(key);
 			if (data[0] == 'o' && data[1] == 'n') {
 				dom_string *sub = NULL;
 				exc = dom_string_substr(
-					key, 2, dom_string_length(key),
+					key, 2, dom_string_byte_length(key),
 					&sub);
 				if (exc == DOM_NO_ERR) {
 					dukky_register_event_listener_for(

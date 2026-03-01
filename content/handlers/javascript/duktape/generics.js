@@ -20,7 +20,10 @@ var NetSurf = {
 	    },
 	    get: function(target, key) {
 		if (typeof key == 'number') {
-		    return target.item(key);
+		    if (typeof target.item === 'function') {
+			return target.item(key);
+		    }
+		    return target[key];
 		} else {
 		    return target[key];
 		}
@@ -125,5 +128,29 @@ var NetSurf = {
 	}
 
 	return Formatter.apply(result);
+    },
+    getElementsByClassName: function(root, classNames) {
+        var names = classNames.split(/\s+/).filter(Boolean);
+        var result = [];
+        function walk(node) {
+            var child = node.firstChild;
+            while (child) {
+                if (child.nodeType === 1) { // ELEMENT_NODE
+                    var classList = child.classList;
+                    if (classList) {
+                        var matches = names.every(function(name) {
+                            return classList.contains(name);
+                        });
+                        if (matches) {
+                            result.push(child);
+                        }
+                    }
+                }
+                walk(child);
+                child = child.nextSibling;
+            }
+        }
+        walk(root);
+        return result;
     }
 };

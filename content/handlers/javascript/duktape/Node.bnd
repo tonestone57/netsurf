@@ -236,7 +236,7 @@ getter Node::textContent()
 	}
 
 	if (content != NULL) {
-		duk_push_lstring(ctx, dom_string_data(content), dom_string_length(content));
+		duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
 		dom_string_unref(content);
 		return 1;
 	}
