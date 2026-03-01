@@ -472,6 +472,9 @@ static inline void layout_find_dimensions(
 	if ((box->flags & DIM_CACHED) &&
 	    box->cached_style == style &&
 	    box->cached_font_size == font_size &&
+	    box->cached_viewport_width == unit_len_ctx->viewport_width &&
+	    box->cached_viewport_height_css == unit_len_ctx->viewport_height &&
+	    box->cached_device_dpi == unit_len_ctx->device_dpi &&
 	    box->cached_available_width == available_width &&
 	    ((viewport_height < 0 && !(box->flags & DIM_VIEWPORT_SET)) ||
 	     (box->cached_viewport_height == viewport_height))) {
@@ -530,18 +533,17 @@ static inline void layout_find_dimensions(
 				if (unit == CSS_UNIT_PCT) {
 					enum css_height_e cbhtype;
 
-					if (css_computed_position(box->style) ==
+					if (css_computed_position(style) ==
 							CSS_POSITION_ABSOLUTE &&
 							box->parent) {
 						/* Box is absolutely positioned */
-						assert(box->float_container);
 						containing_block = box->float_container;
 					} else if (box->float_container &&
-						css_computed_position(box->style) !=
+						css_computed_position(style) !=
 							CSS_POSITION_ABSOLUTE &&
-						(css_computed_float(box->style) ==
+						(css_computed_float(style) ==
 							CSS_FLOAT_LEFT ||
-						 css_computed_float(box->style) ==
+						 css_computed_float(style) ==
 							CSS_FLOAT_RIGHT)) {
 						/* Box is a float */
 						assert(box->parent &&
@@ -786,6 +788,9 @@ static inline void layout_find_dimensions(
 		box->flags |= DIM_CACHED;
 		box->cached_style = style;
 		box->cached_font_size = font_size;
+		box->cached_viewport_width = unit_len_ctx->viewport_width;
+		box->cached_viewport_height_css = unit_len_ctx->viewport_height;
+		box->cached_device_dpi = unit_len_ctx->device_dpi;
 		box->cached_available_width = available_width;
 		if (viewport_height >= 0) {
 			box->flags |= DIM_VIEWPORT_SET;

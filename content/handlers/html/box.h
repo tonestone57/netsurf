@@ -458,6 +458,9 @@ struct box {
 	 */
 	const css_computed_style *cached_style;
 	css_fixed cached_font_size;
+	css_fixed cached_viewport_width;
+	css_fixed cached_viewport_height_css;
+	css_fixed cached_device_dpi;
 	int cached_available_width;
 	int cached_viewport_height;
 	int cached_width;
