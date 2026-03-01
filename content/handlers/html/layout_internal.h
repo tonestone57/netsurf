@@ -397,26 +397,27 @@ static inline void calculate_mbp_width(
 static inline void layout_handle_box_sizing(
 		const css_unit_ctx *unit_len_ctx,
 		const struct box *box,
+		const css_computed_style *style,
 		int available_width,
 		bool setwidth,
 		int *dimension)
 {
 	enum css_box_sizing_e bs;
 
-	if (box == NULL || box->style == NULL)
+	if (style == NULL)
 		return;
 
-	bs = css_computed_box_sizing(box->style);
+	bs = css_computed_box_sizing(style);
 
 	if (bs == CSS_BOX_SIZING_BORDER_BOX) {
 		int orig = *dimension;
 		int fixed = 0;
 		float frac = 0;
 
-		calculate_mbp_width(unit_len_ctx, box->style,
+		calculate_mbp_width(unit_len_ctx, style,
 				setwidth ? LEFT : TOP,
 				false, true, true, &fixed, &frac);
-		calculate_mbp_width(unit_len_ctx, box->style,
+		calculate_mbp_width(unit_len_ctx, style,
 				setwidth ? RIGHT : BOTTOM,
 				false, true, true, &fixed, &frac);
 		orig -= frac * available_width + fixed;
@@ -515,7 +516,7 @@ static inline void layout_find_dimensions(
 
 		if (css_computed_width_px(style, unit_len_ctx,
 				available_width, &l_width) == CSS_WIDTH_SET) {
-			layout_handle_box_sizing(unit_len_ctx, box,
+			layout_handle_box_sizing(unit_len_ctx, box, style,
 					available_width, true, &l_width);
 		} else {
 			l_width = AUTO;
@@ -604,7 +605,7 @@ static inline void layout_find_dimensions(
 			}
 
 			if (l_height != AUTO) {
-				layout_handle_box_sizing(unit_len_ctx, box,
+				layout_handle_box_sizing(unit_len_ctx, box, style,
 						available_width, false, &l_height);
 			}
 		}
@@ -631,7 +632,7 @@ static inline void layout_find_dimensions(
 			}
 
 			if (l_max_width != -1) {
-				layout_handle_box_sizing(unit_len_ctx, box,
+				layout_handle_box_sizing(unit_len_ctx, box, style,
 						available_width, true, &l_max_width);
 			}
 		}
@@ -658,7 +659,7 @@ static inline void layout_find_dimensions(
 			}
 
 			if (l_min_width != 0) {
-				layout_handle_box_sizing(unit_len_ctx, box,
+				layout_handle_box_sizing(unit_len_ctx, box, style,
 						available_width, true, &l_min_width);
 			}
 		}

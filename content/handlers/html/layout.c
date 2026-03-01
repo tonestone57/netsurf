@@ -1018,7 +1018,7 @@ layout_minmax_line(struct box *first,
 				width += fixed;
 		} else if (b->flags & IFRAME) {
 			if (width == AUTO)
-				width = 400;
+				width = 300;
 
 			fixed = frac = 0;
 			if (bs == CSS_BOX_SIZING_BORDER_BOX) {
