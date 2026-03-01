@@ -306,7 +306,8 @@ static void layout_minmax_table(struct box *table,
 	for (cell = row->children; cell; cell = cell->next) {
 		assert(cell->type == BOX_TABLE_CELL);
 		assert(cell->style);
-		/* colspan="0" correctly handled in box normalisation */
+		/** TODO: Handle colspan="0" correctly.
+		 *        It's currently converted to 1 in box normaisation */
 		assert(cell->columns != 0);
 
 		if (cell->columns != 1)
@@ -731,24 +732,9 @@ layout_minmax_line(struct box *first,
 			if (0 < width + fixed)
 				width += fixed;
 		} else if (b->flags & IFRAME) {
-			if (width == AUTO) {
-				enum css_width_e wtype;
-				css_fixed value = 0;
-				css_unit unit = CSS_UNIT_PX;
-
-				wtype = css_computed_width(b->style, &value,
-						&unit);
-				if (wtype == CSS_WIDTH_SET &&
-						unit == CSS_UNIT_PCT) {
-					/* Percentage widths don't contribute to
-					 * min width, but we use 400 for max
-					 * width if we don't have a better
-					 * estimate. */
-					width = 0;
-				} else {
-					width = 400;
-				}
-			}
+			/* TODO: handle percentage widths properly */
+			if (width == AUTO)
+				width = 400;
 
 			fixed = frac = 0;
 			if (bs == CSS_BOX_SIZING_BORDER_BOX) {
@@ -2952,27 +2938,11 @@ layout_line(struct box *first,
 					min_width, max_width,
 					min_height, max_height);
 		} else if (b->flags & IFRAME) {
-			if (b->width == AUTO || b->height == AUTO) {
-				int w, h, max_w, min_w, max_h, min_h;
-				layout_find_dimensions(&content->unit_len_ctx,
-						*width, -1, b, b->style,
-						&w, &h, &max_w, &min_w,
-						&max_h, &min_h,
-						NULL, NULL, NULL);
-
-				if (b->width == AUTO) {
-					if (w != AUTO)
-						b->width = w;
-					else
-						b->width = 400;
-				}
-				if (b->height == AUTO) {
-					if (h != AUTO)
-						b->height = h;
-					else
-						b->height = 300;
-				}
-			}
+			/* TODO: should we look at the content dimensions? */
+			if (b->width == AUTO)
+				b->width = 400;
+			if (b->height == AUTO)
+				b->height = 300;
 
 			/* We reformat the iframe browser window to new
 			 * dimensions in pass 2 */

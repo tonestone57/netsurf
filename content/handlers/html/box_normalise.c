@@ -488,10 +488,9 @@ box_normalise_table_spans(struct box *table,
 			     table_cell != NULL;
 			     table_cell = table_cell->next) {
 
-				/* colspan = 0 -> spans all remaining columns */
+				/* colspan = 0 -> colspan = 1 */
 				if (table_cell->columns == 0) {
-					table_cell->columns = table->columns -
-							table_cell->start_column;
+					table_cell->columns = 1;
 				}
 
 				/* if rowspan is 0 it is expanded to
