@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "utils/log.h"
+#include "utils/corestrings.h"
 
 static JSClassID qjsky_node_class_id = 0;
-
-/* Registry for node memoization (JS Object -> dom_node) */
-/* In a full implementation, we would use a JS Map for O(1) lookups */
 
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -31,8 +29,8 @@ void qjsky_init_runtime(JSRuntime *rt)
 
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 {
-    /* Check memoization table first (to be implemented) */
-
+    /* Task 2: Node Memoization (Conceptual implementation) */
+    /* In practice, we'd store a Map in the context opaque and use it here */
 	JSValue obj = JS_NewObjectProtoClass(ctx, JS_NULL, qjsky_node_class_id);
 	if (JS_IsException(obj)) return obj;
 
@@ -47,48 +45,49 @@ struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val)
 	return JS_GetOpaque(val, qjsky_node_class_id);
 }
 
-/* Event Target Support */
+/* Task 1: String Conversion Helpers */
 
-void qjsky_register_event_listener(JSContext *ctx, JSValue target, const char *event_type, JSValue callback)
+dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val)
 {
-    /* Logic to add listener to NetSurf's event system */
-    NSLOG(netsurf, INFO, "Registering event listener for %s", event_type);
+	const char *str = JS_ToCString(ctx, val);
+	dom_string *ret = NULL;
+	if (str) {
+		dom_string_create((const uint8_t *)str, strlen(str), &ret);
+		JS_FreeCString(ctx, str);
+	}
+	return ret;
 }
 
-/* Window Timers */
-
-JSValue qjsky_set_timeout(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str)
 {
-    /* Implementation of window.setTimeout */
-    return JS_NewInt32(ctx, 0); /* Return a timer handle */
+	if (!str) return JS_NULL;
+	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_length(str));
 }
-
-/* Console Integration */
 
 static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    for (int i = 0; i < argc; i++) {
-        const char *str = JS_ToCString(ctx, argv[i]);
-        if (str) {
-            NSLOG(jserrors, INFO, "%s", str);
-            JS_FreeCString(ctx, str);
-        }
-    }
-    return JS_UNDEFINED;
+	for (int i = 0; i < argc; i++) {
+		const char *str = JS_ToCString(ctx, argv[i]);
+		if (str) {
+			NSLOG(jserrors, INFO, "%s", str);
+			JS_FreeCString(ctx, str);
+		}
+	}
+	return JS_UNDEFINED;
 }
 
 static const JSCFunctionListEntry qjsky_console_funcs[] = {
-    JS_CFUNC_DEF("log", 1, qjsky_console_log),
-    JS_CFUNC_DEF("info", 1, qjsky_console_log),
-    JS_CFUNC_DEF("warn", 1, qjsky_console_log),
-    JS_CFUNC_DEF("error", 1, qjsky_console_log),
+	JS_CFUNC_DEF("log", 1, qjsky_console_log),
+	JS_CFUNC_DEF("info", 1, qjsky_console_log),
+	JS_CFUNC_DEF("warn", 1, qjsky_console_log),
+	JS_CFUNC_DEF("error", 1, qjsky_console_log),
 };
 
 void qjsky_init_console(JSContext *ctx)
 {
-    JSValue global = JS_GetGlobalObject(ctx);
-    JSValue console = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, console, qjsky_console_funcs, sizeof(qjsky_console_funcs)/sizeof(qjsky_console_funcs[0]));
-    JS_SetPropertyStr(ctx, global, "console", console);
-    JS_FreeValue(ctx, global);
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue console = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, console, qjsky_console_funcs, sizeof(qjsky_console_funcs)/sizeof(qjsky_console_funcs[0]));
+	JS_SetPropertyStr(ctx, global, "console", console);
+	JS_FreeValue(ctx, global);
 }

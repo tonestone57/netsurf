@@ -26,4 +26,8 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
 /* Retrieve a libdom node from a QuickJS object */
 struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val);
 
+/* String conversion helpers */
+dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val);
+JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str);
+
 #endif
