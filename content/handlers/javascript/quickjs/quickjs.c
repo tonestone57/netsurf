@@ -99,7 +99,8 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	JSValue global = JS_GetGlobalObject(ctx->ctx);
 	JSValue event_ctor = JS_GetPropertyStr(ctx->ctx, global, "Event");
 
-	if (JS_IsUndefined(event_ctor)) {
+	if (JS_IsException(event_ctor) || JS_IsUndefined(event_ctor)) {
+		JS_FreeValue(ctx->ctx, event_ctor);
 		JS_FreeValue(ctx->ctx, global);
 		return false;
 	}
@@ -111,12 +112,19 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	JS_FreeValue(ctx->ctx, event_ctor);
 
 	if (JS_IsException(event_obj)) {
+		JS_FreeValue(ctx->ctx, event_obj);
 		JS_FreeValue(ctx->ctx, global);
 		return false;
 	}
 
 	/* Wrap target node */
 	JSValue target_val = qjsky_push_node(ctx->ctx, target);
+	if (JS_IsException(target_val)) {
+		JS_FreeValue(ctx->ctx, target_val);
+		JS_FreeValue(ctx->ctx, event_obj);
+		JS_FreeValue(ctx->ctx, global);
+		return false;
+	}
 
 	/* Dispatch event: target.dispatchEvent(event) */
 	JSValue dispatch_fn = JS_GetPropertyStr(ctx->ctx, target_val, "dispatchEvent");
@@ -144,7 +152,7 @@ void js_handle_new_element(struct jsctx *ctx, struct dom_node *node, const char 
 		JSValue node_obj = qjsky_push_node(ctx->ctx, node);
 		if (!JS_IsException(node_obj)) {
 			/* Implementation details pending full binding support */
-			JS_FreeValue(ctx->ctx, node_obj);
 		}
+		JS_FreeValue(ctx->ctx, node_obj);
 	}
 }

@@ -95,6 +95,7 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
 	JSValue argv[2] = { key, JS_DupValue(ctx, obj) };
 	JSValue set_ret = JS_Call(ctx, set_fn, map, 2, argv);
+	JS_FreeValue(ctx, argv[1]);
 	JS_FreeValue(ctx, set_fn);
 	JS_FreeValue(ctx, set_ret);
 	JS_FreeValue(ctx, key);
@@ -197,20 +198,26 @@ void qjsky_timer_cleanup(JSContext *ctx)
 	qjsky_timer_t **timer_ring = (qjsky_timer_t **)&heap->timer_ring;
 	qjsky_timer_t *timer;
 	qjsky_timer_t *next;
+	bool again;
 
-	if (*timer_ring == NULL) return;
-
-	timer = *timer_ring;
 	do {
-		next = timer->r_next;
-		if (timer->ctx == ctx) {
-			guit->misc->schedule(-1, qjsky_timer_cb, timer);
-			JS_FreeValue(ctx, timer->func);
-			RING_REMOVE(*timer_ring, timer);
-			free(timer);
-		}
-		timer = next;
-	} while (*timer_ring != NULL && timer != *timer_ring);
+		again = false;
+		timer = *timer_ring;
+		if (timer == NULL) break;
+
+		do {
+			next = timer->r_next;
+			if (timer->ctx == ctx) {
+				guit->misc->schedule(-1, qjsky_timer_cb, timer);
+				JS_FreeValue(ctx, timer->func);
+				RING_REMOVE(*timer_ring, timer);
+				free(timer);
+				again = true;
+				break;
+			}
+			timer = next;
+		} while (timer != *timer_ring);
+	} while (again);
 }
 
 /* Console Integration */
