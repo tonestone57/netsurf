@@ -501,13 +501,15 @@ method Element::append()
 	duk_pop(ctx);
 
 	dom_node *spare;
-	dom_node_append_child(priv->parent.node, other->node, &spare);
+	exc = dom_node_append_child(priv->parent.node, other->node, &spare);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node_unref(spare);
 	return 0;
 %}
 
 method Element::prepend()
 %{
+	dom_exception exc;
 	dukky_push_generics(ctx, "mutationHelper");
 	duk_push_array(ctx);
 	for (int i = 0; i < duk_get_top(ctx) - 2; i++) {
@@ -525,18 +527,21 @@ method Element::prepend()
 	duk_pop(ctx);
 
 	dom_node *first;
-	dom_node_get_first_child(priv->parent.node, &first);
+	exc = dom_node_get_first_child(priv->parent.node, &first);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node *spare;
-	dom_node_insert_before(priv->parent.node, other->node, first, &spare);
+	exc = dom_node_insert_before(priv->parent.node, other->node, first, &spare);
 	if (first) dom_node_unref(first);
+	if (exc != DOM_NO_ERR) return 0;
 	dom_node_unref(spare);
 	return 0;
 %}
 
 method Element::before()
 %{
+	dom_exception exc;
 	dom_node *parent;
-	dom_node_get_parent_node(priv->parent.node, &parent);
+	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (!parent) return 0;
 
 	dukky_push_generics(ctx, "mutationHelper");
@@ -555,16 +560,17 @@ method Element::before()
 	duk_pop(ctx);
 
 	dom_node *spare;
-	dom_node_insert_before(parent, other->node, priv->parent.node, &spare);
-	dom_node_unref(spare);
+	exc = dom_node_insert_before(parent, other->node, priv->parent.node, &spare);
+	if (exc == DOM_NO_ERR) dom_node_unref(spare);
 	dom_node_unref(parent);
 	return 0;
 %}
 
 method Element::after()
 %{
+	dom_exception exc;
 	dom_node *parent;
-	dom_node_get_parent_node(priv->parent.node, &parent);
+	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (!parent) return 0;
 
 	dukky_push_generics(ctx, "mutationHelper");
@@ -583,19 +589,21 @@ method Element::after()
 	duk_pop(ctx);
 
 	dom_node *next;
-	dom_node_get_next_sibling(priv->parent.node, &next);
+	exc = dom_node_get_next_sibling(priv->parent.node, &next);
+	if (exc != DOM_NO_ERR) { dom_node_unref(parent); return 0; }
 	dom_node *spare;
-	dom_node_insert_before(parent, other->node, next, &spare);
+	exc = dom_node_insert_before(parent, other->node, next, &spare);
 	if (next) dom_node_unref(next);
-	dom_node_unref(spare);
+	if (exc == DOM_NO_ERR) dom_node_unref(spare);
 	dom_node_unref(parent);
 	return 0;
 %}
 
 method Element::replaceWith()
 %{
+	dom_exception exc;
 	dom_node *parent;
-	dom_node_get_parent_node(priv->parent.node, &parent);
+	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (!parent) return 0;
 
 	dukky_push_generics(ctx, "mutationHelper");
@@ -614,8 +622,8 @@ method Element::replaceWith()
 	duk_pop(ctx);
 
 	dom_node *spare;
-	dom_node_replace_child(parent, other->node, priv->parent.node, &spare);
-	dom_node_unref(spare);
+	exc = dom_node_replace_child(parent, other->node, priv->parent.node, &spare);
+	if (exc == DOM_NO_ERR) dom_node_unref(spare);
 	dom_node_unref(parent);
 	return 0;
 %}
@@ -676,25 +684,27 @@ method Element::insertAdjacentHTML()
 	exc = dom_nodelist_item(bodies, 0, &body);
 	if (exc != DOM_NO_ERR || body == NULL) goto out;
 
-	if (strcasecmp(position, "beforebegin") == 0) {
+	if (strcasecmp(position, "beforebegin") == 0 || strcasecmp(position, "afterend") == 0) {
+		dom_node_type ptype;
 		exc = dom_node_get_parent_node(priv->parent.node, &parent);
-		if (exc != DOM_NO_ERR || parent == NULL) {
-			/* According to spec: No-op if parent is null or it's a document element */
+		if (exc != DOM_NO_ERR || parent == NULL) goto out;
+		exc = dom_node_get_node_type(parent, &ptype);
+		if (exc != DOM_NO_ERR || ptype == DOM_DOCUMENT_NODE) {
+			dom_node_unref(parent);
+			parent = NULL;
 			goto out;
 		}
-		ref_child = priv->parent.node;
+		if (strcasecmp(position, "beforebegin") == 0) {
+			ref_child = priv->parent.node;
+		} else {
+			exc = dom_node_get_next_sibling(priv->parent.node, &ref_child);
+		}
 	} else if (strcasecmp(position, "afterbegin") == 0) {
 		parent = priv->parent.node;
 		exc = dom_node_get_first_child(priv->parent.node, &ref_child);
 	} else if (strcasecmp(position, "beforeend") == 0) {
 		parent = priv->parent.node;
 		ref_child = NULL;
-	} else if (strcasecmp(position, "afterend") == 0) {
-		exc = dom_node_get_parent_node(priv->parent.node, &parent);
-		if (exc != DOM_NO_ERR || parent == NULL) {
-			goto out;
-		}
-		exc = dom_node_get_next_sibling(priv->parent.node, &ref_child);
 	} else {
 		goto out;
 	}
@@ -996,9 +1006,14 @@ setter Element::outerHTML()
 
 	exc = dom_node_get_parent_node(priv->parent.node, &parent);
 	if (exc != DOM_NO_ERR || parent == NULL) {
-		/* Per spec: throw NO_MODIFICATION_ALLOWED_ERR or similar,
-		 * but in JS we typically just no-op or throw a generic Error */
 		return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Element has no parent.");
+	} else {
+		dom_node_type ptype;
+		exc = dom_node_get_node_type(parent, &ptype);
+		if (exc == DOM_NO_ERR && ptype == DOM_DOCUMENT_NODE) {
+			dom_node_unref(parent);
+			return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Cannot set outerHTML of document element.");
+		}
 	}
 
 	exc = dom_node_get_next_sibling(priv->parent.node, &next_sibling);
