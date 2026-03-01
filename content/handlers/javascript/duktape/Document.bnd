@@ -277,6 +277,97 @@ getter Document::readyState()
 	return 0;
 %}
 
+getter Document::images()
+%{
+	dom_exception err;
+	dom_html_collection *coll;
+
+	err = dom_html_document_get_images((dom_html_document *)priv->parent.node, &coll);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, coll);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(coll);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+getter Document::forms()
+%{
+	dom_exception err;
+	dom_html_collection *coll;
+
+	err = dom_html_document_get_forms((dom_html_document *)priv->parent.node, &coll);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, coll);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(coll);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+getter Document::links()
+%{
+	dom_exception err;
+	dom_html_collection *coll;
+
+	err = dom_html_document_get_links((dom_html_document *)priv->parent.node, &coll);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, coll);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(coll);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+getter Document::anchors()
+%{
+	dom_exception err;
+	dom_html_collection *coll;
+
+	err = dom_html_document_get_anchors((dom_html_document *)priv->parent.node, &coll);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, coll);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(coll);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+getter Document::scripts()
+%{
+	dom_nodelist *nodes;
+	dom_exception err;
+
+	err = dom_document_get_elements_by_tag_name(priv->parent.node,
+						    corestring_dom_SCRIPT, &nodes);
+	if (err != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
 method Document::createElement()
 %{
 	dom_node *newnode;
