@@ -131,7 +131,7 @@ var NetSurf = {
     },
     getElementsByClassName: function(root, classNames) {
         var names = classNames.split(/\s+/).filter(Boolean);
-        var result = [];
+        var res = [];
         function walk(node) {
             var child = node.firstChild;
             while (child) {
@@ -142,7 +142,7 @@ var NetSurf = {
                             return classList.contains(name);
                         });
                         if (matches) {
-                            result.push(child);
+                            res.push(child);
                         }
                     }
                 }
@@ -151,7 +151,12 @@ var NetSurf = {
             }
         }
         walk(root);
-        return result;
+
+        /* Return a pseudo-live array by defining a 'length' that re-evaluates?
+         * Truly live collections in JS are usually implemented by the engine or
+         * by re-running the selector on every access.
+         */
+        return res;
     },
     makeDatasetProxy: function(element) {
         return new Proxy({}, {

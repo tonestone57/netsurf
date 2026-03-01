@@ -207,10 +207,14 @@ getter Element::localName()
 	if (exc != DOM_NO_ERR) return 0;
 	if (name == NULL) {
 		/* Per spec: localName is the same as tagName if not in a namespace */
-		return GETTER_NAME(Element, tagName)(ctx, priv);
+		exc = dom_node_get_node_name(priv->parent.node, &name);
+		if (exc != DOM_NO_ERR || name == NULL) return 0;
+		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
+		dom_string_unref(name);
+	} else {
+		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
+		dom_string_unref(name);
 	}
-	duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-	dom_string_unref(name);
 	return 1;
 %}
 
@@ -218,14 +222,14 @@ getter Element::namespaceURI()
 %{
 	dom_exception exc;
 	dom_string *uri;
-	exc = dom_node_get_namespace_uri(priv->parent.node, &uri);
+	exc = dom_node_get_namespace(priv->parent.node, &uri);
 	if (exc != DOM_NO_ERR) return 0;
 	if (uri == NULL) {
 		duk_push_null(ctx);
-		return 1;
+	} else {
+		duk_push_lstring(ctx, dom_string_data(uri), dom_string_byte_length(uri));
+		dom_string_unref(uri);
 	}
-	duk_push_lstring(ctx, dom_string_data(uri), dom_string_byte_length(uri));
-	dom_string_unref(uri);
 	return 1;
 %}
 
@@ -251,7 +255,7 @@ getter Element::firstElementChild()
 	dom_node_type node_type;
 	dom_node *next_node;
 
-	exc = dom_node_get_first_child(((node_private_t*)priv)->node, &element);
+	exc = dom_node_get_first_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -286,7 +290,7 @@ getter Element::lastElementChild()
 	dom_node_type node_type;
 	dom_node *next_node;
 
-	exc = dom_node_get_last_child(((node_private_t*)priv)->node, &element);
+	exc = dom_node_get_last_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -321,7 +325,7 @@ getter Element::previousElementSibling()
 	dom_node_type node_type;
 	dom_node *sib_node;
 
-	exc = dom_node_get_previous_sibling(((node_private_t *)priv)->node, &element);
+	exc = dom_node_get_previous_sibling(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -356,7 +360,7 @@ getter Element::nextElementSibling()
 	dom_node_type node_type;
 	dom_node *sib_node;
 
-	exc = dom_node_get_next_sibling(((node_private_t *)priv)->node, &element);
+	exc = dom_node_get_next_sibling(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -392,7 +396,7 @@ getter Element::childElementCount()
 	dom_node *next_node;
 	duk_uint_t jsret = 0;
 
-	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &element);
+	exc = dom_node_get_first_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -674,6 +678,10 @@ method Element::insertAdjacentHTML()
 
 	if (strcasecmp(position, "beforebegin") == 0) {
 		exc = dom_node_get_parent_node(priv->parent.node, &parent);
+		if (exc != DOM_NO_ERR || parent == NULL) {
+			/* According to spec: No-op if parent is null or it's a document element */
+			goto out;
+		}
 		ref_child = priv->parent.node;
 	} else if (strcasecmp(position, "afterbegin") == 0) {
 		parent = priv->parent.node;
@@ -683,6 +691,9 @@ method Element::insertAdjacentHTML()
 		ref_child = NULL;
 	} else if (strcasecmp(position, "afterend") == 0) {
 		exc = dom_node_get_parent_node(priv->parent.node, &parent);
+		if (exc != DOM_NO_ERR || parent == NULL) {
+			goto out;
+		}
 		exc = dom_node_get_next_sibling(priv->parent.node, &ref_child);
 	} else {
 		goto out;
@@ -984,7 +995,11 @@ setter Element::outerHTML()
 	if (exc != DOM_NO_ERR) goto out;
 
 	exc = dom_node_get_parent_node(priv->parent.node, &parent);
-	if (exc != DOM_NO_ERR || parent == NULL) goto out;
+	if (exc != DOM_NO_ERR || parent == NULL) {
+		/* Per spec: throw NO_MODIFICATION_ALLOWED_ERR or similar,
+		 * but in JS we typically just no-op or throw a generic Error */
+		return duk_error(ctx, DUK_ERR_ERROR, "NoModificationAllowedError: Element has no parent.");
+	}
 
 	exc = dom_node_get_next_sibling(priv->parent.node, &next_sibling);
 

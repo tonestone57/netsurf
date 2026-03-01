@@ -256,26 +256,6 @@ setter Node::textContent()
 	return 0;
 %}
 
-getter Node::parentElement()
-%{
-	dom_node *parent;
-	dom_exception exc;
-	dom_node_type type;
-
-	exc = dom_node_get_parent_node(priv->node, &parent);
-	if (exc != DOM_NO_ERR || parent == NULL) return 0;
-
-	exc = dom_node_get_node_type(parent, &type);
-	if (exc != DOM_NO_ERR || type != DOM_ELEMENT_NODE) {
-		dom_node_unref(parent);
-		return 0;
-	}
-
-	dukky_push_node(ctx, parent);
-	dom_node_unref(parent);
-	return 1;
-%}
-
 method Node::normalize()
 %{
 	dom_exception exc;

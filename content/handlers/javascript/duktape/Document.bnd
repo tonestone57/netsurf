@@ -282,7 +282,7 @@ getter Document::firstElementChild()
 	dom_node_type node_type;
 	dom_node *next_node;
 
-	exc = dom_node_get_first_child(((node_private_t*)priv)->node, &element);
+	exc = dom_node_get_first_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -317,7 +317,7 @@ getter Document::lastElementChild()
 	dom_node_type node_type;
 	dom_node *next_node;
 
-	exc = dom_node_get_last_child(((node_private_t*)priv)->node, &element);
+	exc = dom_node_get_last_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -400,7 +400,7 @@ getter Document::childElementCount()
 	dom_node *next_node;
 	duk_uint_t jsret = 0;
 
-	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &element);
+	exc = dom_node_get_first_child(priv->parent.node, &element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -453,7 +453,7 @@ method Document::getElementById()
 		return 0;
 	}
 
-	exc = dom_document_get_element_by_id(((node_private_t *)priv)->node,
+	exc = dom_document_get_element_by_id(priv->parent.node,
 					     elementId_dom, &element);
 	dom_string_unref(elementId_dom);
 	if (exc != DOM_NO_ERR) {
@@ -474,7 +474,7 @@ getter Document::documentElement()
 	dom_exception exc;
 	dom_element *element;
 
-	exc = dom_document_get_document_element(((node_private_t *)priv)->node,
+	exc = dom_document_get_document_element(priv->parent.node,
 						&element);
 	if (exc != DOM_NO_ERR) {
 		return 0;
@@ -503,7 +503,7 @@ method Document::getElementsByTagName()
 
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
-	err = dom_document_get_elements_by_tag_name(((node_private_t *)priv)->node,
+	err = dom_document_get_elements_by_tag_name(priv->parent.node,
 						    tag, &nodes);
 	dom_string_unref(tag);
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
