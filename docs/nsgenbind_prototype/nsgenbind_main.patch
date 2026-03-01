@@ -1,0 +1,39 @@
+--- nsgenbind/src/nsgenbind.c
++++ nsgenbind/src/nsgenbind.c
+@@ -21,6 +21,7 @@
+ #include "output.h"
+ #include "jsapi-libdom.h"
+ #include "duk-libdom.h"
++#include "qjs-libdom.h"
+
+ struct options *options;
+
+@@ -28,6 +29,7 @@
+     BINDINGTYPE_UNKNOWN,
+     BINDINGTYPE_JSAPI_LIBDOM,
+     BINDINGTYPE_DUK_LIBDOM,
++    BINDINGTYPE_QJS_LIBDOM,
+ };
+
+@@ -185,6 +187,10 @@
+         if (strcmp(binding_type, "duk_libdom") == 0) {
+                 return BINDINGTYPE_DUK_LIBDOM;
+         }
++
++        if (strcmp(binding_type, "qjs_libdom") == 0) {
++                return BINDINGTYPE_QJS_LIBDOM;
++        }
+
+         fprintf(stderr, "Error: unsupported binding type \"%s\"\n", binding_type);
+
+@@ -245,6 +251,10 @@
+                 res = duk_libdom_output(ir);
+                 break;
+
++        case BINDINGTYPE_QJS_LIBDOM:
++                res = qjs_libdom_output(ir);
++                break;
++
+         default:
+                 fprintf(stderr, "Unable to generate binding of this type\n");
+                 res = 7;
