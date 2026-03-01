@@ -267,8 +267,10 @@ getter Document::readyState()
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
 	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
-		if (htmlc->parse_completed) {
+		if (htmlc->base.status == CONTENT_STATUS_DONE) {
 			duk_push_string(ctx, "complete");
+		} else if (htmlc->parse_completed) {
+			duk_push_string(ctx, "interactive");
 		} else {
 			duk_push_string(ctx, "loading");
 		}
