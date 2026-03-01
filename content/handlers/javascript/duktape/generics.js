@@ -20,6 +20,9 @@ var NetSurf = {
 	    },
 	    get: function(target, key) {
 		if (typeof key == 'number') {
+		    if (key < 0 || key >= target.length) {
+			return undefined;
+		    }
 		    if (typeof target.item === 'function') {
 			return target.item(key);
 		    }
@@ -29,6 +32,24 @@ var NetSurf = {
 		}
 	    },
 	});
+    },
+    makeLiveCollection: function(searchFn) {
+        var lastResult = null;
+        var lastTime = 0;
+        var CACHE_MS = 50;
+        function getResult() {
+            var now = Date.now();
+            if (lastResult === null || (now - lastTime) > CACHE_MS) {
+                lastResult = searchFn();
+                lastTime = now;
+            }
+            return lastResult;
+        }
+        return {
+            get length() { return getResult().length; },
+            item: function(idx) { return getResult()[idx] || null; },
+            toString: function() { return "[object HTMLCollection]"; }
+        };
     },
     /* The make-proxy call for nodemap-type objects */
     makeNodeMapProxy: function(inner) {
@@ -138,7 +159,7 @@ var NetSurf = {
                 toString: function() { return "[object HTMLCollection]"; }
             };
         }
-        function performSearch() {
+        return this.makeLiveCollection(function() {
             var res = [];
             function walk(node) {
                 var child = node.firstChild;
@@ -160,13 +181,7 @@ var NetSurf = {
             }
             walk(root);
             return res;
-        }
-        /* Returns a "live" collection object */
-        return {
-            get length() { return performSearch().length; },
-            item: function(idx) { return performSearch()[idx]; },
-            toString: function() { return "[object HTMLCollection]"; }
-        };
+        });
     },
     makeDatasetProxy: function(element) {
         return new Proxy({}, {
@@ -205,15 +220,17 @@ var NetSurf = {
         });
     },
     getChildren: function(root) {
-        var result = [];
-        var child = root.firstChild;
-        while (child) {
-            if (child.nodeType === 1) { // ELEMENT_NODE
-                result.push(child);
+        return this.makeLiveCollection(function() {
+            var result = [];
+            var child = root.firstChild;
+            while (child) {
+                if (child.nodeType === 1) { // ELEMENT_NODE
+                    result.push(child);
+                }
+                child = child.nextSibling;
             }
-            child = child.nextSibling;
-        }
-        return result;
+            return result;
+        });
     },
     mutationHelper: function(args, ownerDocument) {
         if (args.length === 1) {
