@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   codeql:
+    permissions:
+      security-events: write
     name: codeql
     runs-on: ubuntu-22.04
 
