@@ -462,10 +462,23 @@ static inline void layout_find_dimensions(
 	struct box *containing_block = NULL;
 	unsigned int i;
 
+	css_fixed font_size = 0;
+	css_unit font_unit = CSS_UNIT_PX;
+
+	if (style != NULL) {
+		css_computed_font_size(style, &font_size, &font_unit);
+	}
+
 	if ((box->flags & DIM_CACHED) &&
+	    box->cached_style == style &&
+	    box->cached_font_size == font_size &&
 	    box->cached_available_width == available_width &&
 	    ((viewport_height < 0 && !(box->flags & DIM_VIEWPORT_SET)) ||
-	     (box->cached_viewport_height == viewport_height))) {
+	     (box->cached_viewport_height == viewport_height)) &&
+	    (width == NULL || box->cached_width != AUTO) &&
+	    (height == NULL || box->cached_height != AUTO) &&
+	    (max_width == NULL || box->cached_max_width != -1) &&
+	    (max_height == NULL || box->cached_max_height != -1)) {
 		if (width) *width = box->cached_width;
 		if (height) *height = box->cached_height;
 		if (max_width) *max_width = box->cached_max_width;
@@ -767,6 +780,8 @@ static inline void layout_find_dimensions(
 	}
 
 	box->flags |= DIM_CACHED;
+	box->cached_style = style;
+	box->cached_font_size = font_size;
 	box->cached_available_width = available_width;
 	if (viewport_height >= 0) {
 		box->flags |= DIM_VIEWPORT_SET;

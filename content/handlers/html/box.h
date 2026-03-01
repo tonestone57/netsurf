@@ -456,6 +456,8 @@ struct box {
 	/**
 	 * Cached results from layout_find_dimensions.
 	 */
+	const css_computed_style *cached_style;
+	css_fixed cached_font_size;
 	int cached_available_width;
 	int cached_viewport_height;
 	int cached_width;
