@@ -22,7 +22,10 @@ getter HTMLElement::dir()
 	dom_string *str;
 
 	err = dom_html_element_get_dir((dom_html_element *)priv->parent.parent.node, &str);
-	if (err != DOM_NO_ERR || str == NULL) return 0;
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
 	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
 	dom_string_unref(str);
@@ -50,7 +53,10 @@ getter HTMLElement::lang()
 	dom_string *str;
 
 	err = dom_html_element_get_lang((dom_html_element *)priv->parent.parent.node, &str);
-	if (err != DOM_NO_ERR || str == NULL) return 0;
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
 	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
 	dom_string_unref(str);
@@ -78,7 +84,10 @@ getter HTMLElement::title()
 	dom_string *str;
 
 	err = dom_html_element_get_title((dom_html_element *)priv->parent.parent.node, &str);
-	if (err != DOM_NO_ERR || str == NULL) return 0;
+	if (err != DOM_NO_ERR || str == NULL) {
+		duk_push_string(ctx, "");
+		return 1;
+	}
 
 	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
 	dom_string_unref(str);

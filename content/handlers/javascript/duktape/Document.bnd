@@ -230,31 +230,66 @@ setter Document::title()
 
 getter Document::URL()
 %{
-	struct html_content *htmlc;
 	dom_exception err;
+	dom_string *url;
 
-	err = dom_node_get_user_data(priv->parent.node,
-				     corestring_dom___ns_key_html_content_data,
-				     &htmlc);
-	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
-		duk_push_string(ctx, nsurl_access(llcache_handle_get_url(htmlc->base.llcache)));
-		return 1;
-	}
-	return 0;
+	err = dom_html_document_get_url((dom_html_document *)priv->parent.node, &url);
+	if (err != DOM_NO_ERR || url == NULL) return 0;
+
+	duk_push_lstring(ctx, dom_string_data(url), dom_string_length(url));
+	dom_string_unref(url);
+
+	return 1;
 %}
 
 getter Document::documentURI()
 %{
-	struct html_content *htmlc;
 	dom_exception err;
+	dom_string *url;
 
-	err = dom_node_get_user_data(priv->parent.node,
-				     corestring_dom___ns_key_html_content_data,
-				     &htmlc);
-	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
-		duk_push_string(ctx, nsurl_access(llcache_handle_get_url(htmlc->base.llcache)));
+	err = dom_html_document_get_url((dom_html_document *)priv->parent.node, &url);
+	if (err != DOM_NO_ERR || url == NULL) return 0;
+
+	duk_push_lstring(ctx, dom_string_data(url), dom_string_length(url));
+	dom_string_unref(url);
+
+	return 1;
+%}
+
+getter Document::referrer()
+%{
+	dom_exception err;
+	dom_string *referrer;
+
+	err = dom_html_document_get_referrer((dom_html_document *)priv->parent.node, &referrer);
+	if (err != DOM_NO_ERR || referrer == NULL) {
+		duk_push_string(ctx, "");
 		return 1;
 	}
+
+	duk_push_lstring(ctx, dom_string_data(referrer), dom_string_length(referrer));
+	dom_string_unref(referrer);
+
+	return 1;
+%}
+
+getter Document::domain()
+%{
+	dom_exception err;
+	dom_string *domain;
+
+	err = dom_html_document_get_domain((dom_html_document *)priv->parent.node, &domain);
+	if (err != DOM_NO_ERR || domain == NULL) return 0;
+
+	duk_push_lstring(ctx, dom_string_data(domain), dom_string_length(domain));
+	dom_string_unref(domain);
+
+	return 1;
+%}
+
+setter Document::domain()
+%{
+	/* Setting document.domain is currently not supported by libdom */
 	return 0;
 %}
 
@@ -285,6 +320,24 @@ getter Document::images()
 	dom_html_collection *coll;
 
 	err = dom_html_document_get_images((dom_html_document *)priv->parent.node, &coll);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, coll);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(coll);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+getter Document::applets()
+%{
+	dom_exception err;
+	dom_html_collection *coll;
+
+	err = dom_html_document_get_applets((dom_html_document *)priv->parent.node, &coll);
 	if (err != DOM_NO_ERR) return 0;
 
 	dukky_push_generics(ctx, "makeListProxy");
