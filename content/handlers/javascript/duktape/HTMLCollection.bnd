@@ -22,3 +22,55 @@ fini HTMLCollection()
 %{
 	dom_html_collection_unref(priv->coll);
 %}
+
+getter HTMLCollection::length()
+%{
+	dom_exception err;
+	uint32_t len;
+
+	err = dom_html_collection_get_length(priv->coll, &len);
+
+	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
+
+	duk_push_uint(ctx, (duk_uint_t)len);
+
+	return 1;
+%}
+
+method HTMLCollection::item()
+%{
+	unsigned long i = duk_to_uint(ctx, 0);
+	dom_exception err;
+	dom_node *node;
+
+	err = dom_html_collection_item(priv->coll, i, &node);
+
+	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
+
+	dukky_push_node(ctx, node);
+	dom_node_unref(node);
+
+	return 1;
+%}
+
+method HTMLCollection::namedItem()
+%{
+	dom_exception err;
+	dom_node *node;
+	dom_string *name;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	err = dom_string_create((const uint8_t *)s, slen, &name);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_html_collection_named_item(priv->coll, name, &node);
+	dom_string_unref(name);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, node);
+	dom_node_unref(node);
+
+	return 1;
+%}
