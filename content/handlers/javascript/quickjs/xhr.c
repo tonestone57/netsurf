@@ -1,5 +1,7 @@
 #include <stdlib.h>
+#include <quickjs.h>
 #include "content/handlers/javascript/quickjs/xhr.h"
+#include "content/handlers/javascript/quickjs/qjs_utils.h"
 
 static JSClassID qjsky_xhr_class_id = 0;
 
@@ -50,11 +52,12 @@ void qjsky_init_xhr(JSContext *ctx)
 
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_xhr_proto_funcs, sizeof(qjsky_xhr_proto_funcs)/sizeof(qjsky_xhr_proto_funcs[0]));
-	JS_SetClassProto(ctx, qjsky_xhr_class_id, proto);
+	JS_SetClassProto(ctx, qjsky_xhr_class_id, JS_DupValue(ctx, proto));
 
 	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, ctor, proto);
 	JS_SetPropertyStr(ctx, global, "XMLHttpRequest", ctor);
 
+	JS_FreeValue(ctx, proto);
 	JS_FreeValue(ctx, global);
 }

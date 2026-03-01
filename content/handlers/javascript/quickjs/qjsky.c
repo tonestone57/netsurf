@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
+#include "content/handlers/javascript/quickjs/qjs_utils.h"
 #include "utils/log.h"
 #include "utils/corestrings.h"
 #include "utils/ring.h"
@@ -18,17 +19,6 @@ typedef struct qjsky_timer_s {
 	struct qjsky_timer_s *r_next;
 	struct qjsky_timer_s *r_prev;
 } qjsky_timer_t;
-
-static void qjsky_log_exception(JSContext *ctx)
-{
-	JSValue exception = JS_GetException(ctx);
-	const char *str = JS_ToCString(ctx, exception);
-	if (str) {
-		NSLOG(jserrors, ERROR, "JS Timer Error: %s", str);
-		JS_FreeCString(ctx, str);
-	}
-	JS_FreeValue(ctx, exception);
-}
 
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -58,11 +48,14 @@ void qjsky_init_context(JSContext *ctx)
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue map = JS_NewMap(ctx);
 
+	/* Use a Symbol for better isolation of the memoization map */
 	if (heap->node_map_atom == JS_ATOM_NULL) {
-		heap->node_map_atom = JS_NewAtom(ctx, "__qjskyNodeMap");
+		JSValue sym = JS_NewSymbol(ctx, "__qjskyNodeMap", 0);
+		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
 	}
 
-	JS_SetProperty(ctx, global, heap->node_map_atom, map);
+	JS_DefinePropertyValue(ctx, global, heap->node_map_atom, map, JS_PROP_CONFIGURABLE);
 	JS_FreeValue(ctx, global);
 }
 
@@ -148,7 +141,7 @@ static void qjsky_timer_cb(void *p)
 {
 	qjsky_timer_t *timer = p;
 	JSValue ret = JS_Call(timer->ctx, timer->func, JS_UNDEFINED, 0, NULL);
-	if (JS_IsException(ret)) qjsky_log_exception(timer->ctx);
+	if (JS_IsException(ret)) qjs_log_exception(timer->ctx, "JS Timer Error");
 	JS_FreeValue(timer->ctx, ret);
 
 	if (timer->repeating) {
@@ -244,15 +237,14 @@ static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc
 	return JS_UNDEFINED;
 }
 
-static const JSCFunctionListEntry qjsky_console_funcs[] = {
-	JS_CFUNC_DEF("log", 1, qjsky_console_log),
-	JS_CFUNC_DEF("info", 1, qjsky_console_log),
-	JS_CFUNC_DEF("warn", 1, qjsky_console_log),
-	JS_CFUNC_DEF("error", 1, qjsky_console_log),
-};
-
 void qjsky_init_console(JSContext *ctx)
 {
+	static const JSCFunctionListEntry qjsky_console_funcs[] = {
+		JS_CFUNC_DEF("log", 1, qjsky_console_log),
+		JS_CFUNC_DEF("info", 1, qjsky_console_log),
+		JS_CFUNC_DEF("warn", 1, qjsky_console_log),
+		JS_CFUNC_DEF("error", 1, qjsky_console_log),
+	};
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue console = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, console, qjsky_console_funcs, sizeof(qjsky_console_funcs)/sizeof(qjsky_console_funcs[0]));

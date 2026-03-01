@@ -6,6 +6,7 @@
 #include "content/handlers/javascript/js.h"
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
+#include "content/handlers/javascript/quickjs/qjs_utils.h"
 #include "content/handlers/javascript/quickjs/xhr.h"
 
 struct jsctx {
@@ -75,22 +76,11 @@ void js_destroyctx(struct jsctx *ctx)
 	free(ctx);
 }
 
-static void qjs_log_exception(JSContext *ctx)
-{
-	JSValue exception = JS_GetException(ctx);
-	const char *str = JS_ToCString(ctx, exception);
-	if (str) {
-		NSLOG(jserrors, ERROR, "JS Error: %s", str);
-		JS_FreeCString(ctx, str);
-	}
-	JS_FreeValue(ctx, exception);
-}
-
 bool js_exec(struct jsctx *ctx, const char *script, size_t len, const char *filename)
 {
 	JSValue val = JS_Eval(ctx->ctx, script, len, filename, JS_EVAL_TYPE_GLOBAL);
 	if (JS_IsException(val)) {
-		qjs_log_exception(ctx->ctx);
+		qjs_log_exception(ctx->ctx, "JS Eval Error");
 		return false;
 	}
 	JS_FreeValue(ctx->ctx, val);
@@ -105,7 +95,7 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	JSValue event_ctor = JS_GetPropertyStr(ctx->ctx, global, "Event");
 
 	if (JS_IsException(event_ctor) || JS_IsUndefined(event_ctor)) {
-		if (JS_IsException(event_ctor)) qjs_log_exception(ctx->ctx);
+		if (JS_IsException(event_ctor)) qjs_log_exception(ctx->ctx, "Event ctor access error");
 		JS_FreeValue(ctx->ctx, event_ctor);
 		JS_FreeValue(ctx->ctx, global);
 		return false;
@@ -118,7 +108,7 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	JS_FreeValue(ctx->ctx, event_ctor);
 
 	if (JS_IsException(event_obj)) {
-		qjs_log_exception(ctx->ctx);
+		qjs_log_exception(ctx->ctx, "Event construction error");
 		JS_FreeValue(ctx->ctx, event_obj);
 		JS_FreeValue(ctx->ctx, global);
 		return false;
@@ -127,7 +117,7 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	/* Wrap target node */
 	JSValue target_val = qjsky_push_node(ctx->ctx, target);
 	if (JS_IsException(target_val)) {
-		qjs_log_exception(ctx->ctx);
+		qjs_log_exception(ctx->ctx, "Node wrapping error");
 		JS_FreeValue(ctx->ctx, target_val);
 		JS_FreeValue(ctx->ctx, event_obj);
 		JS_FreeValue(ctx->ctx, global);
@@ -138,7 +128,7 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 	JSValue dispatch_fn = JS_GetPropertyStr(ctx->ctx, target_val, "dispatchEvent");
 	if (JS_IsFunction(ctx->ctx, dispatch_fn)) {
 		JSValue ret = JS_Call(ctx->ctx, dispatch_fn, target_val, 1, &event_obj);
-		if (JS_IsException(ret)) qjs_log_exception(ctx->ctx);
+		if (JS_IsException(ret)) qjs_log_exception(ctx->ctx, "Event dispatch error");
 		JS_FreeValue(ctx->ctx, ret);
 	}
 
@@ -152,15 +142,10 @@ bool js_fire_event(struct jsctx *ctx, const char *type, struct dom_node *target)
 void js_handle_new_element(struct jsctx *ctx, struct dom_node *node, const char *attr, const char *value)
 {
 	/* Compile and attach inline event handlers (e.g., onclick) */
-	/* Skeleton implementation for future binding integration:
-	   1. Check if 'attr' is an event handler (starts with 'on').
-	   2. Create a JS function: "function(event) { " + value + " }"
-	   3. Assign it to the corresponding property on the JS object for 'node'.
-	*/
 	if (strncmp(attr, "on", 2) == 0) {
 		JSValue node_obj = qjsky_push_node(ctx->ctx, node);
 		if (JS_IsException(node_obj)) {
-			qjs_log_exception(ctx->ctx);
+			qjs_log_exception(ctx->ctx, "Inline handler node wrapping error");
 		} else {
 			/* Implementation details pending full binding support */
 		}
