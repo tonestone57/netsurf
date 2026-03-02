@@ -132,7 +132,7 @@ dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val)
 JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str)
 {
 	if (!str) return JS_NULL;
-	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_length(str));
+	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_byte_length(str));
 }
 
 /* Timer Support */

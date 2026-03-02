@@ -88,12 +88,8 @@ typedef enum {
 	REPLACE_DIM = 1 << 9,	/* replaced element has given dimensions */
 	IFRAME      = 1 << 10,	/* box contains an iframe */
 	CONVERT_CHILDREN = 1 << 11,  /* wanted children converting */
-<<<<<<< HEAD
 	IS_REPLACED = 1 << 12,	/* box is a replaced element */
 	DIM_CACHED  = 1 << 13	/* dimension data is cached */
-=======
-	IS_REPLACED = 1 << 12	/* box is a replaced element */
->>>>>>> origin/quickjs-migration-audit-15903127118075571481
 } box_flags;
 
 
@@ -456,7 +452,6 @@ struct box {
 	 */
 	struct browser_window *iframe;
 
-<<<<<<< HEAD
 	/**
 	 * Cached results from layout_find_dimensions.
 	 */
@@ -477,8 +472,6 @@ struct box {
 	int cached_margin[4];
 	int cached_padding[4];
 	struct box_border cached_border[4];
-=======
->>>>>>> origin/quickjs-migration-audit-15903127118075571481
 };
 
 
