@@ -71,7 +71,7 @@ static void dukky_getInnerText_recursive(duk_context *ctx, dom_node *node, duk_u
 		}
 
 		if (isBlock && *idx > 0) {
-			/* Check if previous fragment was already a newline to avoid triple spacing */
+			/* Block start: add newline if needed */
 			duk_get_prop_index(ctx, arr_idx, *idx - 1);
 			const char *prev = duk_get_string(ctx, -1);
 			if (prev && strcmp(prev, "\n") != 0) {
@@ -89,9 +89,15 @@ static void dukky_getInnerText_recursive(duk_context *ctx, dom_node *node, duk_u
 			child = next_child;
 		}
 
-		if (isBlock) {
-			duk_push_string(ctx, "\n");
-			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		if (isBlock && *idx > 0) {
+			/* Block end: add newline if needed */
+			duk_get_prop_index(ctx, arr_idx, *idx - 1);
+			const char *prev = duk_get_string(ctx, -1);
+			if (prev && strcmp(prev, "\n") != 0) {
+				duk_push_string(ctx, "\n");
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			}
+			duk_pop(ctx);
 		}
 
 		dom_string_unref(node_name);
