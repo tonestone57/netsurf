@@ -66,6 +66,12 @@ void js_destroyheap(struct jsheap *heap)
 		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
 	if (heap->event_proto_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->event_proto_atom);
+	if (heap->uievent_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->uievent_proto_atom);
+	if (heap->mouseevent_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->mouseevent_proto_atom);
+	if (heap->keyboardevent_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->keyboardevent_proto_atom);
 
 	JS_FreeRuntime(heap->rt);
 	free(heap);
@@ -211,6 +217,8 @@ bool js_fire_event(struct jsthread *thread, const char *type, struct dom_documen
 		JS_FreeValue(thread->ctx, event_ctor);
 		JS_FreeValue(thread->ctx, global);
 		JS_FreeValue(thread->ctx, node_val);
+
+		qjs_run_jobs(thread->ctx);
 
 		return true;
 	}

@@ -24,8 +24,6 @@ typedef struct qjsky_xhr_s {
 	struct fetch *fetch;
 } qjsky_xhr_t;
 
-static JSClassID qjsky_xhr_class_id = 0;
-
 static void qjsky_xhr_set_status(qjsky_xhr_t *xhr)
 {
 	xhr->status = fetch_http_code(xhr->fetch);
@@ -124,7 +122,8 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 
 static void qjsky_xhr_finalizer(JSRuntime *rt, JSValue val)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque(val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	qjsky_xhr_t *xhr = JS_GetOpaque(val, heap->xhr_class_id);
 	if (xhr) {
 		if (xhr->fetch) fetch_free(xhr->fetch);
 		free(xhr->status_text);
@@ -135,14 +134,15 @@ static void qjsky_xhr_finalizer(JSRuntime *rt, JSValue val)
 	}
 }
 
-static JSClassDef qjsky_xhr_class = {
+JSClassDef qjsky_xhr_class = {
 	"XMLHttpRequest",
 	.finalizer = qjsky_xhr_finalizer,
 };
 
 static JSValue qjsky_xhr_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
 {
-	JSValue obj = JS_NewObjectProtoClass(ctx, new_target, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	JSValue obj = JS_NewObjectProtoClass(ctx, new_target, heap->xhr_class_id);
 	if (JS_IsException(obj)) return obj;
 
 	qjsky_xhr_t *xhr = calloc(1, sizeof(*xhr));
@@ -161,7 +161,8 @@ static JSValue qjsky_xhr_ctor(JSContext *ctx, JSValueConst new_target, int argc,
 
 static JSValue qjsky_xhr_open(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 
 	if (argc < 2) return JS_EXCEPTION;
@@ -199,7 +200,8 @@ static JSValue qjsky_xhr_open(JSContext *ctx, JSValueConst this_val, int argc, J
 
 static JSValue qjsky_xhr_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 
 	if (xhr->ready_state != 1 || xhr->url == NULL) return JS_EXCEPTION;
@@ -220,28 +222,32 @@ static JSValue qjsky_xhr_send(JSContext *ctx, JSValueConst this_val, int argc, J
 
 static JSValue qjsky_xhr_get_readyState(JSContext *ctx, JSValueConst this_val)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 	return JS_NewInt32(ctx, xhr->ready_state);
 }
 
 static JSValue qjsky_xhr_get_status(JSContext *ctx, JSValueConst this_val)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 	return JS_NewInt32(ctx, xhr->status);
 }
 
 static JSValue qjsky_xhr_get_statusText(JSContext *ctx, JSValueConst this_val)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 	return JS_NewString(ctx, xhr->status_text ? xhr->status_text : "");
 }
 
 static JSValue qjsky_xhr_get_responseText(JSContext *ctx, JSValueConst this_val)
 {
-	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 	return JS_NewString(ctx, xhr->response_text ? xhr->response_text : "");
 }
@@ -269,17 +275,13 @@ static const JSCFunctionListEntry qjsky_xhr_proto_funcs[] = {
 
 void qjsky_init_xhr(JSContext *ctx)
 {
-	if (qjsky_xhr_class_id == 0) {
-		JS_NewClassID(&qjsky_xhr_class_id);
-	}
-	/* Ensure class is registered for this runtime */
-	JS_NewClass(JS_GetRuntime(ctx), qjsky_xhr_class_id, &qjsky_xhr_class);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
 	JSValue global = JS_GetGlobalObject(ctx);
 
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_xhr_proto_funcs, sizeof(qjsky_xhr_proto_funcs)/sizeof(qjsky_xhr_proto_funcs[0]));
-	JS_SetClassProto(ctx, qjsky_xhr_class_id, JS_DupValue(ctx, proto));
+	JS_SetClassProto(ctx, heap->xhr_class_id, JS_DupValue(ctx, proto));
 
 	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, ctor, proto);

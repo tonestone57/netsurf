@@ -5,9 +5,7 @@
 #include "desktop/browser_history.h"
 #include "netsurf/browser_window.h"
 
-static JSClassID qjsky_history_class_id = 0;
-
-static JSClassDef qjsky_history_class = {
+JSClassDef qjsky_history_class = {
 	"History",
 	.finalizer = NULL,
 };
@@ -51,17 +49,15 @@ static const JSCFunctionListEntry qjsky_history_proto_funcs[] = {
 
 void qjsky_init_history(JSContext *ctx)
 {
-	if (qjsky_history_class_id == 0) {
-		JS_NewClassID(&qjsky_history_class_id);
-	}
-	JS_NewClass(JS_GetRuntime(ctx), qjsky_history_class_id, &qjsky_history_class);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_history_proto_funcs, sizeof(qjsky_history_proto_funcs)/sizeof(qjsky_history_proto_funcs[0]));
-	JS_SetClassProto(ctx, qjsky_history_class_id, proto);
+	JS_SetClassProto(ctx, heap->history_class_id, proto);
 }
 
 JSValue qjsky_create_history(JSContext *ctx)
 {
-	return JS_NewObjectClass(ctx, qjsky_history_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	return JS_NewObjectClass(ctx, heap->history_class_id);
 }

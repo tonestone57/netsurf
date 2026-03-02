@@ -23,7 +23,7 @@
 
 ## Phase 5: Advanced Integration & Performance
 16. **Weak Reference Memoization**: Migrate the node map to a native-managed registry using `JS_SetOpaque` with proper garbage collection tracking to eliminate current memory leaks.
-17. **Async Task Queue**: Integrate `JS_ExecutePendingJob` into the NetSurf main loop to support ES6 Promises and async/await functionality.
-18. **Event Class Hierarchy**: Implement full inheritance for `UIEvent`, `MouseEvent`, and `KeyboardEvent` in the QuickJS glue layer.
+17. **[COMPLETED] Async Task Queue**: Integrated `JS_ExecutePendingJob` into timers and event entry points to support ES6 Promises.
+18. **[COMPLETED] Event Class Hierarchy**: Implemented full inheritance for `UIEvent`, `MouseEvent`, and `KeyboardEvent` in the QuickJS glue layer.
 19. **nsgenbind Upstreaming**: Finalize the `qjs_libdom` backend and submit it to the upstream NetSurf `nsgenbind` repository.
 20. **Remediation Audit**: Perform a full pass of all 67 `.bnd` files to ensure they remain engine-agnostic and use byte-length string operations.

@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include <quickjs.h>
 #include "content/handlers/javascript/quickjs/navigator.h"
+#include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "utils/useragent.h"
 
-static JSClassID qjsky_navigator_class_id = 0;
-
-static JSClassDef qjsky_navigator_class = {
+JSClassDef qjsky_navigator_class = {
 	"Navigator",
 	.finalizer = NULL,
 };
@@ -45,17 +44,15 @@ static const JSCFunctionListEntry qjsky_navigator_proto_funcs[] = {
 
 void qjsky_init_navigator(JSContext *ctx)
 {
-	if (qjsky_navigator_class_id == 0) {
-		JS_NewClassID(&qjsky_navigator_class_id);
-	}
-	JS_NewClass(JS_GetRuntime(ctx), qjsky_navigator_class_id, &qjsky_navigator_class);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_navigator_proto_funcs, sizeof(qjsky_navigator_proto_funcs)/sizeof(qjsky_navigator_proto_funcs[0]));
-	JS_SetClassProto(ctx, qjsky_navigator_class_id, proto);
+	JS_SetClassProto(ctx, heap->navigator_class_id, proto);
 }
 
 JSValue qjsky_create_navigator(JSContext *ctx)
 {
-	return JS_NewObjectClass(ctx, qjsky_navigator_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	return JS_NewObjectClass(ctx, heap->navigator_class_id);
 }

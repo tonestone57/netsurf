@@ -13,18 +13,17 @@ typedef struct qjsky_location_s {
 	nsurl *url;
 } qjsky_location_t;
 
-static JSClassID qjsky_location_class_id = 0;
-
 static void qjsky_location_finalizer(JSRuntime *rt, JSValue val)
 {
-	qjsky_location_t *loc = JS_GetOpaque(val, qjsky_location_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	qjsky_location_t *loc = JS_GetOpaque(val, heap->location_class_id);
 	if (loc) {
 		nsurl_unref(loc->url);
 		free(loc);
 	}
 }
 
-static JSClassDef qjsky_location_class = {
+JSClassDef qjsky_location_class = {
 	"Location",
 	.finalizer = qjsky_location_finalizer,
 };
@@ -40,7 +39,8 @@ static JSValue qjsky_location_reload(JSContext *ctx, JSValueConst this_val, int 
 
 static JSValue qjsky_location_get_href(JSContext *ctx, JSValueConst this_val)
 {
-	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, qjsky_location_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, heap->location_class_id);
 	if (!loc) return JS_EXCEPTION;
 
 	char *url_s;
@@ -55,7 +55,8 @@ static JSValue qjsky_location_get_href(JSContext *ctx, JSValueConst this_val)
 
 static JSValue qjsky_location_set_href(JSContext *ctx, JSValueConst this_val, JSValueConst val)
 {
-	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, qjsky_location_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, heap->location_class_id);
 	if (!loc) return JS_EXCEPTION;
 
 	struct jsthread *thread = JS_GetContextOpaque(ctx);
@@ -78,7 +79,8 @@ static JSValue qjsky_location_set_href(JSContext *ctx, JSValueConst this_val, JS
 
 static JSValue qjsky_location_get_component(JSContext *ctx, JSValueConst this_val, nsurl_component component)
 {
-	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, qjsky_location_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_location_t *loc = JS_GetOpaque2(ctx, this_val, heap->location_class_id);
 	if (!loc) return JS_EXCEPTION;
 
 	char *url_s;
@@ -111,19 +113,17 @@ static const JSCFunctionListEntry qjsky_location_proto_funcs[] = {
 
 void qjsky_init_location(JSContext *ctx)
 {
-	if (qjsky_location_class_id == 0) {
-		JS_NewClassID(&qjsky_location_class_id);
-	}
-	JS_NewClass(JS_GetRuntime(ctx), qjsky_location_class_id, &qjsky_location_class);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_location_proto_funcs, sizeof(qjsky_location_proto_funcs)/sizeof(qjsky_location_proto_funcs[0]));
-	JS_SetClassProto(ctx, qjsky_location_class_id, proto);
+	JS_SetClassProto(ctx, heap->location_class_id, proto);
 }
 
 JSValue qjsky_create_location(JSContext *ctx, nsurl *url)
 {
-	JSValue obj = JS_NewObjectClass(ctx, qjsky_location_class_id);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	JSValue obj = JS_NewObjectClass(ctx, heap->location_class_id);
 	if (JS_IsException(obj)) return obj;
 
 	qjsky_location_t *loc = calloc(1, sizeof(*loc));
