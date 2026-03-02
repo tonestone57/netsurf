@@ -1062,12 +1062,25 @@ layout_minmax_line(struct box *first,
 	}
 
 	if (first_line) {
-		/* todo: handle percentage values properly */
 		/* todo: handle text-indent interaction with floats */
-		int text_indent = layout_text_indent(&content->unit_len_ctx,
-				first->parent->parent->style, 100);
-		min = (min + text_indent < 0) ? 0 : min + text_indent;
-		max = (max + text_indent < 0) ? 0 : max + text_indent;
+		css_fixed value = 0;
+		css_unit unit = CSS_UNIT_PX;
+
+		css_computed_text_indent(block->style, &value, &unit);
+
+		if (unit != CSS_UNIT_PCT) {
+			int text_indent = FIXTOINT(css_unit_len2device_px(
+					block->style, &content->unit_len_ctx,
+					value, unit));
+			min = (min + text_indent < 0) ? 0 : min + text_indent;
+			max = (max + text_indent < 0) ? 0 : max + text_indent;
+		} else {
+			/* Percentage text-indent is relative to the containing
+			 * block's width. In the min/max pass, we don't know
+			 * this width, so we treat it as 0 to avoid circular
+			 * dependencies and incorrect heuristics.
+			 * todo: handle percentage values properly */
+		}
 	}
 
 	*line_min = min;
@@ -1265,8 +1278,10 @@ static void layout_minmax_block(
 				layout_minmax_table(child, font_func,
 						content);
 				/* todo: fix for zero height tables */
-				child_has_height = true;
-				child->flags |= MAKE_HEIGHT;
+				if (child->children != NULL) {
+					child_has_height = true;
+					child->flags |= MAKE_HEIGHT;
+				}
 				break;
 			default:
 				assert(0);
@@ -2362,8 +2377,61 @@ bool layout_table(
 	}
 	/* Table height is either the height of the contents, or specified
 	 * height if greater */
-	table_height = max(table_height, min_height);
-	/** \todo distribute spare height over the row groups / rows / cells */
+	if (table_height < min_height) {
+		spare_height = min_height - table_height;
+		int total_rows = 0;
+
+		for (row_group = table->children; row_group;
+				row_group = row_group->next) {
+			for (row = row_group->children; row; row = row->next) {
+				total_rows++;
+			}
+		}
+
+		if (total_rows > 0) {
+			int row_spare = spare_height / total_rows;
+			int remainder = spare_height % total_rows;
+			int current_table_y = border_spacing_v;
+
+			memset(row_span, 0, columns * sizeof(row_span[0]));
+			memset(row_span_cell, 0, columns * sizeof(row_span_cell[0]));
+
+			for (row_group = table->children; row_group;
+					row_group = row_group->next) {
+				int row_group_height = 0;
+				for (row = row_group->children; row; row = row->next) {
+					int r_spare = row_spare + (remainder > 0 ? 1 : 0);
+					if (remainder > 0) remainder--;
+
+					for (c = row->children; c; c = c->next) {
+						for (i = 0; i != c->columns; i++) {
+							row_span[c->start_column + i] = c->rows;
+						}
+						row_span_cell[c->start_column] = c;
+					}
+
+					row->y = row_group_height;
+					row->height += r_spare;
+
+					for (i = 0; i != columns; i++) {
+						if (row_span_cell[i] != 0) {
+							row_span_cell[i]->padding[BOTTOM] += r_spare;
+						}
+						if (row_span[i] != 0)
+							row_span[i]--;
+						else
+							row_span_cell[i] = 0;
+					}
+
+					row_group_height += row->height + border_spacing_v;
+				}
+				row_group->y = current_table_y;
+				row_group->height = row_group_height;
+				current_table_y += row_group_height;
+			}
+			table_height = min_height;
+		}
+	}
 
 	/* perform vertical alignment */
 	for (row_group = table->children; row_group;
