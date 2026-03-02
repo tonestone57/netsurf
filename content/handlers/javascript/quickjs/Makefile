@@ -17,7 +17,25 @@ $(OBJROOT)/quickjs/binding.h $(OBJROOT)/quickjs/Makefile: content/handlers/javas
 		false; \
 	)
 
+# Generator for the C include representing the generics.js
+$(OBJROOT)/quickjs/generics.js.inc: content/handlers/javascript/duktape/generics.js $(TOOLROOT)/xxd
+	$(Q)$(MKDIR) -p $(OBJROOT)/quickjs
+	$(VQ)echo "     XXD: $<"
+	$(Q)$(TOOLROOT)/xxd -i $< $@.tmp
+	$(Q)sed -e 's/content_handlers_javascript_duktape_generics_js/generics_js/' $@.tmp > $@
+
+# Generator for the C include representing the polyfill.js
+$(OBJROOT)/quickjs/polyfill.js.inc: content/handlers/javascript/duktape/polyfill.js $(TOOLROOT)/xxd
+	$(Q)$(MKDIR) -p $(OBJROOT)/quickjs
+	$(VQ)echo "     XXD: $<"
+	$(Q)$(TOOLROOT)/xxd -i $< $@.tmp
+	$(Q)sed -e 's/content_handlers_javascript_duktape_polyfill_js/polyfill_js/' $@.tmp > $@
+
 # Link against quickjs.
 # Use pkg-config if available, otherwise fallback to -lquickjs.
-CFLAGS += $(shell pkg-config --cflags quickjs 2>/dev/null || echo "")
-LDFLAGS += $(shell pkg-config --libs quickjs 2>/dev/null || echo "-lquickjs")
+CFLAGS += $(shell pkg-config --cflags quickjs 2>/dev/null || echo "-I/usr/include/quickjs")
+LDFLAGS += $(shell pkg-config --libs quickjs 2>/dev/null || echo "-L/usr/lib/quickjs -lquickjs")
+
+# Add dependencies for objects
+$(OBJROOT)/content_handlers_javascript_quickjs_qjsky.o: $(OBJROOT)/quickjs/generics.js.inc $(OBJROOT)/quickjs/polyfill.js.inc
+$(OBJROOT)/content_handlers_javascript_quickjs_quickjs.o: $(OBJROOT)/quickjs/generics.js.inc $(OBJROOT)/quickjs/polyfill.js.inc

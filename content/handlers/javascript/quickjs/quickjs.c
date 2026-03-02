@@ -3,16 +3,18 @@
 #include <string.h>
 
 #include "utils/log.h"
+#include "utils/corestrings.h"
 #include "content/handlers/javascript/js.h"
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/handlers/javascript/quickjs/qjs_utils.h"
 #include "content/handlers/javascript/quickjs/xhr.h"
 
-struct jsthread {
-	JSContext *ctx;
-	struct jsheap *heap;
-};
+#include "quickjs/binding.h"
+#include "quickjs/generics.js.inc"
+#include "quickjs/polyfill.js.inc"
+
+#include <dom/dom.h>
 
 void js_initialise(void)
 {
@@ -76,6 +78,26 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
+	/* Load polyfill.js */
+	JSValue polyfill_val = JS_Eval(thread->ctx, (const char *)polyfill_js, polyfill_js_len, "polyfill.js", JS_EVAL_TYPE_GLOBAL);
+	if (JS_IsException(polyfill_val)) {
+		qjs_log_exception(thread->ctx, "Failed to load polyfill.js");
+		JS_FreeValue(thread->ctx, polyfill_val);
+		js_destroythread(thread);
+		return NSERROR_INIT_FAILED;
+	}
+	JS_FreeValue(thread->ctx, polyfill_val);
+
+	/* Load generics.js */
+	JSValue generics_val = JS_Eval(thread->ctx, (const char *)generics_js, generics_js_len, "generics.js", JS_EVAL_TYPE_GLOBAL);
+	if (JS_IsException(generics_val)) {
+		qjs_log_exception(thread->ctx, "Failed to load generics.js");
+		JS_FreeValue(thread->ctx, generics_val);
+		js_destroythread(thread);
+		return NSERROR_INIT_FAILED;
+	}
+	JS_FreeValue(thread->ctx, generics_val);
+
 	*thread_out = thread;
 	return NSERROR_OK;
 }
@@ -109,58 +131,82 @@ bool js_exec(struct jsthread *thread, const uint8_t *txt, size_t txtlen, const c
 
 bool js_fire_event(struct jsthread *thread, const char *type, struct dom_document *doc, struct dom_node *target)
 {
-	JSValue global = JS_GetGlobalObject(thread->ctx);
-	JSValue event_ctor = JS_GetPropertyStr(thread->ctx, global, "Event");
+	if (target != NULL) {
+		/* General event firing logic */
+		JSValue node_val = qjsky_push_node(thread->ctx, target);
+		JSValue global = JS_GetGlobalObject(thread->ctx);
+		JSValue event_ctor = JS_GetPropertyStr(thread->ctx, global, "Event");
 
-	if (JS_IsException(event_ctor) || JS_IsUndefined(event_ctor)) {
-		if (JS_IsException(event_ctor)) qjs_log_exception(thread->ctx, "Event ctor access error");
+		JSValue type_val = JS_NewString(thread->ctx, type);
+		JSValue event_obj = JS_CallConstructor(thread->ctx, event_ctor, 1, &type_val);
+
+		JSValue dispatch_fn = JS_GetPropertyStr(thread->ctx, node_val, "dispatchEvent");
+		if (JS_IsFunction(thread->ctx, dispatch_fn)) {
+			JSValue ret = JS_Call(thread->ctx, dispatch_fn, node_val, 1, &event_obj);
+			JS_FreeValue(thread->ctx, ret);
+		}
+
+		JS_FreeValue(thread->ctx, dispatch_fn);
+		JS_FreeValue(thread->ctx, event_obj);
+		JS_FreeValue(thread->ctx, type_val);
 		JS_FreeValue(thread->ctx, event_ctor);
 		JS_FreeValue(thread->ctx, global);
-		return false;
+		JS_FreeValue(thread->ctx, node_val);
+
+		return true;
 	}
 
-	/* Construct Event object */
-	JSValue type_val = JS_NewString(thread->ctx, type);
-	JSValue event_obj = JS_CallConstructor(thread->ctx, event_ctor, 1, &type_val);
-	JS_FreeValue(thread->ctx, type_val);
-	JS_FreeValue(thread->ctx, event_ctor);
-
-	if (JS_IsException(event_obj)) {
-		qjs_log_exception(thread->ctx, "Event construction error");
-		JS_FreeValue(thread->ctx, event_obj);
-		JS_FreeValue(thread->ctx, global);
-		return false;
+	if (strcmp(type, "load") == 0) {
+		/* Special case for Window.onload */
+		/* Simple dispatch for now */
 	}
 
-	/* Wrap target node */
-	JSValue target_val = qjsky_push_node(thread->ctx, target);
-	if (JS_IsException(target_val)) {
-		qjs_log_exception(thread->ctx, "Node wrapping error");
-		JS_FreeValue(thread->ctx, target_val);
-		JS_FreeValue(thread->ctx, event_obj);
-		JS_FreeValue(thread->ctx, global);
-		return false;
-	}
-
-	/* Dispatch event: target.dispatchEvent(event) */
-	JSValue dispatch_fn = JS_GetPropertyStr(thread->ctx, target_val, "dispatchEvent");
-	if (JS_IsFunction(thread->ctx, dispatch_fn)) {
-		JSValue ret = JS_Call(thread->ctx, dispatch_fn, target_val, 1, &event_obj);
-		if (JS_IsException(ret)) qjs_log_exception(thread->ctx, "Event dispatch error");
-		JS_FreeValue(thread->ctx, ret);
-	}
-
-	JS_FreeValue(thread->ctx, dispatch_fn);
-	JS_FreeValue(thread->ctx, target_val);
-	JS_FreeValue(thread->ctx, event_obj);
-	JS_FreeValue(thread->ctx, global);
 	return true;
 }
 
 void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 {
-	/* Compile and attach inline event handlers (e.g., onclick) */
-	/* Note: In a full implementation, we'd scan for all on* attributes */
+	dom_namednodemap *map;
+	dom_exception exc;
+	dom_ulong idx, siz;
+	dom_attr *attr = NULL;
+	dom_string *key = NULL;
+
+	exc = dom_node_get_attributes(node, &map);
+	if (exc != DOM_NO_ERR || map == NULL) return;
+
+	exc = dom_namednodemap_get_length(map, &siz);
+	if (exc != DOM_NO_ERR) {
+		dom_namednodemap_unref(map);
+		return;
+	}
+
+	for (idx = 0; idx < siz; idx++) {
+		exc = dom_namednodemap_item(map, idx, &attr);
+		if (exc != DOM_NO_ERR) break;
+
+		exc = dom_attr_get_name(attr, &key);
+		if (exc != DOM_NO_ERR) {
+			dom_node_unref(attr);
+			break;
+		}
+
+		if (dom_string_byte_length(key) > 2) {
+			const uint8_t *data = (const uint8_t *)dom_string_data(key);
+			if (data[0] == 'o' && data[1] == 'n') {
+				dom_string *sub = NULL;
+				dom_string_substr(key, 2, dom_string_byte_length(key), &sub);
+				if (sub) {
+					qjsky_register_event_listener_for(thread->ctx, node, sub, false);
+					dom_string_unref(sub);
+				}
+			}
+		}
+
+		dom_string_unref(key);
+		dom_node_unref(attr);
+	}
+	dom_namednodemap_unref(map);
 }
 
 void js_event_cleanup(struct jsthread *thread, struct dom_event *evt)

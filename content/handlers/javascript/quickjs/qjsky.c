@@ -7,6 +7,7 @@
 #include "utils/log.h"
 #include "utils/corestrings.h"
 #include "utils/ring.h"
+#include "include/netsurf/misc.h"
 #include "desktop/gui_internal.h"
 
 /* Timer tracking */
@@ -46,15 +47,15 @@ void qjsky_init_context(JSContext *ctx)
 	JSRuntime *rt = JS_GetRuntime(ctx);
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
 	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue map = JS_NewMap(ctx);
 
-	/* Use a Symbol for better isolation of the memoization map */
+	/* Initialize atoms */
 	if (heap->node_map_atom == JS_ATOM_NULL) {
-		JSValue sym = JS_NewSymbol(ctx, "__qjskyNodeMap", 0);
-		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
+		heap->node_map_atom = JS_NewAtom(ctx, "__qjskyNodeMap");
+		heap->handler_map_atom = JS_NewAtom(ctx, "__qjskyHandlerMap");
+		heap->handler_listener_map_atom = JS_NewAtom(ctx, "__qjskyHandlerListenerMap");
 	}
 
+	JSValue map = JS_NewObject(ctx);
 	JS_DefinePropertyValue(ctx, global, heap->node_map_atom, map, JS_PROP_CONFIGURABLE);
 	JS_FreeValue(ctx, global);
 }
@@ -67,16 +68,13 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue map = JS_GetProperty(ctx, global, heap->node_map_atom);
 
-	/* Key for the map: use BigUint64 for pointer precision */
-	JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)node);
+	/* Key for the map: use a string of the pointer for now */
+	char key_str[32];
+	snprintf(key_str, sizeof(key_str), "ptr_%p", node);
 
-	/* Call map.get(key) */
-	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
-	JSValue existing = JS_Call(ctx, get_fn, map, 1, &key);
-	JS_FreeValue(ctx, get_fn);
+	JSValue existing = JS_GetPropertyStr(ctx, map, key_str);
 
 	if (!JS_IsUndefined(existing) && !JS_IsNull(existing)) {
-		JS_FreeValue(ctx, key);
 		JS_FreeValue(ctx, map);
 		JS_FreeValue(ctx, global);
 		return existing;
@@ -86,7 +84,6 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	/* Create object with proper class */
 	JSValue obj = JS_NewObjectClass(ctx, heap->node_class_id);
 	if (JS_IsException(obj)) {
-		JS_FreeValue(ctx, key);
 		JS_FreeValue(ctx, map);
 		JS_FreeValue(ctx, global);
 		return obj;
@@ -95,14 +92,12 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JS_SetOpaque(obj, node);
 	dom_node_ref(node);
 
+	/* Attach private maps for handlers and listeners */
+	JS_DefinePropertyValue(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx), 0);
+	JS_DefinePropertyValue(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx), 0);
+
 	/* Store in memoization map */
-	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
-	JSValue argv[2] = { key, JS_DupValue(ctx, obj) };
-	JSValue set_ret = JS_Call(ctx, set_fn, map, 2, argv);
-	JS_FreeValue(ctx, argv[1]);
-	JS_FreeValue(ctx, set_fn);
-	JS_FreeValue(ctx, set_ret);
-	JS_FreeValue(ctx, key);
+	JS_SetPropertyStr(ctx, map, key_str, JS_DupValue(ctx, obj));
 
 	JS_FreeValue(ctx, map);
 	JS_FreeValue(ctx, global);
@@ -148,8 +143,9 @@ static void qjsky_timer_cb(void *p)
 		guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
 	} else {
 		struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(timer->ctx));
-		qjsky_timer_t **timer_ring = (qjsky_timer_t **)&heap->timer_ring;
-		RING_REMOVE(*timer_ring, timer);
+		qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+		RING_REMOVE(timer_ring, timer);
+		heap->timer_ring = timer_ring;
 		JS_FreeValue(timer->ctx, timer->func);
 		free(timer);
 	}
@@ -170,8 +166,9 @@ static JSValue qjsky_set_timer(JSContext *ctx, int argc, JSValueConst *argv, boo
 	timer->repeating = repeating;
 	timer->handle = heap->next_timer_handle++;
 
-	qjsky_timer_t **timer_ring = (qjsky_timer_t **)&heap->timer_ring;
-	RING_INSERT(*timer_ring, timer);
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+	RING_INSERT(timer_ring, timer);
+	heap->timer_ring = timer_ring;
 	guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
 
 	return JS_NewInt32(ctx, timer->handle);
@@ -198,14 +195,14 @@ void qjsky_timer_init(JSContext *ctx)
 void qjsky_timer_cleanup(JSContext *ctx)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-	qjsky_timer_t **timer_ring = (qjsky_timer_t **)&heap->timer_ring;
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
 	qjsky_timer_t *timer;
 	qjsky_timer_t *next;
 	bool again;
 
 	do {
 		again = false;
-		timer = *timer_ring;
+		timer = timer_ring;
 		if (timer == NULL) break;
 
 		do {
@@ -213,14 +210,15 @@ void qjsky_timer_cleanup(JSContext *ctx)
 			if (timer->ctx == ctx) {
 				guit->misc->schedule(-1, qjsky_timer_cb, timer);
 				JS_FreeValue(ctx, timer->func);
-				RING_REMOVE(*timer_ring, timer);
+				RING_REMOVE(timer_ring, timer);
 				free(timer);
 				again = true;
 				break;
 			}
 			timer = next;
-		} while (timer != *timer_ring);
+		} while (timer != timer_ring);
 	} while (again);
+	heap->timer_ring = timer_ring;
 }
 
 /* Console Integration */
@@ -250,4 +248,94 @@ void qjsky_init_console(JSContext *ctx)
 	JS_SetPropertyFunctionList(ctx, console, qjsky_console_funcs, sizeof(qjsky_console_funcs)/sizeof(qjsky_console_funcs[0]));
 	JS_SetPropertyStr(ctx, global, "console", console);
 	JS_FreeValue(ctx, global);
+}
+
+/* Event Support */
+
+static JSValue qjsky_get_handler(JSContext *ctx, struct dom_element *ele, dom_string *name)
+{
+	JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)ele);
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	JSValue handler_map = JS_GetProperty(ctx, node_val, heap->handler_map_atom);
+
+	JSAtom prop = JS_NewAtomLen(ctx, (const char *)dom_string_data(name), dom_string_byte_length(name));
+	JSValue handler = JS_GetProperty(ctx, handler_map, prop);
+	JS_FreeAtom(ctx, prop);
+
+	JS_FreeValue(ctx, handler_map);
+	JS_FreeValue(ctx, node_val);
+	return handler;
+}
+
+static void qjsky_generic_event_handler(dom_event *evt, void *pw)
+{
+	JSContext *ctx = (JSContext *)pw;
+	dom_string *name;
+	dom_exception exc;
+	dom_event_target *targ;
+
+	exc = dom_event_get_type(evt, &name);
+	if (exc != DOM_NO_ERR) return;
+
+	exc = dom_event_get_current_target(evt, &targ);
+	if (exc != DOM_NO_ERR) {
+		dom_string_unref(name);
+		return;
+	}
+
+	JSValue handler = qjsky_get_handler(ctx, (struct dom_element *)targ, name);
+	if (JS_IsFunction(ctx, handler)) {
+		JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)targ);
+		JSValue event_val = JS_NewObject(ctx); /* TODO: Better Event wrapping */
+		JSValue ret = JS_Call(ctx, handler, node_val, 1, &event_val);
+		if (JS_IsException(ret)) qjs_log_exception(ctx, "Event handler error");
+
+		if (JS_IsBool(ret) && !JS_ToBool(ctx, ret)) {
+			dom_event_prevent_default(evt);
+		}
+
+		JS_FreeValue(ctx, ret);
+		JS_FreeValue(ctx, event_val);
+		JS_FreeValue(ctx, node_val);
+	}
+	JS_FreeValue(ctx, handler);
+
+	dom_node_unref(targ);
+	dom_string_unref(name);
+}
+
+void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, bool capture)
+{
+	dom_event_listener *listen = NULL;
+	dom_exception exc;
+
+	/* Create a wrapper if it's the first time */
+	/* In a real implementation we would track if we've already registered a C handler for this name on this element */
+
+	exc = dom_event_listener_create(qjsky_generic_event_handler, ctx, &listen);
+	if (exc != DOM_NO_ERR) return;
+
+	dom_event_target_add_event_listener(ele, name, listen, capture);
+	dom_event_listener_unref(listen);
+}
+
+void qjsky_push_event(JSContext *ctx, dom_event *evt)
+{
+	/* Simple placeholder for now */
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue event_ctor = JS_GetPropertyStr(ctx, global, "Event");
+	dom_string *type_dom;
+	dom_event_get_type(evt, &type_dom);
+
+	JSValue type_val = qjsky_dom_string_to_js_value(ctx, type_dom);
+	JSValue event_obj = JS_CallConstructor(ctx, event_ctor, 1, &type_val);
+
+	JS_FreeValue(ctx, type_val);
+	JS_FreeValue(ctx, event_ctor);
+	JS_FreeValue(ctx, global);
+	dom_string_unref(type_dom);
+
+	/* In a real implementation we would associate the dom_event* with the JS object */
+	JS_SetOpaque(event_obj, evt);
+	dom_event_ref(evt);
 }
