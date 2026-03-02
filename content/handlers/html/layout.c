@@ -280,10 +280,16 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		if (d->type != BOX_TEXT && d->type != BOX_BR &&
 				d->type != BOX_INLINE_END &&
 				layout__box_is_replace(d)) {
-			/* Baseline of replaced element is the bottom of its margin box */
+			/* Baseline of replaced element is the bottom of its
+			 * margin box. We align this with the baseline of the
+			 * line, which we estimate at 3/4 of the line height.
+			 */
 			baseline_shift = used_height * 3 / 4 - outer_h;
 		} else {
-			/* Baseline of non-replaced element is assumed to be at 3/4 of its height */
+			/* Baseline of non-replaced element is assumed to be
+			 * at 3/4 of its height. We align this with the
+			 * baseline of the line.
+			 */
 			baseline_shift = (used_height - d->height) * 3 / 4;
 		}
 
