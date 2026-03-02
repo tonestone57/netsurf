@@ -231,42 +231,64 @@ static void layout_line_set_positions(struct box *first, struct box *last,
 /**
  * Handle vertical-align by adjusting box y values.
  *
+ * \param  unit_len_ctx  Length conversion context
  * \param  first        first box in line
  * \param  last         box after last box in line
  * \param  used_height  height of line
  */
-static void layout_line_vertical_align(struct box *first, struct box *last,
-		int used_height)
+static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
+		struct box *first, struct box *last, int used_height)
 {
 	struct box *d;
 
 	for (d = first; d != last; d = d->next) {
-		if (d->style == NULL)
+		css_fixed value = 0;
+		css_unit unit = CSS_UNIT_PX;
+		int h;
+
+		if (d->style == NULL || lh__box_is_absolute(d))
 			continue;
 
-		if ((d->type == BOX_INLINE && d->inline_end) ||
-				d->type == BOX_BR ||
-				d->type == BOX_TEXT ||
+		if (d->type == BOX_TEXT || d->type == BOX_BR ||
 				d->type == BOX_INLINE_END) {
-			css_fixed value = 0;
-			css_unit unit = CSS_UNIT_PX;
-			switch (css_computed_vertical_align(d->style, &value,
-					&unit)) {
-			case CSS_VERTICAL_ALIGN_SUPER:
-			case CSS_VERTICAL_ALIGN_TOP:
-			case CSS_VERTICAL_ALIGN_TEXT_TOP:
-				/* already at top */
-				break;
-			case CSS_VERTICAL_ALIGN_SUB:
-			case CSS_VERTICAL_ALIGN_BOTTOM:
-			case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
-				d->y += used_height - d->height;
-				break;
-			default:
-			case CSS_VERTICAL_ALIGN_BASELINE:
-				d->y += 0.75 * (used_height - d->height);
-				break;
+			h = d->height;
+		} else if (d->type == BOX_INLINE ||
+				d->type == BOX_INLINE_BLOCK ||
+				d->type == BOX_INLINE_FLEX) {
+			h = d->border[TOP].width + d->padding[TOP] + d->height +
+					d->padding[BOTTOM] +
+					d->border[BOTTOM].width;
+		} else {
+			continue;
+		}
+
+		switch (css_computed_vertical_align(d->style, &value, &unit)) {
+		case CSS_VERTICAL_ALIGN_SUPER:
+		case CSS_VERTICAL_ALIGN_TOP:
+		case CSS_VERTICAL_ALIGN_TEXT_TOP:
+			/* already at top */
+			break;
+		case CSS_VERTICAL_ALIGN_MIDDLE:
+			d->y += (used_height - h) / 2;
+			break;
+		case CSS_VERTICAL_ALIGN_SUB:
+		case CSS_VERTICAL_ALIGN_BOTTOM:
+		case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
+			d->y += used_height - h;
+			break;
+		case CSS_VERTICAL_ALIGN_SET:
+			if (unit == CSS_UNIT_PCT) {
+				d->y -= FPCT_OF_INT_TOINT(value, used_height);
+			} else {
+				d->y -= FIXTOINT(css_unit_len2device_px(
+						d->style, unit_len_ctx,
+						value, unit));
 			}
+			break;
+		default:
+		case CSS_VERTICAL_ALIGN_BASELINE:
+			d->y += 0.75 * (used_height - h);
+			break;
 		}
 	}
 }
@@ -850,8 +872,10 @@ layout_minmax_line(struct box *first,
 
 			if (b->next) {
 				if (b->space == UNKNOWN_WIDTH) {
-					font_func->width(&fstyle, " ", 1,
-							 &b->space);
+					if (font_func->width(&fstyle, " ", 1,
+							&b->space) != NSERROR_OK) {
+						b->space = 0;
+					}
 				}
 				max += b->space;
 			}
@@ -872,8 +896,6 @@ layout_minmax_line(struct box *first,
 					CSS_WHITE_SPACE_PRE);
 
 			if (b->width == UNKNOWN_WIDTH) {
-				/** \todo handle errors */
-
 				/* If it's a select element, we must use the
 				 * width of the widest option text */
 				if (b->parent->parent->gadget &&
@@ -900,16 +922,21 @@ layout_minmax_line(struct box *first,
 						b->width += SCROLLBAR_WIDTH;
 
 				} else {
-					font_func->width(&fstyle, b->text,
-						b->length, &b->width);
+					if (font_func->width(&fstyle, b->text,
+							b->length, &b->width) !=
+							NSERROR_OK) {
+						b->width = 0;
+					}
 					b->flags |= MEASURED;
 				}
 			}
 			max += b->width;
 			if (b->next) {
 				if (b->space == UNKNOWN_WIDTH) {
-					font_func->width(&fstyle, " ", 1,
-							 &b->space);
+					if (font_func->width(&fstyle, " ", 1,
+							&b->space) != NSERROR_OK) {
+						b->space = 0;
+					}
 				}
 				max += b->space;
 			}
@@ -935,8 +962,11 @@ layout_minmax_line(struct box *first,
 					for (j = i; j != b->length &&
 							b->text[j] != ' '; j++)
 						;
-					font_func->width(&fstyle, b->text + i,
-							 j - i, &width);
+					if (font_func->width(&fstyle, b->text + i,
+							j - i, &width) !=
+							NSERROR_OK) {
+						width = 0;
+					}
 					if (min < width)
 						min = width;
 					i = j + 1;
@@ -3112,7 +3142,10 @@ layout_text_box_split(html_content *content,
 		/* We're need to add a space, and we don't know how big
 		 * it's to be, OR we have a space of unknown width anyway;
 		 * Calculate space width */
-		font_func->width(fstyle, " ", 1, &space_width);
+		if (font_func->width(fstyle, " ", 1, &space_width) !=
+				NSERROR_OK) {
+			space_width = 0;
+		}
 	}
 
 	if (split_box->space == UNKNOWN_WIDTH)
@@ -3593,8 +3626,10 @@ layout_line(struct box *first,
 		} else if (b->type == BOX_INLINE_END) {
 			b->width = 0;
 			if (b->space == UNKNOWN_WIDTH) {
-				font_func->width(&fstyle, " ", 1, &b->space);
-				/** \todo handle errors */
+				if (font_func->width(&fstyle, " ", 1,
+						&b->space) != NSERROR_OK) {
+					b->space = 0;
+				}
 			}
 			space_after = b->space;
 
@@ -3618,8 +3653,6 @@ layout_line(struct box *first,
 			}
 
 			if (b->width == UNKNOWN_WIDTH) {
-				/** \todo handle errors */
-
 				/* If it's a select element, we must use the
 				 * width of the widest option text */
 				if (b->parent->parent->gadget &&
@@ -3644,8 +3677,11 @@ layout_line(struct box *first,
 					if (nsoption_bool(core_select_menu))
 						b->width += SCROLLBAR_WIDTH;
 				} else {
-					font_func->width(&fstyle, b->text,
-							b->length, &b->width);
+					if (font_func->width(&fstyle, b->text,
+							b->length, &b->width) !=
+							NSERROR_OK) {
+						b->width = 0;
+					}
 					b->flags |= MEASURED;
 				}
 			}
@@ -3657,8 +3693,11 @@ layout_line(struct box *first,
 			if (b->text && (x + b->width < x1 - x0) &&
 					!(b->flags & MEASURED) &&
 					b->next) {
-				font_func->width(&fstyle, b->text,
-						 b->length, &b->width);
+				if (font_func->width(&fstyle, b->text,
+						 b->length, &b->width) !=
+						 NSERROR_OK) {
+					b->width = 0;
+				}
 				b->flags |= MEASURED;
 			}
 
@@ -3792,9 +3831,10 @@ layout_line(struct box *first,
 					font_plot_style_from_css(
 							&content->unit_len_ctx,
 							b->style, &fstyle);
-					/** \todo handle errors */
-					font_func->width(&fstyle, " ", 1,
-							 &b->space);
+					if (font_func->width(&fstyle, " ", 1,
+							&b->space) != NSERROR_OK) {
+						b->space = 0;
+					}
 				}
 				space_after = b->space;
 			} else {
@@ -3946,13 +3986,14 @@ layout_line(struct box *first,
 
 			font_plot_style_from_css(&content->unit_len_ctx,
 					split_box->style, &fstyle);
-			/** \todo handle errors */
-			font_func->split(&fstyle,
+			if (font_func->split(&fstyle,
 					 split_box->text,
 					 split_box->length,
 					 x1 - x0 - x - space_before,
 					 &split,
-					 &w);
+					 &w) != NSERROR_OK) {
+				split = 0;
+			}
 		}
 
 		/* split == 0 implies that text can't be split */
@@ -4088,8 +4129,7 @@ layout_line(struct box *first,
 	assert(b != first || (move_y && 0 < used_height && (left || right)));
 
 	/* handle vertical-align by adjusting box y values */
-	/** \todo  proper vertical alignment handling */
-	layout_line_vertical_align(first, b, used_height);
+	layout_line_vertical_align(&content->unit_len_ctx, first, b, used_height);
 
 	/* handle clearance for br */
 	if (br_box && css_computed_clear(br_box->style) != CSS_CLEAR_NONE) {
@@ -5030,10 +5070,13 @@ layout_lists(const html_content *content, struct box *box)
 							&content->unit_len_ctx,
 							marker->style,
 							&fstyle);
-					content->font_func->width(&fstyle,
+					if (content->font_func->width(&fstyle,
 							marker->text,
 							marker->length,
-							&marker->width);
+							&marker->width) !=
+							NSERROR_OK) {
+						marker->width = 0;
+					}
 					marker->flags |= MEASURED;
 				}
 				marker->x = -marker->width;
