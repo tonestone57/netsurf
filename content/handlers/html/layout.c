@@ -844,7 +844,8 @@ layout_minmax_line(struct box *first,
 			continue;
 		}
 
-		assert(b->style);
+		if (b->style == NULL)
+			continue;
 		font_plot_style_from_css(&content->unit_len_ctx, b->style, &fstyle);
 
 		if (b->type == BOX_INLINE && !b->object &&
@@ -2422,18 +2423,20 @@ bool layout_table(
 	if (table_height < min_height) {
 		spare_height = min_height - table_height;
 		int total_rows = 0;
+		int sum_row_heights = 0;
 
 		for (row_group = table->children; row_group;
 				row_group = row_group->next) {
 			for (row = row_group->children; row; row = row->next) {
 				total_rows++;
+				sum_row_heights += row->height;
 			}
 		}
 
 		if (total_rows > 0) {
-			int row_spare = spare_height / total_rows;
-			int remainder = spare_height % total_rows;
 			int current_table_y = border_spacing_v;
+			int used_spare_height = 0;
+			int rows_processed = 0;
 
 			memset(row_span, 0, columns * sizeof(row_span[0]));
 			memset(row_span_cell, 0, columns * sizeof(row_span_cell[0]));
@@ -2442,8 +2445,17 @@ bool layout_table(
 					row_group = row_group->next) {
 				int row_group_height = 0;
 				for (row = row_group->children; row; row = row->next) {
-					int r_spare = row_spare + (remainder > 0 ? 1 : 0);
-					if (remainder > 0) remainder--;
+					int r_spare;
+
+					if (rows_processed == total_rows - 1) {
+						r_spare = spare_height - used_spare_height;
+					} else if (sum_row_heights > 0) {
+						r_spare = (long long)spare_height * row->height / sum_row_heights;
+					} else {
+						r_spare = spare_height / total_rows;
+					}
+					used_spare_height += r_spare;
+					rows_processed++;
 
 					for (c = row->children; c; c = c->next) {
 						for (i = 0; i != c->columns; i++) {
@@ -3450,7 +3462,11 @@ static int line_height(
 	css_unit lhunit = CSS_UNIT_PX;
 	css_fixed line_height;
 
-	assert(style);
+	if (style == NULL) {
+		/* Fallback for boxes without style: 1.3 * 10pt ≈ 13pt */
+		return FIXTOINT(css_unit_len2device_px(NULL, unit_len_ctx,
+				INTTOFIX(13), CSS_UNIT_PT));
+	}
 
 	lhtype = css_computed_line_height(style, &lhvalue, &lhunit);
 	if (lhtype == CSS_LINE_HEIGHT_NORMAL) {
