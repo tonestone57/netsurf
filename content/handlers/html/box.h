@@ -460,6 +460,7 @@ struct box {
 	css_fixed cached_viewport_width;
 	css_fixed cached_viewport_height_css;
 	css_fixed cached_device_dpi;
+	const css_computed_style *cached_root_style;
 	int cached_available_width;
 	int cached_viewport_height;
 	int cached_width;

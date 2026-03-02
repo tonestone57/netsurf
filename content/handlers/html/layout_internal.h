@@ -68,6 +68,23 @@ bool layout_flex(
 		int available_width,
 		html_content *content);
 
+/**
+ * Internal dimension calculation function for full cache population.
+ *
+ * \param  unit_len_ctx     Length conversion context
+ * \param  available_width  width of containing block
+ * \param  viewport_height  height of viewport in pixels or -ve if unknown
+ * \param  box              current box
+ * \param  style            style giving width, height, margins, paddings,
+ *                          and borders
+ */
+void layout_find_dimensions_internal(
+		const css_unit_ctx *unit_len_ctx,
+		int available_width,
+		int viewport_height,
+		struct box *box,
+		const css_computed_style *style);
+
 typedef uint8_t (*css_len_func)(
 		const css_computed_style *style,
 		css_fixed *length, css_unit *unit);
@@ -460,9 +477,6 @@ static inline void layout_find_dimensions(
 		int padding[4],
 		struct box_border border[4])
 {
-	struct box *containing_block = NULL;
-	unsigned int i;
-
 	css_fixed font_size = 0;
 	css_unit font_unit = CSS_UNIT_PX;
 
@@ -470,401 +484,29 @@ static inline void layout_find_dimensions(
 		css_computed_font_size(style, &font_size, &font_unit);
 	}
 
-	if ((box->flags & DIM_CACHED) &&
-	    box->cached_style == style &&
-	    box->cached_font_size == font_size &&
-	    box->cached_viewport_width == unit_len_ctx->viewport_width &&
-	    box->cached_viewport_height_css == unit_len_ctx->viewport_height &&
-	    box->cached_device_dpi == unit_len_ctx->device_dpi &&
-	    box->cached_available_width == available_width &&
-	    box->cached_viewport_height == viewport_height) {
-		if (width) *width = box->cached_width;
-		if (height) *height = box->cached_height;
-		if (max_width) *max_width = box->cached_max_width;
-		if (min_width) *min_width = box->cached_min_width;
-		if (max_height) *max_height = box->cached_max_height;
-		if (min_height) *min_height = box->cached_min_height;
-		if (margin) memcpy(margin, box->cached_margin, sizeof(int) * 4);
-		if (padding) memcpy(padding, box->cached_padding, sizeof(int) * 4);
-		if (border) memcpy(border, box->cached_border, sizeof(struct box_border) * 4);
-		return;
+	if (!(box->flags & DIM_CACHED) ||
+	    box->cached_style != style ||
+	    box->cached_font_size != font_size ||
+	    box->cached_viewport_width != unit_len_ctx->viewport_width ||
+	    box->cached_viewport_height_css != unit_len_ctx->viewport_height ||
+	    box->cached_device_dpi != unit_len_ctx->device_dpi ||
+	    box->cached_root_style != unit_len_ctx->root_style ||
+	    box->cached_available_width != available_width ||
+	    box->cached_viewport_height != viewport_height) {
+		layout_find_dimensions_internal(unit_len_ctx, available_width,
+				viewport_height, box, style);
 	}
 
-	if (style == NULL) {
-		if (width) *width = AUTO;
-		if (height) *height = AUTO;
-		if (max_width) *max_width = -1;
-		if (min_width) *min_width = 0;
-		if (max_height) *max_height = -1;
-		if (min_height) *min_height = 0;
-		if (margin) memset(margin, 0, sizeof(int) * 4);
-		if (padding) memset(padding, 0, sizeof(int) * 4);
-		if (border) {
-			for (i = 0; i < 4; i++) {
-				border[i].style = CSS_BORDER_STYLE_NONE;
-				border[i].width = 0;
-				border[i].c = 0;
-			}
-		}
-		return;
-	}
-
-	if (width) {
-		if (css_computed_width_px(style, unit_len_ctx,
-				available_width, width) == CSS_WIDTH_SET) {
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, true, width);
-		} else {
-			*width = AUTO;
-		}
-	}
-
-	if (height || max_height || min_height) {
-		if (css_computed_position(style) ==
-				CSS_POSITION_ABSOLUTE &&
-				box->parent) {
-			/* Box is absolutely positioned */
-			containing_block = box->float_container;
-		} else if (box->float_container &&
-				css_computed_position(style) !=
-				CSS_POSITION_ABSOLUTE &&
-				(css_computed_float(style) ==
-				CSS_FLOAT_LEFT ||
-				css_computed_float(style) ==
-				CSS_FLOAT_RIGHT)) {
-			/* Box is a float */
-			assert(box->parent &&
-					box->parent->parent &&
-					box->parent->parent->parent);
-
-			containing_block =
-					box->parent->parent->parent;
-		} else if (box->parent && box->parent->type !=
-				BOX_INLINE_CONTAINER) {
-			/* Box is a block level element */
-			containing_block = box->parent;
-		} else if (box->parent && box->parent->type ==
-				BOX_INLINE_CONTAINER) {
-			/* Box is an inline block */
-			assert(box->parent->parent);
-			containing_block = box->parent->parent;
-		}
-	}
-
-	if (height) {
-		enum css_height_e htype;
-		css_fixed value = 0;
-		css_unit unit = CSS_UNIT_PX;
-
-		htype = css_computed_height(style, &value, &unit);
-
-		if (htype == CSS_HEIGHT_SET) {
-			if (unit == CSS_UNIT_PCT) {
-				enum css_height_e cbhtype = CSS_HEIGHT_AUTO;
-
-				if (containing_block) {
-					css_fixed f = 0;
-					css_unit u = CSS_UNIT_PX;
-
-					cbhtype = css_computed_height(
-							containing_block->style,
-							&f, &u);
-				}
-
-				if (containing_block &&
-					containing_block->height != AUTO &&
-					(css_computed_position(style) ==
-							CSS_POSITION_ABSOLUTE ||
-						cbhtype == CSS_HEIGHT_SET)) {
-					/* Box is absolutely positioned or its
-					 * containing block has a valid
-					 * specified height.
-					 * (CSS 2.1 Section 10.5) */
-					*height = FPCT_OF_INT_TOINT(value,
-						containing_block->height);
-				} else if ((!box->parent ||
-						!box->parent->parent) &&
-						viewport_height >= 0) {
-					/* If root element or it's child
-					 * (HTML or BODY) */
-					*height = FPCT_OF_INT_TOINT(value,
-							viewport_height);
-				} else {
-					/* precentage height not permissible
-					 * treat height as auto */
-					*height = AUTO;
-				}
-			} else {
-				*height = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		} else {
-			*height = AUTO;
-		}
-
-		if (*height != AUTO) {
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, false, height);
-		}
-	}
-
-	if (max_width) {
-		enum css_max_width_e type;
-		css_fixed value = 0;
-		css_unit unit = CSS_UNIT_PX;
-
-		type = css_computed_max_width(style, &value, &unit);
-
-		if (type == CSS_MAX_WIDTH_SET) {
-			if (unit == CSS_UNIT_PCT) {
-				*max_width = FPCT_OF_INT_TOINT(value,
-						available_width);
-			} else {
-				*max_width = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		} else {
-			/* Inadmissible */
-			*max_width = -1;
-		}
-
-		if (*max_width != -1) {
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, true, max_width);
-		}
-	}
-
-	if (min_width) {
-		enum css_min_width_e type;
-		css_fixed value = 0;
-		css_unit unit = CSS_UNIT_PX;
-
-		type = ns_computed_min_width(style, &value, &unit);
-
-		if (type == CSS_MIN_WIDTH_SET) {
-			if (unit == CSS_UNIT_PCT) {
-				*min_width = FPCT_OF_INT_TOINT(value,
-						available_width);
-			} else {
-				*min_width = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		} else {
-			/* Inadmissible */
-			*min_width = 0;
-		}
-
-		if (*min_width != 0) {
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, true, min_width);
-		}
-	}
-
-	if (max_height) {
-		enum css_max_height_e type;
-		css_fixed value = 0;
-		css_unit unit = CSS_UNIT_PX;
-
-		type = css_computed_max_height(style, &value, &unit);
-
-		if (type == CSS_MAX_HEIGHT_SET) {
-			if (unit == CSS_UNIT_PCT) {
-				enum css_height_e cbhtype = CSS_HEIGHT_AUTO;
-
-				if (containing_block) {
-					css_fixed f = 0;
-					css_unit u = CSS_UNIT_PX;
-
-					cbhtype = css_computed_height(
-							containing_block->style,
-							&f, &u);
-				}
-
-				if (containing_block &&
-					containing_block->height != AUTO &&
-					(css_computed_position(style) ==
-							CSS_POSITION_ABSOLUTE ||
-						cbhtype == CSS_HEIGHT_SET)) {
-					*max_height = FPCT_OF_INT_TOINT(value,
-						containing_block->height);
-				} else if ((!box->parent ||
-						!box->parent->parent) &&
-						viewport_height >= 0) {
-					*max_height = FPCT_OF_INT_TOINT(value,
-							viewport_height);
-				} else {
-					*max_height = -1;
-				}
-			} else {
-				*max_height = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		} else {
-			/* Inadmissible */
-			*max_height = -1;
-		}
-
-		if (*max_height != -1) {
-			/* setwidth=false for vertical dimensions (TOP/BOTTOM) */
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, false, max_height);
-		}
-	}
-
-	if (min_height) {
-		enum css_min_height_e type;
-		css_fixed value = 0;
-		css_unit unit = CSS_UNIT_PX;
-
-		type = ns_computed_min_height(style, &value, &unit);
-
-		if (type == CSS_MIN_HEIGHT_SET) {
-			if (unit == CSS_UNIT_PCT) {
-				enum css_height_e cbhtype = CSS_HEIGHT_AUTO;
-
-				if (containing_block) {
-					css_fixed f = 0;
-					css_unit u = CSS_UNIT_PX;
-
-					cbhtype = css_computed_height(
-							containing_block->style,
-							&f, &u);
-				}
-
-				if (containing_block &&
-					containing_block->height != AUTO &&
-					(css_computed_position(style) ==
-							CSS_POSITION_ABSOLUTE ||
-						cbhtype == CSS_HEIGHT_SET)) {
-					*min_height = FPCT_OF_INT_TOINT(value,
-						containing_block->height);
-				} else if ((!box->parent ||
-						!box->parent->parent) &&
-						viewport_height >= 0) {
-					*min_height = FPCT_OF_INT_TOINT(value,
-							viewport_height);
-				} else {
-					*min_height = 0;
-				}
-			} else {
-				*min_height = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		} else {
-			/* Inadmissible */
-			*min_height = 0;
-		}
-
-		if (*min_height != 0) {
-			/* setwidth=false for vertical dimensions (TOP/BOTTOM) */
-			layout_handle_box_sizing(unit_len_ctx, box, style,
-					available_width, false, min_height);
-		}
-	}
-
-	for (i = 0; i != 4; i++) {
-		if (margin) {
-			enum css_margin_e type = CSS_MARGIN_AUTO;
-			css_fixed value = 0;
-			css_unit unit = CSS_UNIT_PX;
-
-			type = margin_funcs[i](style, &value, &unit);
-
-			if (type == CSS_MARGIN_SET) {
-				if (unit == CSS_UNIT_PCT) {
-					margin[i] = FPCT_OF_INT_TOINT(value,
-							available_width);
-				} else {
-					margin[i] = FIXTOINT(css_unit_len2device_px(
-							style, unit_len_ctx,
-							value, unit));
-				}
-			} else {
-				margin[i] = AUTO;
-			}
-		}
-
-		if (padding) {
-			css_fixed value = 0;
-			css_unit unit = CSS_UNIT_PX;
-
-			padding_funcs[i](style, &value, &unit);
-
-			if (unit == CSS_UNIT_PCT) {
-				padding[i] = FPCT_OF_INT_TOINT(value,
-						available_width);
-			} else {
-				padding[i] = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-			}
-		}
-
-		/* Table cell borders are populated in table.c */
-		if (border && box->type != BOX_TABLE_CELL) {
-			enum css_border_style_e bstyle = CSS_BORDER_STYLE_NONE;
-			css_color color = 0;
-			css_fixed value = 0;
-			css_unit unit = CSS_UNIT_PX;
-
-			border_width_funcs[i](style, &value, &unit);
-			bstyle = border_style_funcs[i](style);
-			border_color_funcs[i](style, &color);
-
-			border[i].style = bstyle;
-			border[i].c = color;
-
-			if (bstyle == CSS_BORDER_STYLE_HIDDEN ||
-					bstyle == CSS_BORDER_STYLE_NONE)
-				/* spec unclear: following Mozilla */
-				border[i].width = 0;
-			else
-				border[i].width = FIXTOINT(css_unit_len2device_px(
-						style, unit_len_ctx,
-						value, unit));
-
-			/* Special case for border-collapse: make all borders
-			 * on table/table-row-group/table-row zero width. */
-			if (css_computed_border_collapse(style) ==
-					CSS_BORDER_COLLAPSE_COLLAPSE &&
-					(box->type == BOX_TABLE ||
-					 box->type == BOX_TABLE_ROW_GROUP ||
-					 box->type == BOX_TABLE_ROW))
-				border[i].width = 0;
-		}
-	}
-
-	box->flags |= DIM_CACHED;
-	box->cached_style = style;
-	box->cached_font_size = font_size;
-	box->cached_viewport_width = unit_len_ctx->viewport_width;
-	box->cached_viewport_height_css = unit_len_ctx->viewport_height;
-	box->cached_device_dpi = unit_len_ctx->device_dpi;
-	box->cached_available_width = available_width;
-	box->cached_viewport_height = viewport_height;
-	box->cached_width = width ? *width : AUTO;
-	box->cached_height = height ? *height : AUTO;
-	box->cached_max_width = max_width ? *max_width : -1;
-	box->cached_min_width = min_width ? *min_width : 0;
-	box->cached_max_height = max_height ? *max_height : -1;
-	box->cached_min_height = min_height ? *min_height : 0;
-	if (margin) memcpy(box->cached_margin, margin, sizeof(int) * 4);
-	else memset(box->cached_margin, 0, sizeof(int) * 4);
-	if (padding) memcpy(box->cached_padding, padding, sizeof(int) * 4);
-	else memset(box->cached_padding, 0, sizeof(int) * 4);
-	if (border) memcpy(box->cached_border, border, sizeof(struct box_border) * 4);
-	else {
-		for (i = 0; i < 4; i++) {
-			box->cached_border[i].style = CSS_BORDER_STYLE_NONE;
-			box->cached_border[i].width = 0;
-			box->cached_border[i].c = 0;
-		}
-	}
+	if (width) *width = box->cached_width;
+	if (height) *height = box->cached_height;
+	if (max_width) *max_width = box->cached_max_width;
+	if (min_width) *min_width = box->cached_min_width;
+	if (max_height) *max_height = box->cached_max_height;
+	if (min_height) *min_height = box->cached_min_height;
+	if (margin) memcpy(margin, box->cached_margin, sizeof(int) * 4);
+	if (padding) memcpy(padding, box->cached_padding, sizeof(int) * 4);
+	if (border) memcpy(border, box->cached_border,
+			sizeof(struct box_border) * 4);
 }
 
 #endif
