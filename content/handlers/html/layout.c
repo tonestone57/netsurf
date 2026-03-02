@@ -267,9 +267,11 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			continue;
 		}
 
+		int baseline_offset = (used_height - h) * 3 / 4;
+
 		switch (css_computed_vertical_align(style, &value, &unit)) {
 		case CSS_VERTICAL_ALIGN_SUPER:
-			d->y -= line_height(unit_len_ctx, style) / 3;
+			d->y += baseline_offset - line_height(unit_len_ctx, style) / 3;
 			break;
 		case CSS_VERTICAL_ALIGN_TOP:
 		case CSS_VERTICAL_ALIGN_TEXT_TOP:
@@ -279,7 +281,7 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			d->y += (used_height - h) / 2;
 			break;
 		case CSS_VERTICAL_ALIGN_SUB:
-			d->y += line_height(unit_len_ctx, style) / 5;
+			d->y += baseline_offset + line_height(unit_len_ctx, style) / 5;
 			break;
 		case CSS_VERTICAL_ALIGN_BOTTOM:
 		case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
@@ -288,16 +290,16 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		case CSS_VERTICAL_ALIGN_SET:
 			if (unit == CSS_UNIT_PCT) {
 				int lh = line_height(unit_len_ctx, style);
-				d->y -= FPCT_OF_INT_TOINT(value, lh);
+				d->y += baseline_offset - FPCT_OF_INT_TOINT(value, lh);
 			} else {
-				d->y -= FIXTOINT(css_unit_len2device_px(
+				d->y += baseline_offset - FIXTOINT(css_unit_len2device_px(
 						style, unit_len_ctx,
 						value, unit));
 			}
 			break;
 		default:
 		case CSS_VERTICAL_ALIGN_BASELINE:
-			d->y += (used_height - h) * 3 / 4;
+			d->y += baseline_offset;
 			break;
 		}
 	}
@@ -1323,10 +1325,15 @@ static void layout_minmax_block(
 				layout_minmax_table(child, font_func,
 						content);
 				/* todo: fix for zero height tables */
-				if (child->children != NULL &&
-						child->children->children != NULL) {
-					child_has_height = true;
-					child->flags |= MAKE_HEIGHT;
+				if (child->children != NULL) {
+					struct box *rg;
+					for (rg = child->children; rg; rg = rg->next) {
+						if (rg->children != NULL) {
+							child_has_height = true;
+							child->flags |= MAKE_HEIGHT;
+							break;
+						}
+					}
 				}
 				break;
 			default:
@@ -3735,8 +3742,10 @@ layout_line(struct box *first,
 
 			x += b->width;
 			if (b->space == UNKNOWN_WIDTH) {
-				font_func->width(&fstyle, " ", 1, &b->space);
-				/** \todo handle errors */
+				if (font_func->width(&fstyle, " ", 1,
+						&b->space) != NSERROR_OK) {
+					b->space = 0;
+				}
 			}
 			space_after = b->space;
 			continue;
