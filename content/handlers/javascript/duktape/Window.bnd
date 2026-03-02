@@ -721,12 +721,3 @@ getter Window::onwaiting();
 setter Window::onwaiting();
 getter Window::onwheel();
 setter Window::onwheel();
-
-method Window::getComputedStyle()
-%{
-	/* Return a stub CSSStyleDeclaration for compatibility */
-	if (dukky_create_object(ctx, PROTO_NAME(CSSSTYLEDECLARATION), 0) != DUK_EXEC_SUCCESS) {
-		return 0;
-	}
-	return 1;
-%}

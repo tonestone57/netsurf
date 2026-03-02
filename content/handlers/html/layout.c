@@ -116,6 +116,7 @@ static void layout_minmax_block(
 		const struct gui_layout_table *font_func,
 		const html_content *content);
 
+<<<<<<< HEAD
 static void
 find_sides(struct box *fl,
 	   int y0, int y1,
@@ -403,6 +404,8 @@ layout_get_iframe_dimensions(struct box *box,
 }
 
 
+=======
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 /**
  * Compute the size of replaced boxes with auto dimensions, according to
  * content.
@@ -593,6 +596,11 @@ static void layout_minmax_table(struct box *table,
 	for (cell = row->children; cell; cell = cell->next) {
 		assert(cell->type == BOX_TABLE_CELL);
 		assert(cell->style);
+<<<<<<< HEAD
+=======
+		/** TODO: Handle colspan="0" correctly.
+		 *        It's currently converted to 1 in box normaisation */
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 		assert(cell->columns != 0);
 
 		if (cell->columns != 1)
@@ -1017,8 +1025,14 @@ layout_minmax_line(struct box *first,
 			if (0 < width + fixed)
 				width += fixed;
 		} else if (b->flags & IFRAME) {
+<<<<<<< HEAD
 			if (width == AUTO)
 				width = 300;
+=======
+			/* TODO: handle percentage widths properly */
+			if (width == AUTO)
+				width = 400;
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 			fixed = frac = 0;
 			if (bs == CSS_BOX_SIZING_BORDER_BOX) {
@@ -1235,7 +1249,12 @@ static void layout_minmax_block(
 
 		block->flags |= HAS_HEIGHT;
 	} else if (block->flags & IFRAME) {
+<<<<<<< HEAD
 		min = max = 300;
+=======
+		/** \todo do we need to know the min/max width of the iframe's
+		 * content? */
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 		block->flags |= HAS_HEIGHT;
 	} else {
 		/* recurse through children */
@@ -1787,9 +1806,12 @@ layout_block_find_dimensions(const css_unit_ctx *unit_len_ctx,
 		/* block-level replaced element, see 10.3.4 and 10.6.2 */
 		layout_get_object_dimensions(box, &width, &height,
 				min_width, max_width, min_height, max_height);
+<<<<<<< HEAD
 	} else if (box->flags & IFRAME) {
 		layout_get_iframe_dimensions(box, &width, &height,
 				min_width, max_width, min_height, max_height);
+=======
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 	}
 
 	box->width = layout_solve_width(box, available_width, width, lm, rm,
@@ -2568,13 +2590,24 @@ static bool layout_block_object(struct box *block)
 	NSLOG(layout, DEBUG,  "block %p, object %p, width %i", block,
 	      hlcache_handle_get_url(block->object), block->width);
 
+<<<<<<< HEAD
 	layout_block_object_reformat(block, block->width);
+=======
+	if (content_can_reformat(block->object)) {
+		content_reformat(block->object, false, block->width, 1);
+	} else {
+		/* Non-HTML objects */
+		/* this case handled already in
+		 * layout_block_find_dimensions() */
+	}
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 	return true;
 }
 
 
 /**
+<<<<<<< HEAD
  * Internal dimension calculation function for full cache population.
  */
 void layout_find_dimensions_internal(
@@ -2972,6 +3005,8 @@ void layout_find_dimensions_internal(
 
 
 /**
+=======
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
  * Insert a float into a container.
  *
  * \param  cont	  block formatting context block, used to contain float
@@ -3615,9 +3650,17 @@ layout_line(struct box *first,
 					min_width, max_width,
 					min_height, max_height);
 		} else if (b->flags & IFRAME) {
+<<<<<<< HEAD
 			layout_get_iframe_dimensions(b, &b->width, &b->height,
 					min_width, max_width,
 					min_height, max_height);
+=======
+			/* TODO: should we look at the content dimensions? */
+			if (b->width == AUTO)
+				b->width = 400;
+			if (b->height == AUTO)
+				b->height = 300;
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 			/* We reformat the iframe browser window to new
 			 * dimensions in pass 2 */
@@ -3681,8 +3724,18 @@ layout_line(struct box *first,
 
 		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
 
+<<<<<<< HEAD
 		if (lh__box_is_absolute(b)) {
 			b->x = x + space_after;
+=======
+		if (b->type == BOX_INLINE_BLOCK &&
+				(css_computed_position(b->style) ==
+						CSS_POSITION_ABSOLUTE ||
+				 css_computed_position(b->style) ==
+						CSS_POSITION_FIXED)) {
+			b->x = x + space_after;
+
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 		} else if (lh__box_is_inline_flow(b)) {
 			assert(b->width != UNKNOWN_WIDTH);
 
@@ -4008,7 +4061,51 @@ layout_line(struct box *first,
 		break;
 	}
 
+<<<<<<< HEAD
 	layout_line_set_positions(first, b, x0, y, &used_height);
+=======
+	for (d = first; d != b; d = d->next) {
+		d->flags &= ~NEW_LINE;
+
+		if (d->type == BOX_INLINE_BLOCK &&
+				(css_computed_position(d->style) ==
+						CSS_POSITION_ABSOLUTE ||
+				 css_computed_position(d->style) ==
+						CSS_POSITION_FIXED)) {
+			/* positioned inline-blocks:
+			 * set static position (x,y) only, rest of positioning
+			 * is handled later */
+			d->x += x0;
+			d->y = *y;
+			continue;
+		} else if ((d->type == BOX_INLINE &&
+				lh__box_is_replace(d) == false) ||
+				d->type == BOX_BR ||
+				d->type == BOX_TEXT ||
+				d->type == BOX_INLINE_END) {
+			/* regular (non-replaced) inlines */
+			d->x += x0;
+			d->y = *y - d->padding[TOP];
+
+			if (d->type == BOX_TEXT && d->height > used_height) {
+				/* text */
+				used_height = d->height;
+			}
+		} else if ((d->type == BOX_INLINE) ||
+				d->type == BOX_INLINE_BLOCK) {
+			/* replaced inlines and inline-blocks */
+			d->x += x0;
+			d->y = *y + d->border[TOP].width + d->margin[TOP];
+			h = d->margin[TOP] + d->border[TOP].width +
+					d->padding[TOP] + d->height +
+					d->padding[BOTTOM] +
+					d->border[BOTTOM].width +
+					d->margin[BOTTOM];
+			if (used_height < h)
+				used_height = h;
+		}
+	}
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 	first->flags |= NEW_LINE;
 
@@ -4016,7 +4113,36 @@ layout_line(struct box *first,
 
 	/* handle vertical-align by adjusting box y values */
 	/** \todo  proper vertical alignment handling */
+<<<<<<< HEAD
 	layout_line_vertical_align(first, b, used_height);
+=======
+	for (d = first; d != b; d = d->next) {
+		if ((d->type == BOX_INLINE && d->inline_end) ||
+				d->type == BOX_BR ||
+				d->type == BOX_TEXT ||
+				d->type == BOX_INLINE_END) {
+			css_fixed value = 0;
+			css_unit unit = CSS_UNIT_PX;
+			switch (css_computed_vertical_align(d->style, &value,
+					&unit)) {
+			case CSS_VERTICAL_ALIGN_SUPER:
+			case CSS_VERTICAL_ALIGN_TOP:
+			case CSS_VERTICAL_ALIGN_TEXT_TOP:
+				/* already at top */
+				break;
+			case CSS_VERTICAL_ALIGN_SUB:
+			case CSS_VERTICAL_ALIGN_BOTTOM:
+			case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
+				d->y += used_height - d->height;
+				break;
+			default:
+			case CSS_VERTICAL_ALIGN_BASELINE:
+				d->y += 0.75 * (used_height - d->height);
+				break;
+			}
+		}
+	}
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 	/* handle clearance for br */
 	if (br_box && css_computed_clear(br_box->style) != CSS_CLEAR_NONE) {
@@ -4212,7 +4338,15 @@ bool layout_block_context(
 		 * correct handling of floats.
 		 */
 
+<<<<<<< HEAD
 		if (lh__box_is_absolute(box)) {
+=======
+		if (box->style &&
+				(css_computed_position(box->style) ==
+					CSS_POSITION_ABSOLUTE ||
+				 css_computed_position(box->style) ==
+					CSS_POSITION_FIXED)) {
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 			box->x = box->parent->padding[LEFT];
 			/* absolute positioned; this element will establish
 			 * its own block context when it gets laid out later,
@@ -4258,9 +4392,29 @@ bool layout_block_context(
 				/* box establishes new block formatting context
 				 * so available width may be diminished due to
 				 * floats. */
+<<<<<<< HEAD
 				layout_block_context_bfc_margins(block, cx, cy,
 						y, max_pos_margin,
 						max_neg_margin, box, &lm, &rm);
+=======
+				int x0, x1, top;
+				struct box *left, *right;
+				top = cy + max_pos_margin - max_neg_margin;
+				top = (top > y) ? top : y;
+				x0 = cx;
+				x1 = cx + box->parent->width -
+						box->parent->padding[LEFT] -
+						box->parent->padding[RIGHT];
+				find_sides(block->float_children, top, top,
+						&x0, &x1, &left, &right);
+				/* calculate min required left & right margins
+				 * needed to avoid floats */
+				lm = x0 - cx;
+				rm = cx + box->parent->width -
+						box->parent->padding[LEFT] -
+						box->parent->padding[RIGHT] -
+						x1;
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 			}
 			layout_block_find_dimensions(&content->unit_len_ctx,
 					box->parent->width,
@@ -4281,11 +4435,33 @@ bool layout_block_context(
 				if (wtype == CSS_WIDTH_AUTO) {
 					/* max available width may be
 					 * diminished due to floats. */
+<<<<<<< HEAD
 					layout_block_context_bfc_margins(block,
 							cx, cy, y,
 							max_pos_margin,
 							max_neg_margin, box,
 							&lm, &rm);
+=======
+					int x0, x1, top;
+					struct box *left, *right;
+					top = cy + max_pos_margin -
+							max_neg_margin;
+					top = (top > y) ? top : y;
+					x0 = cx;
+					x1 = cx + box->parent->width -
+						box->parent->padding[LEFT] -
+						box->parent->padding[RIGHT];
+					find_sides(block->float_children,
+						top, top, &x0, &x1,
+						&left, &right);
+					/* calculate min required left & right
+					 * margins needed to avoid floats */
+					lm = x0 - cx;
+					rm = cx + box->parent->width -
+						box->parent->padding[LEFT] -
+						box->parent->padding[RIGHT] -
+						x1;
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 				}
 			}
 			if (!layout_table(box, box->parent->width - lm - rm,
@@ -4307,9 +4483,27 @@ bool layout_block_context(
 		}
 
 		/* Vertical margin */
+<<<<<<< HEAD
 		layout_block_context_apply_margin(box, margin_collapse,
 				&in_margin, &cy, &max_pos_margin,
 				&max_neg_margin);
+=======
+		if (((box->type == BOX_BLOCK && (box->flags & HAS_HEIGHT)) ||
+		     box->type == BOX_FLEX ||
+		     box->type == BOX_TABLE ||
+		     (box->type == BOX_INLINE_CONTAINER &&
+		      !box_is_first_child(box)) ||
+		     margin_collapse == box) &&
+		    in_margin == true) {
+			/* Margin goes above this box. */
+			cy += max_pos_margin - max_neg_margin;
+			box->y += max_pos_margin - max_neg_margin;
+
+			/* Current margin has been applied. */
+			in_margin = false;
+			max_pos_margin = max_neg_margin = 0;
+		}
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 
 		/* Handle clearance */
 		if (box->type != BOX_INLINE_CONTAINER &&
@@ -4358,6 +4552,7 @@ bool layout_block_context(
 				box, cx, cy, box->width);
 
 		/* Layout (except tables). */
+<<<<<<< HEAD
 		if (box->object || box->type == BOX_INLINE_CONTAINER) {
 			if (box->object) {
 				if (!layout_block_object(box))
@@ -4372,6 +4567,52 @@ bool layout_block_context(
 			int x0;
 			layout_block_context_position_table(block, cx, cy,
 					box, &y, &x0);
+=======
+		if (box->object) {
+			if (!layout_block_object(box))
+				return false;
+
+		} else if (box->type == BOX_INLINE_CONTAINER) {
+			box->width = box->parent->width;
+			if (!layout_inline_container(box, box->width, block,
+					cx, cy, content))
+				return false;
+
+		} else if (box->type == BOX_TABLE) {
+			/* Move down to avoid floats if necessary. */
+			int x0, x1;
+			struct box *left, *right;
+			y = cy;
+			while (1) {
+				enum css_width_e wtype;
+				css_fixed width = 0;
+				css_unit unit = CSS_UNIT_PX;
+
+				wtype = css_computed_width(box->style,
+						&width, &unit);
+
+				x0 = cx;
+				x1 = cx + box->parent->width;
+				find_sides(block->float_children, y,
+						y + box->height,
+						&x0, &x1, &left, &right);
+				if (wtype == CSS_WIDTH_AUTO)
+					break;
+				if (box->width <= x1 - x0)
+					break;
+				if (!left && !right)
+					break;
+				else if (!left)
+					y = right->y + right->height + 1;
+				else if (!right)
+					y = left->y + left->height + 1;
+				else if (left->y + left->height <
+						right->y + right->height)
+					y = left->y + left->height + 1;
+				else
+					y = right->y + right->height + 1;
+			}
+>>>>>>> origin/quickjs-migration-audit-15903127118075571481
 			box->x += x0 - cx;
 			cx = x0;
 			box->y += y - cy;
