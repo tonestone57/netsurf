@@ -37,7 +37,7 @@ static int dukky_document_push_url(duk_context *ctx, node_private_t *priv)
 		return 0;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(url), dom_string_length(url));
+	duk_push_lstring(ctx, dom_string_data(url), dom_string_byte_length(url));
 	dom_string_unref(url);
 
 	return 1;
@@ -175,7 +175,7 @@ getter Document::title()
 		dom_node_unref(title_node);
 		if (err == DOM_NO_ERR && title_str != NULL) {
 			duk_push_lstring(ctx, dom_string_data(title_str),
-					 dom_string_length(title_str));
+					 dom_string_byte_length(title_str));
 			dom_string_unref(title_str);
 			return 1;
 		}
@@ -273,7 +273,7 @@ getter Document::referrer()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(referrer), dom_string_length(referrer));
+	duk_push_lstring(ctx, dom_string_data(referrer), dom_string_byte_length(referrer));
 	dom_string_unref(referrer);
 
 	return 1;
@@ -287,7 +287,7 @@ getter Document::domain()
 	err = dom_html_document_get_domain((dom_html_document *)priv->parent.node, &domain);
 	if (err != DOM_NO_ERR || domain == NULL) return 0;
 
-	duk_push_lstring(ctx, dom_string_data(domain), dom_string_length(domain));
+	duk_push_lstring(ctx, dom_string_data(domain), dom_string_byte_length(domain));
 	dom_string_unref(domain);
 
 	return 1;

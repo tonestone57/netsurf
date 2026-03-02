@@ -4,62 +4,27 @@
 #include <quickjs.h>
 #include <dom/dom.h>
 
-/**
- * qjsky javascript heap
- */
-typedef struct jsheap jsheap;
+struct jsheap;
 
-/**
- * qjsky javascript thread
- */
-typedef struct jsthread jsthread;
+/* Per-runtime initialization */
+void qjsky_init_runtime(struct jsheap *heap);
 
-/* Initialise a QuickJS runtime for NetSurf support */
-void qjsky_init_runtime(JSRuntime *rt);
+/* Per-context initialization */
+void qjsky_init_context(JSContext *ctx);
 
-/* Map a libdom node to a QuickJS object */
+/* Node conversion and memoization */
 JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
-
-/* Retrieve a libdom node from a QuickJS object */
 struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val);
 
-/* Initialise Console API */
+/* String Conversion Helpers */
+dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val);
+JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str);
+
+/* Console Integration */
 void qjsky_init_console(JSContext *ctx);
 
-/* Initialise Window aliases (self, window, top) */
-void qjsky_init_window_aliases(JSContext *ctx);
-
-/* Initialise Performance API */
-void qjsky_init_performance(JSContext *ctx);
-
-/* Initialise Navigator API */
-void qjsky_init_navigator(JSContext *ctx);
-
-/* Setup Node prototype with common properties */
-void qjsky_setup_node_prototype(JSContext *ctx, JSValue proto);
-
-/* Initialise Location API */
-void qjsky_init_location(JSContext *ctx);
-
-/* Initialise History API */
-void qjsky_init_history(JSContext *ctx);
-
-/* Initialise XMLHttpRequest API */
-void qjsky_init_xhr(JSContext *ctx);
-
-/* Setup Document prototype with common properties */
-void qjsky_setup_document_prototype(JSContext *ctx, JSValue proto);
-
-/* Setup Element prototype with common properties */
-void qjsky_setup_element_prototype(JSContext *ctx, JSValue proto);
-
-/* Initialise Timer API */
-void qjsky_init_timers(JSContext *ctx);
-
-/* Setup EventTarget prototype with common properties */
-void qjsky_setup_event_target_prototype(JSContext *ctx, JSValue proto);
-
-/* Setup Element Attribute accessors */
-void qjsky_setup_element_attr_prototype(JSContext *ctx, JSValue proto);
+/* Timer Support */
+void qjsky_timer_init(JSContext *ctx);
+void qjsky_timer_cleanup(JSContext *ctx);
 
 #endif
