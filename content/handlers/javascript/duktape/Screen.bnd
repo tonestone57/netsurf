@@ -8,30 +8,26 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+class Screen {
+};
+
 prologue Screen()
 %{
 #include "netsurf/browser_window.h"
 #include "javascript/duktape/dukky.h"
 %}
 
-init Screen()
-%{
-%}
-
 getter Screen::availWidth()
 %{
 	window_private_t *win_priv;
 	int width = 800;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		width = win_priv->win->width;
 	}
-
 	duk_push_int(ctx, width);
 	return 1;
 %}
@@ -40,16 +36,13 @@ getter Screen::availHeight()
 %{
 	window_private_t *win_priv;
 	int height = 600;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		height = win_priv->win->height;
 	}
-
 	duk_push_int(ctx, height);
 	return 1;
 %}
@@ -58,16 +51,13 @@ getter Screen::width()
 %{
 	window_private_t *win_priv;
 	int width = 800;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		width = win_priv->win->width;
 	}
-
 	duk_push_int(ctx, width);
 	return 1;
 %}
@@ -76,16 +66,13 @@ getter Screen::height()
 %{
 	window_private_t *win_priv;
 	int height = 600;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		height = win_priv->win->height;
 	}
-
 	duk_push_int(ctx, height);
 	return 1;
 %}

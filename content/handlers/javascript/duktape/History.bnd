@@ -8,6 +8,9 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+class History {
+};
+
 prologue History()
 %{
 #include "netsurf/browser_window.h"
@@ -21,35 +24,20 @@ static bool history_count_cb(const struct browser_window *bw,
 	unsigned int *count = user_data;
 	(*count)++;
 	return true;
-%}
-
-method History::pushState()
-%{
-	/* Stub implementation */
-	return 0;
-%}
-
-method History::replaceState()
-%{
-	/* Stub implementation */
-	return 0;
-%}
+}
 %}
 
 getter History::length()
 %{
 	window_private_t *win_priv;
 	unsigned int count = 0;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		browser_window_history_enumerate(win_priv->win, history_count_cb, &count);
 	}
-
 	duk_push_uint(ctx, count);
 	return 1;
 %}
@@ -63,32 +51,26 @@ getter History::state()
 method History::back()
 %{
 	window_private_t *win_priv;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		browser_window_history_back(win_priv->win, false);
 	}
-
 	return 0;
 %}
 
 method History::forward()
 %{
 	window_private_t *win_priv;
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		browser_window_history_forward(win_priv->win, false);
 	}
-
 	return 0;
 %}
 
@@ -96,21 +78,17 @@ method History::go()
 %{
 	window_private_t *win_priv;
 	duk_int_t delta = 0;
-
 	if (duk_get_top(ctx) > 0) {
 		delta = duk_to_int(ctx, 0);
 	}
-
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
 	win_priv = duk_get_pointer(ctx, -1);
 	duk_pop_2(ctx);
-
 	if (win_priv != NULL && win_priv->win != NULL) {
 		if (delta == 0) {
 			browser_window_reload(win_priv->win, false);
 		} else {
-			/* Simplistic implementation of go(delta) */
 			while (delta > 0) {
 				browser_window_history_forward(win_priv->win, false);
 				delta--;
@@ -121,6 +99,15 @@ method History::go()
 			}
 		}
 	}
+	return 0;
+%}
 
+method History::pushState()
+%{
+	return 0;
+%}
+
+method History::replaceState()
+%{
 	return 0;
 %}
