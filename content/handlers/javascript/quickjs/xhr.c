@@ -104,6 +104,17 @@ static JSValue qjsky_xhr_get_responseText(JSContext *ctx, JSValueConst this_val)
 	return JS_NewString(ctx, xhr->response_text ? xhr->response_text : "");
 }
 
+static JSValue qjsky_xhr_get_onreadystatechange(JSContext *ctx, JSValueConst this_val)
+{
+	return JS_GetPropertyStr(ctx, this_val, "__onreadystatechange");
+}
+
+static JSValue qjsky_xhr_set_onreadystatechange(JSContext *ctx, JSValueConst this_val, JSValueConst val)
+{
+	JS_SetPropertyStr(ctx, this_val, "__onreadystatechange", JS_DupValue(ctx, val));
+	return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry qjsky_xhr_proto_funcs[] = {
 	JS_CFUNC_DEF("open", 2, qjsky_xhr_open),
 	JS_CFUNC_DEF("send", 1, qjsky_xhr_send),
@@ -111,6 +122,7 @@ static const JSCFunctionListEntry qjsky_xhr_proto_funcs[] = {
 	JS_CGETSET_DEF("status", qjsky_xhr_get_status, NULL),
 	JS_CGETSET_DEF("statusText", qjsky_xhr_get_statusText, NULL),
 	JS_CGETSET_DEF("responseText", qjsky_xhr_get_responseText, NULL),
+	JS_CGETSET_DEF("onreadystatechange", qjsky_xhr_get_onreadystatechange, qjsky_xhr_set_onreadystatechange),
 };
 
 void qjsky_init_xhr(JSContext *ctx)

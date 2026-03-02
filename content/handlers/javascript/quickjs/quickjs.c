@@ -9,6 +9,10 @@
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/handlers/javascript/quickjs/qjs_utils.h"
 #include "content/handlers/javascript/quickjs/xhr.h"
+#include "content/handlers/javascript/quickjs/location.h"
+#include "content/handlers/javascript/quickjs/history.h"
+#include "content/content_protected.h"
+#include "content/hlcache.h"
 
 #include "quickjs/binding.h"
 #include "quickjs/generics.js.inc"
@@ -29,10 +33,10 @@ void js_finalise(void)
 nserror js_newheap(int timeout, struct jsheap **heap_out)
 {
 	struct jsheap *heap = calloc(1, sizeof(*heap));
-	if (!heap) return NSERROR_NOMEM;
+	if (heap == NULL) return NSERROR_NOMEM;
 
 	heap->rt = JS_NewRuntime();
-	if (!heap->rt) {
+	if (heap->rt == NULL) {
 		free(heap);
 		return NSERROR_NOMEM;
 	}
@@ -51,7 +55,7 @@ nserror js_newheap(int timeout, struct jsheap **heap_out)
 
 void js_destroyheap(struct jsheap *heap)
 {
-	if (!heap) return;
+	if (heap == NULL) return;
 	/* Atoms are freed automatically when the runtime is destroyed,
 	   but we should be clean if we were to reuse it. */
 	if (heap->node_map_atom != JS_ATOM_NULL)
@@ -67,10 +71,10 @@ void js_destroyheap(struct jsheap *heap)
 nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct jsthread **thread_out)
 {
 	struct jsthread *thread = calloc(1, sizeof(*thread));
-	if (!thread) return NSERROR_NOMEM;
+	if (thread == NULL) return NSERROR_NOMEM;
 
 	thread->ctx = JS_NewContext(heap->rt);
-	if (!thread->ctx) {
+	if (thread->ctx == NULL) {
 		free(thread);
 		return NSERROR_NOMEM;
 	}
@@ -84,6 +88,8 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_context(thread->ctx);
 	qjsky_init_console(thread->ctx);
 	qjsky_init_window(thread->ctx);
+	qjsky_init_location(thread->ctx);
+	qjsky_init_history(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -107,22 +113,57 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	}
 	JS_FreeValue(thread->ctx, generics_val);
 
+	/* Attach global instances */
+	JSValue global = JS_GetGlobalObject(thread->ctx);
+
+	/* window.location */
+	nsurl *url = NULL;
+	if (thread->doc_priv) {
+		url = llcache_handle_get_url(((struct content *)thread->doc_priv)->llcache);
+	}
+	JSValue loc_obj = qjsky_create_location(thread->ctx, url);
+	JS_SetPropertyStr(thread->ctx, global, "location", JS_DupValue(thread->ctx, loc_obj));
+	/* TODO: document.location */
+	JS_FreeValue(thread->ctx, loc_obj);
+
+	/* window.history */
+	JSValue hist_obj = qjsky_create_history(thread->ctx);
+	JS_SetPropertyStr(thread->ctx, global, "history", hist_obj);
+
+	/* window self-reference */
+	JS_SetPropertyStr(thread->ctx, global, "window", JS_DupValue(thread->ctx, global));
+
+	JS_FreeValue(thread->ctx, global);
+
 	*thread_out = thread;
 	return NSERROR_OK;
 }
 
 nserror js_closethread(struct jsthread *thread)
 {
-	if (!thread) return NSERROR_BAD_PARAMETER;
+	if (thread == NULL) return NSERROR_BAD_PARAMETER;
 	qjsky_timer_cleanup(thread->ctx);
 	return NSERROR_OK;
 }
 
 void js_destroythread(struct jsthread *thread)
 {
-	if (!thread) return;
+	if (thread == NULL) return;
 	JS_FreeContext(thread->ctx);
 	free(thread);
+}
+
+static void qjs_run_jobs(JSContext *ctx)
+{
+	JSContext *ctx1;
+	int err;
+	for (;;) {
+		err = JS_ExecutePendingJob(JS_GetRuntime(ctx), &ctx1);
+		if (err <= 0) {
+			if (err < 0) qjs_log_exception(ctx1, "Pending job error");
+			break;
+		}
+	}
 }
 
 bool js_exec(struct jsthread *thread, const uint8_t *txt, size_t txtlen, const char *name)
@@ -133,6 +174,7 @@ bool js_exec(struct jsthread *thread, const uint8_t *txt, size_t txtlen, const c
 		return false;
 	}
 	JS_FreeValue(thread->ctx, val);
+	qjs_run_jobs(thread->ctx);
 	return true;
 }
 

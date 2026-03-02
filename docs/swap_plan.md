@@ -43,8 +43,8 @@ A new backend has been prototyped for the `nsgenbind` tool.
 ### Phase 2: Core Browser API (Glue Layer Completion)
 5.  **[COMPLETED] Event Listeners**: Implement `addEventListener` and `removeEventListener` in `qjsky.c`.
 6.  **Event Construction**: Port the `Event` class hierarchy (UIEvent, MouseEvent) to the new engine.
-7.  **Timer Refinement**: Implement `clearTimeout`/`clearInterval` and robust timer tracking.
-8.  **Location API**: Port the `Location` object and navigation hooks to QuickJS.
+ 7.  **[COMPLETED] Timer Refinement**: Implement `clearTimeout`/`clearInterval` and robust timer tracking.
+ 8.  **[COMPLETED] Location API**: Port the `Location` object and navigation hooks to QuickJS.
 
 ### Phase 3: Web Features & Refinement
 9.  **Asynchronous XHR**: Connect `xhr.c` to NetSurf's asynchronous fetcher and implement readyState transitions.

@@ -176,6 +176,10 @@ static void qjsky_timer_cb(void *p)
 	if (JS_IsException(ret)) qjs_log_exception(timer->ctx, "JS Timer Error");
 	JS_FreeValue(timer->ctx, ret);
 
+	/* Use context to run pending jobs (Promises) after timer callback */
+	JSContext *ctx1;
+	while (JS_ExecutePendingJob(JS_GetRuntime(timer->ctx), &ctx1) > 0);
+
 	if (timer->repeating) {
 		guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
 	} else {
@@ -396,6 +400,10 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 		JS_FreeValue(ctx, ret);
 		JS_FreeValue(ctx, event_val);
 		JS_FreeValue(ctx, node_val);
+
+		/* Run pending jobs (Promises) after event handler */
+		JSContext *ctx1;
+		while (JS_ExecutePendingJob(JS_GetRuntime(ctx), &ctx1) > 0);
 	}
 	JS_FreeValue(ctx, handler);
 
