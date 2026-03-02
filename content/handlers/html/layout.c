@@ -832,18 +832,21 @@ layout_minmax_line(struct box *first,
 						b->style, RIGHT,
 						true, true, true,
 						&fixed, &frac);
-			if (0 < fixed)
+			if (0 < fixed) {
 				max += fixed;
+				min += fixed;
+			}
 			*line_has_height = true;
-			/* \todo  update min width, consider fractional extra */
 		} else if (b->type == BOX_INLINE_END) {
 			fixed = frac = 0;
 			calculate_mbp_width(&content->unit_len_ctx,
 					b->inline_end->style, RIGHT,
 					true, true, true,
 					&fixed, &frac);
-			if (0 < fixed)
+			if (0 < fixed) {
 				max += fixed;
+				min += fixed;
+			}
 
 			if (b->next) {
 				if (b->space == UNKNOWN_WIDTH) {
@@ -1328,7 +1331,9 @@ static void layout_minmax_block(
 	}
 
 	/* fixed width takes priority */
-	if (block->type != BOX_TABLE_CELL && !lh__box_is_flex_item(block)) {
+	if (block->style != NULL &&
+			block->type != BOX_TABLE_CELL &&
+			!lh__box_is_flex_item(block)) {
 		bool border_box = bs == CSS_BOX_SIZING_BORDER_BOX;
 		enum css_max_width_e max_type;
 		enum css_min_width_e min_type;

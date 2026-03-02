@@ -304,6 +304,13 @@ box_normalise_table_row_group(struct box *row_group,
 	NSLOG(netsurf, INFO, "row_group %p", row_group);
 #endif
 
+	/* Clear spanning information for new row group */
+	for (unsigned int i = 0; i < col_info->num_columns; i++) {
+		col_info->spans[i].row_span = 0;
+		col_info->spans[i].auto_row = false;
+		col_info->spans[i].rg = NULL;
+	}
+
 	for (child = row_group->children; child != NULL; child = next_child) {
 		next_child = child->next;
 
