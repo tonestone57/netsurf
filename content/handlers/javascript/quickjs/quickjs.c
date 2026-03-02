@@ -159,8 +159,50 @@ bool js_fire_event(struct jsthread *thread, const char *type, struct dom_documen
 
 void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 {
-	/* Compile and attach inline event handlers (e.g., onclick) */
-	/* Note: In a full implementation, we'd scan for all on* attributes */
+	dom_namednodemap *map;
+	dom_exception exc;
+	dom_ulong idx, siz;
+	dom_attr *attr = NULL;
+	dom_string *key = NULL;
+
+	exc = dom_node_get_attributes(node, &map);
+	if (exc != DOM_NO_ERR || map == NULL) return;
+
+	exc = dom_namednodemap_get_length(map, &siz);
+	if (exc != DOM_NO_ERR) {
+		dom_namednodemap_unref(map);
+		return;
+	}
+
+	for (idx = 0; idx < siz; idx++) {
+		exc = dom_namednodemap_item(map, idx, &attr);
+		if (exc != DOM_NO_ERR || attr == NULL) continue;
+
+		exc = dom_attr_get_name(attr, &key);
+		if (exc != DOM_NO_ERR || key == NULL) {
+			dom_node_unref(attr);
+			continue;
+		}
+
+		if (dom_string_byte_length(key) > 2) {
+			const uint8_t *data = dom_string_data(key);
+			if (data[0] == 'o' && data[1] == 'n') {
+				/* This is an on* attribute.
+				 * NetSurf core will handle the actual compilation
+				 * when the event fires by calling into the engine.
+				 * Here we could potentially pre-compile, but for now
+				 * we'll just ensure the engine is aware of the element.
+				 */
+				JSValue val = qjsky_push_node(thread->ctx, (dom_node *)node);
+				JS_FreeValue(thread->ctx, val);
+			}
+		}
+
+		dom_string_unref(key);
+		dom_node_unref(attr);
+	}
+
+	dom_namednodemap_unref(map);
 }
 
 void js_event_cleanup(struct jsthread *thread, struct dom_event *evt)
