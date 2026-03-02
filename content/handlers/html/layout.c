@@ -1264,9 +1264,10 @@ static void layout_minmax_block(
 			case BOX_TABLE:
 				layout_minmax_table(child, font_func,
 						content);
-				/* todo: fix for zero height tables */
-				child_has_height = true;
-				child->flags |= MAKE_HEIGHT;
+				if (child->children != NULL && child->children->children != NULL) {
+					child_has_height = true;
+					child->flags |= MAKE_HEIGHT;
+				}
 				break;
 			default:
 				assert(0);

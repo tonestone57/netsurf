@@ -937,13 +937,11 @@ static bool layout_flex__place_line_items_main(
 		int box_size_main;
 		int *box_pos_main;
 
-		if (ctx->horizontal) {
-			b->width = item->target_main_size -
-					lh__delta_outer_width(b);
+		int delta_main = lh__delta_outer_main(ctx->flex, b);
+		*lh__box_size_main_ptr(ctx->horizontal, b) = item->target_main_size - delta_main;
 
-			if (!layout_flex_item(ctx, item, b->width)) {
-				return false;
-			}
+		if (!layout_flex_item(ctx, item, b->width)) {
+			return false;
 		}
 
 		box_size_main = lh__box_size_main(ctx->horizontal, b);
@@ -1070,11 +1068,17 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 		default:
 		case CSS_ALIGN_SELF_STRETCH:
 			if (lh__box_size_cross_is_auto(ctx->horizontal, b)) {
-				*box_size_cross += cross_free_space;
+				int size = *box_size_cross + cross_free_space;
+				if (item->max_cross >= 0 && size > item->max_cross) size = item->max_cross;
+				if (item->min_cross > 0 && size < item->min_cross) size = item->min_cross;
+				if (size < 0) size = 0;
 
-				/* Relayout children for stretch. */
-				if (!layout_flex_item(ctx, item, b->width)) {
-					return;
+				if (*box_size_cross != size) {
+					*box_size_cross = size;
+					/* Relayout children for stretch. */
+					if (!layout_flex_item(ctx, item, b->width)) {
+						return;
+					}
 				}
 			}
 			fallthrough;
@@ -1256,8 +1260,6 @@ bool layout_flex(struct box *flex, int available_width,
 		goto cleanup;
 	}
 
-	layout_flex__place_lines(ctx);
-
 	if (flex->height == AUTO) {
 		flex->height = ctx->horizontal ?
 				ctx->cross_size :
@@ -1272,6 +1274,16 @@ bool layout_flex(struct box *flex, int available_width,
 			flex->height = min_height;
 		}
 	}
+
+	if (ctx->horizontal) {
+		ctx->available_cross = ctx->flex->height;
+	} else {
+		ctx->available_main = ctx->flex->height;
+		/* If available_main changed, we might need to re-resolve lines.
+		 * For now, just ensure place_lines has correct info. */
+	}
+
+	layout_flex__place_lines(ctx);
 
 	success = true;
 
