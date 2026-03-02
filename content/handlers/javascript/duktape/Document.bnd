@@ -590,6 +590,109 @@ getter Document::location()
 	return 1;
 %}
 
+method Document::getElementsByTagNameNS()
+%{
+	dom_nodelist *nodes;
+	dom_exception err;
+	duk_size_t ns_len, ln_len;
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+	dom_string *ns = NULL, *ln = NULL;
+
+	if (!duk_is_null(ctx, 0)) {
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		err = dom_string_create((uint8_t*)ns_str, ns_len, &ns);
+		if (err != DOM_NO_ERR) return 0;
+	}
+
+	err = dom_string_create((uint8_t*)ln_str, ln_len, &ln);
+	if (err != DOM_NO_ERR) {
+		if (ns) dom_string_unref(ns);
+		return 0;
+	}
+
+	err = dom_document_get_elements_by_tag_name_ns(priv->parent.node, ns, ln, &nodes);
+	if (ns) dom_string_unref(ns);
+	dom_string_unref(ln);
+
+	if (err != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+method Document::createAttributeNS()
+%{
+	dom_node *attr;
+	dom_exception err;
+	duk_size_t qn_len;
+	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
+	dom_string *ns = NULL, *qn = NULL;
+
+	if (!duk_is_null(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		err = dom_string_create((uint8_t*)ns_str, ns_len, &ns);
+		if (err != DOM_NO_ERR) return 0;
+	}
+
+	err = dom_string_create((uint8_t*)qn_str, qn_len, &qn);
+	if (err != DOM_NO_ERR) {
+		if (ns) dom_string_unref(ns);
+		return 0;
+	}
+
+	err = dom_document_create_attribute_ns(priv->parent.node, ns, qn, (dom_attr **)&attr);
+	if (ns) dom_string_unref(ns);
+	dom_string_unref(qn);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, attr);
+	dom_node_unref(attr);
+	return 1;
+%}
+
+method Document::importNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+	bool deep = duk_to_boolean(ctx, 1);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_document_import_node(priv->parent.node, other->node, deep, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method Document::adoptNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_document_adopt_node(priv->parent.node, other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
+	return 1;
+%}
+
 getter Document::firstElementChild()
 %{
 	dom_node *element;

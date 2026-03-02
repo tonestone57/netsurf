@@ -72,3 +72,88 @@ method NamedNodeMap::getNamedItem()
 	dom_node_unref(attr);
 	return 1;
 %}
+
+method NamedNodeMap::getNamedItemNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_node *attr = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_namednodemap_get_named_item_ns(priv->map, namespace, local_name, &attr);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, attr);
+	dom_node_unref(attr);
+	return 1;
+%}
+
+method NamedNodeMap::setNamedItemNS()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_namednodemap_set_named_item_ns(priv->map, other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method NamedNodeMap::removeNamedItemNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_node *attr = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_namednodemap_remove_named_item_ns(priv->map, namespace, local_name, &attr);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, attr);
+	dom_node_unref(attr);
+	return 1;
+%}
