@@ -859,7 +859,6 @@ method Document::getElementsByTagName()
 	return 1; /* The Proxy(NodeList) wrapper */
 %}
 
-
 method Document::getElementsByClassName()
 %{
 	duk_size_t clen;
