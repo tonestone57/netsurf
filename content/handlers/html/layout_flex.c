@@ -32,6 +32,7 @@
  */
 
 #include <string.h>
+#include <dom/dom.h>
 
 #include "utils/log.h"
 #include "utils/utils.h"
@@ -359,6 +360,19 @@ static int layout_flex__item_compare(const void *a, const void *b)
 		return -1;
 	} else if (ia->order > ib->order) {
 		return 1;
+	}
+
+	/* Tie-breaker: stable sort based on document order.
+	 * We try to use DOM position if nodes are available.
+	 */
+	if (ia->box->node != NULL && ib->box->node != NULL &&
+			ia->box->node != ib->box->node) {
+		uint16_t result;
+		if (dom_node_compare_document_position(ia->box->node, ib->box->node,
+				&result) == DOM_NO_ERR) {
+			if (result & 0x02 /* PRECEDING */) return 1;
+			if (result & 0x04 /* FOLLOWING */) return -1;
+		}
 	}
 
 	if (ia->index < ib->index) {
@@ -850,53 +864,60 @@ static bool layout_flex__place_line_items_main(
 	size_t item_count = line->first + line->count;
 	int extra_remainder = 0;
 	int extra = 0;
-	int space_between = 0;
-	int space_between_remainder = 0;
+	int jc_extra = 0;
+	int jc_extra_remainder = 0;
+	size_t non_abs_count = 0;
+	size_t non_abs_processed = 0;
 
 	if (ctx->main_reversed) {
 		main_pos = lh__box_size_main(ctx->horizontal, ctx->flex) -
 				main_pos;
 	}
 
+	for (size_t i = line->first; i < item_count; i++) {
+		if (!lh__box_is_absolute(ctx->item.data[i].box))
+			non_abs_count++;
+	}
+
 	if (ctx->available_main != AUTO &&
 	    ctx->available_main != UNKNOWN_WIDTH &&
 	    ctx->available_main > line->used_main_size) {
-		int free_main = ctx->available_main - line->used_main_size;
+		int spare = ctx->available_main - line->used_main_size;
 		if (line->main_auto_margin_count > 0) {
-			extra = free_main;
-
-			extra_remainder = extra % line->main_auto_margin_count;
-			extra /= line->main_auto_margin_count;
+			extra = spare / line->main_auto_margin_count;
+			extra_remainder = spare % line->main_auto_margin_count;
 		} else {
 			switch (ctx->justify_content) {
 			case CSS_JUSTIFY_CONTENT_FLEX_END:
-				main_pos += post_multiplier * free_main +
-						pre_multiplier * free_main;
+				main_pos += post_multiplier * spare +
+						pre_multiplier * spare;
 				break;
 			case CSS_JUSTIFY_CONTENT_CENTER:
-				main_pos += post_multiplier * (free_main / 2) +
-						pre_multiplier * (free_main / 2);
+				main_pos += post_multiplier * (spare / 2) +
+						pre_multiplier * (spare / 2);
 				break;
 			case CSS_JUSTIFY_CONTENT_SPACE_BETWEEN:
-				if (line->count > 1) {
-					space_between = free_main / (line->count - 1);
-					space_between_remainder = free_main % (line->count - 1);
+				if (non_abs_count > 1) {
+					jc_extra = spare / (non_abs_count - 1);
+					jc_extra_remainder = spare % (non_abs_count - 1);
 				}
 				break;
 			case CSS_JUSTIFY_CONTENT_SPACE_AROUND:
-				if (line->count > 0) {
-					space_between = free_main / line->count;
-					space_between_remainder = free_main % line->count;
-					main_pos += post_multiplier * (space_between / 2) +
-							pre_multiplier * (space_between / 2);
+				if (non_abs_count > 0) {
+					jc_extra = spare / non_abs_count;
+					jc_extra_remainder = spare % non_abs_count;
+					main_pos += post_multiplier * (jc_extra / 2) +
+							pre_multiplier * (jc_extra / 2);
 				}
 				break;
 			case CSS_JUSTIFY_CONTENT_SPACE_EVENLY:
-				if (line->count > 0) {
-					space_between = free_main / (line->count + 1);
-					space_between_remainder = free_main % (line->count + 1);
-					main_pos += post_multiplier * space_between +
-							pre_multiplier * space_between;
+				if (non_abs_count > 0) {
+					jc_extra = spare / (non_abs_count + 1);
+					jc_extra_remainder = spare % (non_abs_count + 1);
+					int step = jc_extra + (jc_extra_remainder > 0 ? 1 : 0);
+					main_pos += post_multiplier * step +
+							pre_multiplier * step;
+					if (jc_extra_remainder > 0) jc_extra_remainder--;
 				}
 				break;
 			default:
@@ -929,43 +950,41 @@ static bool layout_flex__place_line_items_main(
 		box_pos_main = ctx->horizontal ? &b->x : &b->y;
 
 		if (!lh__box_is_absolute(b)) {
-			if (i != line->first) {
-				int space = space_between;
-				if (space_between_remainder > 0) {
-					space++;
-					space_between_remainder--;
-				}
-				main_pos += pre_multiplier * space;
-				main_pos += post_multiplier * space;
-			}
-
 			if (b->margin[main_start] == AUTO) {
-				extra_pre = extra + extra_remainder;
+				extra_pre = extra + (extra_remainder > 0 ? 1 : 0);
+				if (extra_remainder > 0) extra_remainder--;
 			}
 			if (b->margin[main_end] == AUTO) {
-				extra_post = extra + extra_remainder;
+				extra_post = extra + (extra_remainder > 0 ? 1 : 0);
+				if (extra_remainder > 0) extra_remainder--;
 			}
 			extra_total = extra_pre + extra_post;
 
 			main_pos += pre_multiplier *
 					(extra_total + box_size_main +
 					 lh__delta_outer_main(ctx->flex, b));
-
-			*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
-					extra_pre + b->border[main_start].width;
-
-			main_pos += post_multiplier *
-					(extra_total + box_size_main +
-					 lh__delta_outer_main(ctx->flex, b));
-		} else {
-			*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
-					b->border[main_start].width;
 		}
+
+		*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
+				extra_pre + b->border[main_start].width;
 
 		if (!lh__box_is_absolute(b)) {
 			int cross_size;
 			int box_size_cross = lh__box_size_cross(
 					ctx->horizontal, b);
+
+			main_pos += post_multiplier *
+					(extra_total + box_size_main +
+					 lh__delta_outer_main(ctx->flex, b));
+
+			non_abs_processed++;
+			if (line->main_auto_margin_count == 0 &&
+					non_abs_processed < non_abs_count) {
+				int step = jc_extra + (jc_extra_remainder > 0 ? 1 : 0);
+				main_pos += post_multiplier * step +
+						pre_multiplier * step;
+				if (jc_extra_remainder > 0) jc_extra_remainder--;
+			}
 
 			cross_size = box_size_cross + lh__delta_outer_cross(
 					ctx->flex, b);
@@ -1092,57 +1111,59 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 static void layout_flex__place_lines(struct flex_ctx *ctx)
 {
 	bool reversed = ctx->wrap == CSS_FLEX_WRAP_WRAP_REVERSE;
-	int line_pos = reversed ? ctx->cross_size : 0;
+	int total_cross = (ctx->available_cross == AUTO) ?
+			ctx->cross_size : ctx->available_cross;
+	int line_pos = reversed ? total_cross : 0;
 	int post_multiplier = reversed ? 0 : 1;
 	int pre_multiplier = reversed ? -1 : 0;
 	int extra_remainder = 0;
 	int extra = 0;
-	int space_between = 0;
-	int space_between_remainder = 0;
+	int ac_extra = 0;
+	int ac_extra_remainder = 0;
 
 	if (ctx->available_cross != AUTO &&
 	    ctx->available_cross > ctx->cross_size &&
-	    ctx->line.count > 0 &&
-	    ctx->wrap != CSS_FLEX_WRAP_NOWRAP) {
-		int free_cross = ctx->available_cross - ctx->cross_size;
-
-		switch (ctx->align_content) {
-		case CSS_ALIGN_CONTENT_STRETCH:
-			extra = free_cross;
-			extra_remainder = extra % ctx->line.count;
-			extra /= ctx->line.count;
-			break;
+	    ctx->line.count > 0) {
+		int spare = ctx->available_cross - ctx->cross_size;
+		if (ctx->wrap == CSS_FLEX_WRAP_NOWRAP) {
+			extra = spare;
+		} else switch (ctx->align_content) {
 		case CSS_ALIGN_CONTENT_FLEX_END:
-			line_pos += post_multiplier * free_cross +
-					pre_multiplier * free_cross;
+			line_pos += post_multiplier * spare +
+					pre_multiplier * spare;
 			break;
 		case CSS_ALIGN_CONTENT_CENTER:
-			line_pos += post_multiplier * (free_cross / 2) +
-					pre_multiplier * (free_cross / 2);
+			line_pos += post_multiplier * (spare / 2) +
+					pre_multiplier * (spare / 2);
 			break;
 		case CSS_ALIGN_CONTENT_SPACE_BETWEEN:
 			if (ctx->line.count > 1) {
-				space_between = free_cross / (ctx->line.count - 1);
-				space_between_remainder = free_cross % (ctx->line.count - 1);
+				ac_extra = spare / (ctx->line.count - 1);
+				ac_extra_remainder = spare % (ctx->line.count - 1);
 			}
 			break;
 		case CSS_ALIGN_CONTENT_SPACE_AROUND:
 			if (ctx->line.count > 0) {
-				space_between = free_cross / ctx->line.count;
-				space_between_remainder = free_cross % ctx->line.count;
-				line_pos += post_multiplier * (space_between / 2) +
-						pre_multiplier * (space_between / 2);
+				ac_extra = spare / ctx->line.count;
+				ac_extra_remainder = spare % ctx->line.count;
+				line_pos += post_multiplier * (ac_extra / 2) +
+						pre_multiplier * (ac_extra / 2);
 			}
 			break;
 		case CSS_ALIGN_CONTENT_SPACE_EVENLY:
 			if (ctx->line.count > 0) {
-				space_between = free_cross / (ctx->line.count + 1);
-				space_between_remainder = free_cross % (ctx->line.count + 1);
-				line_pos += post_multiplier * space_between +
-						pre_multiplier * space_between;
+				ac_extra = spare / (ctx->line.count + 1);
+				ac_extra_remainder = spare % (ctx->line.count + 1);
+				int step = ac_extra + (ac_extra_remainder > 0 ? 1 : 0);
+				line_pos += post_multiplier * step +
+						pre_multiplier * step;
+				if (ac_extra_remainder > 0) ac_extra_remainder--;
 			}
 			break;
+		case CSS_ALIGN_CONTENT_STRETCH:
 		default:
+			extra = spare / ctx->line.count;
+			extra_remainder = spare % ctx->line.count;
 			break;
 		}
 	}
@@ -1150,26 +1171,24 @@ static void layout_flex__place_lines(struct flex_ctx *ctx)
 	for (size_t i = 0; i < ctx->line.count; i++) {
 		struct flex_line_data *line = &ctx->line.data[i];
 
-		if (i != 0) {
-			int space = space_between;
-			if (space_between_remainder > 0) {
-				space++;
-				space_between_remainder--;
-			}
-			line_pos += pre_multiplier * space;
-			line_pos += post_multiplier * space;
-		}
-
-		line_pos += pre_multiplier * line->cross_size;
+		line_pos += pre_multiplier * (line->cross_size + extra +
+				(extra_remainder > 0 ? 1 : 0));
 		line->pos = line_pos;
-		line_pos += post_multiplier * line->cross_size +
-				extra + (extra_remainder > 0 ? 1 : 0);
+		line_pos += post_multiplier * (line->cross_size + extra +
+				(extra_remainder > 0 ? 1 : 0));
 
 		layout_flex__place_line_items_cross(ctx, line,
 				extra + (extra_remainder > 0 ? 1 : 0));
 
 		if (extra_remainder > 0) {
 			extra_remainder--;
+		}
+
+		if (i + 1 < ctx->line.count) {
+			int step = ac_extra + (ac_extra_remainder > 0 ? 1 : 0);
+			line_pos += post_multiplier * step +
+					pre_multiplier * step;
+			if (ac_extra_remainder > 0) ac_extra_remainder--;
 		}
 	}
 }
@@ -1208,38 +1227,10 @@ bool layout_flex(struct box *flex, int available_width,
 
 	if (ctx->horizontal) {
 		ctx->available_main = available_width;
-		ctx->available_cross = flex->height;
+		ctx->available_cross = ctx->flex->height;
 	} else {
-		ctx->available_main = flex->height;
+		ctx->available_main = ctx->flex->height;
 		ctx->available_cross = available_width;
-	}
-
-	if (ctx->horizontal == false) {
-		if (ctx->available_main == AUTO) {
-			if (min_height > 0) {
-				ctx->available_main = min_height;
-			}
-		} else {
-			if (max_height >= 0 && ctx->available_main > max_height) {
-				ctx->available_main = max_height;
-			}
-			if (min_height > 0 && ctx->available_main < min_height) {
-				ctx->available_main = min_height;
-			}
-		}
-	} else {
-		if (ctx->available_cross == AUTO) {
-			if (min_height > 0) {
-				ctx->available_cross = min_height;
-			}
-		} else {
-			if (max_height >= 0 && ctx->available_cross > max_height) {
-				ctx->available_cross = max_height;
-			}
-			if (min_height > 0 && ctx->available_cross < min_height) {
-				ctx->available_cross = min_height;
-			}
-		}
 	}
 
 	NSLOG(flex, DEEPDEBUG, "box %p: available_main: %i",
@@ -1249,33 +1240,13 @@ bool layout_flex(struct box *flex, int available_width,
 
 	layout_flex_ctx__populate_item_data(ctx, flex, available_width);
 
-	/* The sort and reorder only needs to happen if any items have non-zero
-	 * order property. If all order values are 0, document order is preserved.
-	 */
-	bool reorder = false;
-	for (size_t i = 0; i < ctx->item.count; i++) {
-		if (ctx->item.data[i].order != 0) {
-			reorder = true;
-			break;
-		}
-	}
-
-	if (reorder && ctx->item.count > 1) {
-		struct box *prev = NULL;
+	/* Reorder box tree to match visual order (affects painting order) */
+	if (ctx->item.count > 0) {
+		flex->children = ctx->item.data[0].box;
+		flex->last = ctx->item.data[ctx->item.count - 1].box;
 		for (size_t i = 0; i < ctx->item.count; i++) {
-			struct box *b = ctx->item.data[i].box;
-			if (i == 0) {
-				flex->children = b;
-				b->prev = NULL;
-			} else {
-				prev->next = b;
-				b->prev = prev;
-			}
-			prev = b;
-		}
-		if (prev) {
-			prev->next = NULL;
-			flex->last = prev;
+			ctx->item.data[i].box->prev = (i == 0) ? NULL : ctx->item.data[i-1].box;
+			ctx->item.data[i].box->next = (i == ctx->item.count - 1) ? NULL : ctx->item.data[i+1].box;
 		}
 	}
 

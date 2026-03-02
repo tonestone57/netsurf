@@ -1062,6 +1062,7 @@ layout_minmax_line(struct box *first,
 	}
 
 	if (first_line) {
+		/* todo: handle percentage values properly */
 		/* todo: handle text-indent interaction with floats */
 		int text_indent = layout_text_indent(&content->unit_len_ctx,
 				first->parent->parent->style, 100);
@@ -1263,12 +1264,9 @@ static void layout_minmax_block(
 			case BOX_TABLE:
 				layout_minmax_table(child, font_func,
 						content);
-
-				if (child->children != NULL ||
-						child->height != AUTO) {
-					child_has_height = true;
-					child->flags |= MAKE_HEIGHT;
-				}
+				/* todo: fix for zero height tables */
+				child_has_height = true;
+				child->flags |= MAKE_HEIGHT;
 				break;
 			default:
 				assert(0);
@@ -2340,10 +2338,11 @@ bool layout_table(
 						row_height = excess_y[i];
 			}
 			for (i = 0; i != columns; i++) {
-				if (row_height < excess_y[i])
-					excess_y[i] -= row_height;
+				if (row_height + border_spacing_v < excess_y[i])
+					excess_y[i] -= row_height + border_spacing_v;
 				else
 					excess_y[i] = 0;
+
 				if (row_span_cell[i] != 0)
 					row_span_cell[i]->padding[BOTTOM] +=
 							row_height +
@@ -2364,59 +2363,51 @@ bool layout_table(
 	}
 	/* Table height is either the height of the contents, or specified
 	 * height if greater */
-	if (table_height < min_height) {
-		int spare_table_height = min_height - table_height;
-		int num_rows = 0;
-		int row_extra;
-		int row_extra_remainder;
-		int current_table_y = 0;
+	spare_height = min_height - table_height;
+	if (spare_height > 0) {
+		int total_rows = 0;
+		int row_idx = 0;
+		int *row_extras;
+		int y_offset = 0;
 
 		for (row_group = table->children; row_group;
 				row_group = row_group->next) {
-			num_rows += row_group->rows;
+			total_rows += row_group->rows;
 		}
 
-		if (num_rows > 0) {
-			int *row_extras;
-			int row_idx = 0;
-
-			row_extras = calloc(num_rows, sizeof(int));
-			if (row_extras != NULL) {
-				row_extra = spare_table_height / num_rows;
-				row_extra_remainder = spare_table_height % num_rows;
-
-				for (int i = 0; i < num_rows; i++) {
-					row_extras[i] = row_extra + (row_extra_remainder > 0 ? 1 : 0);
-					if (row_extra_remainder > 0) row_extra_remainder--;
+		if (total_rows > 0) {
+			row_extras = malloc(sizeof(int) * total_rows);
+			if (row_extras) {
+				for (i = 0; i < (unsigned int)total_rows; i++) {
+					row_extras[i] = spare_height / total_rows;
+					if (i < (unsigned int)spare_height % total_rows)
+						row_extras[i]++;
 				}
 
 				for (row_group = table->children; row_group;
 						row_group = row_group->next) {
-					int current_group_y = 0;
+					int row_group_extra = 0;
+					row_group->y += y_offset;
+					for (row = row_group->children; row;
+							row = row->next) {
+						int current_row_idx = row_idx++;
+						int row_extra = row_extras[current_row_idx];
 
-					row_group->y = current_table_y;
-
-					for (row = row_group->children; row; row = row->next) {
-						int extra = row_extras[row_idx];
-
-						row->y = current_group_y;
-						row->height += extra;
+						row->y += row_group_extra;
+						row->height += row_extra;
 
 						for (c = row->children; c; c = c->next) {
-							int cell_extra = 0;
-							for (unsigned int j = 0; j < c->rows; j++) {
-								if (row_idx + j < (unsigned int)num_rows) {
-									cell_extra += row_extras[row_idx + j];
+							for (i = 0; i < c->rows; i++) {
+								if (current_row_idx + i < (unsigned int)total_rows) {
+									c->padding[BOTTOM] +=
+										row_extras[current_row_idx + i];
 								}
 							}
-							c->height += cell_extra;
 						}
-
-						current_group_y += row->height + border_spacing_v;
-						row_idx++;
+						row_group_extra += row_extra;
 					}
-					row_group->height = current_group_y;
-					current_table_y += row_group->height;
+					row_group->height += row_group_extra;
+					y_offset += row_group_extra;
 				}
 				free(row_extras);
 			}
@@ -3487,10 +3478,6 @@ layout_line(struct box *first,
 	x0 -= cx;
 	x1 -= cx;
 
-	if (indent)
-		x0 += layout_text_indent(&content->unit_len_ctx,
-				first->parent->parent->style, *width);
-
 	if (x1 < x0)
 		x1 = x0;
 
@@ -3511,8 +3498,16 @@ layout_line(struct box *first,
 
 	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
 
+	int text_indent = 0;
+	if (indent)
+		text_indent = layout_text_indent(&content->unit_len_ctx,
+				first->parent->parent->style, *width);
 
 	for (x = 0, b = first; x <= x1 - x0 && b != 0; b = b->next) {
+		if (text_indent != 0 && !lh__box_is_float_box(b) && b->type != BOX_BR) {
+			x += text_indent;
+			text_indent = 0;
+		}
 		int min_width, max_width, min_height, max_height;
 
 		assert(lh__box_is_inline_content(b));
@@ -3723,10 +3718,6 @@ layout_line(struct box *first,
 	x0 -= cx;
 	x1 -= cx;
 
-	if (indent)
-		x0 += layout_text_indent(&content->unit_len_ctx,
-				first->parent->parent->style, *width);
-
 	if (x1 < x0)
 		x1 = x0;
 
@@ -3736,7 +3727,17 @@ layout_line(struct box *first,
 
 	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
 
+	if (indent)
+		text_indent = layout_text_indent(&content->unit_len_ctx,
+				first->parent->parent->style, *width);
+	else
+		text_indent = 0;
+
 	for (x = x_previous = 0, b = first; x <= x1 - x0 && b; b = b->next) {
+		if (text_indent != 0 && !lh__box_is_float_box(b) && b->type != BOX_BR) {
+			x += text_indent;
+			text_indent = 0;
+		}
 
 		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
 
