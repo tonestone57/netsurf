@@ -13,7 +13,7 @@ prologue DOMImplementation ()
 #include "utils/corestrings.h"
 %}
 
-method DOMImplemention::hasFeature ()
+method DOMImplementation::hasFeature ()
 %{
 	/* Always return true */
 	duk_push_bool(ctx, true);
@@ -62,7 +62,7 @@ method DOMImplementation::createDocument()
 
 	dom_string_create((const uint8_t *)qn_str, qn_len, &qn);
 
-	if (!duk_is_null(ctx, 2)) {
+	if (!duk_is_null(ctx, 2) && !duk_is_undefined(ctx, 2)) {
 		if (!dukky_instanceof(ctx, 2, PROTO_NAME(NODE))) return 0;
 		duk_get_prop_string(ctx, 2, PRIVATE_MAGIC);
 		node_private_t *priv = duk_get_pointer(ctx, -1);
@@ -83,8 +83,11 @@ method DOMImplementation::createDocument()
 
 method DOMImplementation::createHTMLDocument ()
 %{
-	duk_size_t text_len;
-	const char *text = duk_is_undefined(ctx, 0) ? "" : duk_safe_to_lstring(ctx, 0, &text_len);
+	duk_size_t text_len = 0;
+	const char *text = "";
+	if (!duk_is_undefined(ctx, 0)) {
+		text = duk_safe_to_lstring(ctx, 0, &text_len);
+	}
 	struct dom_document *doc = NULL, *ret = NULL;
 	struct dom_document_type *doctype = NULL;
 	struct dom_html_element *html = NULL, *head = NULL, *title = NULL, *body = NULL;
