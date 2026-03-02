@@ -29,6 +29,6 @@ void qjsky_timer_cleanup(JSContext *ctx);
 
 /* Event Support */
 void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, bool capture);
-void qjsky_push_event(JSContext *ctx, dom_event *evt);
+JSValue qjsky_push_event(JSContext *ctx, dom_event *evt);
 
 #endif

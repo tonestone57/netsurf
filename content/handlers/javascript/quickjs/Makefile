@@ -32,9 +32,18 @@ $(OBJROOT)/quickjs/polyfill.js.inc: content/handlers/javascript/duktape/polyfill
 	$(Q)sed -e 's/content_handlers_javascript_duktape_polyfill_js/polyfill_js/' $@.tmp > $@
 
 # Link against quickjs.
-# Use pkg-config if available, otherwise fallback to -lquickjs.
-CFLAGS += $(shell pkg-config --cflags quickjs 2>/dev/null || echo "-I/usr/include/quickjs")
-LDFLAGS += $(shell pkg-config --libs quickjs 2>/dev/null || echo "-L/usr/lib/quickjs -lquickjs")
+# Use pkg-config if available, otherwise fallback to standard paths.
+QJS_CFLAGS := $(shell pkg-config --cflags quickjs 2>/dev/null)
+ifeq ($(QJS_CFLAGS),)
+  QJS_CFLAGS := -I/usr/include/quickjs
+endif
+CFLAGS += $(QJS_CFLAGS)
+
+QJS_LDFLAGS := $(shell pkg-config --libs quickjs 2>/dev/null)
+ifeq ($(QJS_LDFLAGS),)
+  QJS_LDFLAGS := -L/usr/lib/quickjs -lquickjs
+endif
+LDFLAGS += $(QJS_LDFLAGS)
 
 # Add dependencies for objects
 $(OBJROOT)/content_handlers_javascript_quickjs_qjsky.o: $(OBJROOT)/quickjs/generics.js.inc $(OBJROOT)/quickjs/polyfill.js.inc

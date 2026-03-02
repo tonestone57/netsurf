@@ -7,7 +7,7 @@
 #include "utils/log.h"
 #include "utils/corestrings.h"
 #include "utils/ring.h"
-#include "include/netsurf/misc.h"
+#include "netsurf/misc.h"
 #include "desktop/gui_internal.h"
 
 /* Timer tracking */
@@ -48,6 +48,10 @@ void qjsky_init_context(JSContext *ctx)
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
 	JSValue global = JS_GetGlobalObject(ctx);
 
+	/* Ensure support for necessary intrinsics */
+	JS_AddIntrinsicMapSet(ctx);
+	JS_AddIntrinsicBigInt(ctx);
+
 	/* Initialize atoms */
 	if (heap->node_map_atom == JS_ATOM_NULL) {
 		heap->node_map_atom = JS_NewAtom(ctx, "__qjskyNodeMap");
@@ -55,7 +59,10 @@ void qjsky_init_context(JSContext *ctx)
 		heap->handler_listener_map_atom = JS_NewAtom(ctx, "__qjskyHandlerListenerMap");
 	}
 
-	JSValue map = JS_NewObject(ctx);
+	JSValue map_ctor = JS_GetPropertyStr(ctx, global, "Map");
+	JSValue map = JS_CallConstructor(ctx, map_ctor, 0, NULL);
+	JS_FreeValue(ctx, map_ctor);
+
 	JS_DefinePropertyValue(ctx, global, heap->node_map_atom, map, JS_PROP_CONFIGURABLE);
 	JS_FreeValue(ctx, global);
 }
@@ -68,13 +75,15 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue map = JS_GetProperty(ctx, global, heap->node_map_atom);
 
-	/* Key for the map: use a string of the pointer for now */
-	char key_str[32];
-	snprintf(key_str, sizeof(key_str), "ptr_%p", node);
+	/* Key for the map: use BigUint64 for pointer precision */
+	JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)node);
 
-	JSValue existing = JS_GetPropertyStr(ctx, map, key_str);
+	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
+	JSValue existing = JS_Call(ctx, get_fn, map, 1, &key);
+	JS_FreeValue(ctx, get_fn);
 
 	if (!JS_IsUndefined(existing) && !JS_IsNull(existing)) {
+		JS_FreeValue(ctx, key);
 		JS_FreeValue(ctx, map);
 		JS_FreeValue(ctx, global);
 		return existing;
@@ -84,6 +93,7 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	/* Create object with proper class */
 	JSValue obj = JS_NewObjectClass(ctx, heap->node_class_id);
 	if (JS_IsException(obj)) {
+		JS_FreeValue(ctx, key);
 		JS_FreeValue(ctx, map);
 		JS_FreeValue(ctx, global);
 		return obj;
@@ -97,7 +107,12 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JS_DefinePropertyValue(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx), 0);
 
 	/* Store in memoization map */
-	JS_SetPropertyStr(ctx, map, key_str, JS_DupValue(ctx, obj));
+	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
+	JSValue args[2] = { key, JS_DupValue(ctx, obj) };
+	JSValue ret = JS_Call(ctx, set_fn, map, 2, args);
+	JS_FreeValue(ctx, ret);
+	JS_FreeValue(ctx, set_fn);
+	JS_FreeValue(ctx, key);
 
 	JS_FreeValue(ctx, map);
 	JS_FreeValue(ctx, global);
@@ -286,7 +301,7 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 	JSValue handler = qjsky_get_handler(ctx, (struct dom_element *)targ, name);
 	if (JS_IsFunction(ctx, handler)) {
 		JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)targ);
-		JSValue event_val = JS_NewObject(ctx); /* TODO: Better Event wrapping */
+		JSValue event_val = qjsky_push_event(ctx, evt);
 		JSValue ret = JS_Call(ctx, handler, node_val, 1, &event_val);
 		if (JS_IsException(ret)) qjs_log_exception(ctx, "Event handler error");
 
@@ -319,7 +334,7 @@ void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, 
 	dom_event_listener_unref(listen);
 }
 
-void qjsky_push_event(JSContext *ctx, dom_event *evt)
+JSValue qjsky_push_event(JSContext *ctx, dom_event *evt)
 {
 	/* Simple placeholder for now */
 	JSValue global = JS_GetGlobalObject(ctx);
@@ -335,7 +350,8 @@ void qjsky_push_event(JSContext *ctx, dom_event *evt)
 	JS_FreeValue(ctx, global);
 	dom_string_unref(type_dom);
 
-	/* In a real implementation we would associate the dom_event* with the JS object */
-	JS_SetOpaque(event_obj, evt);
-	dom_event_ref(evt);
+	/* In a real implementation we would associate the dom_event* with the JS object
+	   but we need the ClassID for Event which is currently generated but not easily accessible here. */
+
+	return event_obj;
 }

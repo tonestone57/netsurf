@@ -56,6 +56,10 @@ void js_destroyheap(struct jsheap *heap)
 	   but we should be clean if we were to reuse it. */
 	if (heap->node_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
+	if (heap->handler_map_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->handler_map_atom);
+	if (heap->handler_listener_map_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
 	JS_FreeRuntime(heap->rt);
 	free(heap);
 }
