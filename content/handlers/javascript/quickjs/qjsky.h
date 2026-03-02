@@ -23,8 +23,15 @@ JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str);
 /* Console Integration */
 void qjsky_init_console(JSContext *ctx);
 
+/* Window Integration */
+void qjsky_init_window(JSContext *ctx);
+
 /* Timer Support */
 void qjsky_timer_init(JSContext *ctx);
 void qjsky_timer_cleanup(JSContext *ctx);
+
+/* Event Support */
+void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, dom_string *value, bool capture);
+JSValue qjsky_push_event(JSContext *ctx, dom_event *evt);
 
 #endif
