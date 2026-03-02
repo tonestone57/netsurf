@@ -16,6 +16,8 @@ prologue Document()
 #include "content/hlcache.h"
 #include "html/private.h"
 #include "content/urldb.h"
+#include "content/llcache.h"
+#include <time.h>
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 
@@ -298,6 +300,32 @@ setter Document::domain()
 	/* Setting document.domain is currently not supported by libdom.
 	 * Any value passed is currently ignored.
 	 */
+	return 0;
+%}
+
+getter Document::lastModified()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+	const char *last_mod;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		last_mod = llcache_handle_get_header(htmlc->base.llcache, "Last-Modified");
+		if (last_mod != NULL) {
+			duk_push_string(ctx, last_mod);
+		} else {
+			/* Fallback to current date/time if no header */
+			time_t now = time(NULL);
+			struct tm *tm_now = localtime(&now);
+			char buf[32];
+			strftime(buf, sizeof(buf), "%m/%d/%Y %H:%M:%S", tm_now);
+			duk_push_string(ctx, buf);
+		}
+		return 1;
+	}
 	return 0;
 %}
 

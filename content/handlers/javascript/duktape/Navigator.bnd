@@ -93,6 +93,12 @@ getter Navigator::userAgent()
 	return 1;
 %}
 
+getter Navigator::hardwareConcurrency()
+%{
+	duk_push_uint(ctx, 1);
+	return 1;
+%}
+
 getter Navigator::language()
 %{
 	const char *accept_language = nsoption_charp(accept_language);
