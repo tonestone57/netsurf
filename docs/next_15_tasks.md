@@ -1,10 +1,10 @@
 # Implementation Roadmap: Next 15 Tasks for QuickJS Integration
 
 ## Phase 2: Engine Integration & Glue Layer
-1.  **String Conversion Helpers**: Implement `js_value_to_dom_string` and `dom_string_to_js_value` in `qjsky.c`.
-2.  **Node Memoization**: Implement a `JSMap` or hidden property on the global object to memoize `dom_node*` -> `JSValue` mappings.
-3.  **Event Dispatch Bridge**: Implement `js_fire_event` in `quickjs.c` to translate NetSurf events into JS function calls.
-4.  **Auto-Handler Registration**: Implement `js_handle_new_element` to scan for `on*` HTML attributes.
+1.  **[COMPLETED] String Conversion Helpers**: Implemented `js_value_to_dom_string` and `dom_string_to_js_value` in `qjsky.c` with correct UTF-8 byte length handling.
+2.  **[COMPLETED] Node Memoization**: Implemented a hidden `JSMap` with `BigUint64` keys on the global object to robustly memoize `dom_node*` -> `JSValue` mappings.
+3.  **[COMPLETED] Event Dispatch Bridge**: Implemented `js_fire_event` in `quickjs.c` conforming to the `js.h` adapter interface.
+4.  **Auto-Handler Registration**: Implement `js_handle_new_element` to scan for `on*` HTML attributes (Skeleton added).
 5.  **XMLHttpRequest Skeleton**: Create the base implementation for `XMLHttpRequest` in `quickjs/`.
 6.  **Timer System Port**: Implement `setTimeout` and `setInterval` logic using NetSurf's `guit->misc->schedule`.
 7.  **Timer Management**: Implement `js_closethread` to correctly cancel pending timers and cleanup callbacks.
@@ -20,3 +20,10 @@
 ## Phase 4: Basic Web APIs
 14. **Window.alert Bridge**: Implement a bridge to NetSurf's native alert dialogs.
 15. **Build System Bindings**: Add `nsgenbind` invocation rules to `quickjs/Makefile`.
+
+## Phase 5: Advanced Integration & Performance
+16. **Weak Reference Memoization**: Migrate the node map to a native-managed registry using `JS_SetOpaque` with proper garbage collection tracking to eliminate current memory leaks.
+17. **Async Task Queue**: Integrate `JS_ExecutePendingJob` into the NetSurf main loop to support ES6 Promises and async/await functionality.
+18. **Event Class Hierarchy**: Implement full inheritance for `UIEvent`, `MouseEvent`, and `KeyboardEvent` in the QuickJS glue layer.
+19. **nsgenbind Upstreaming**: Finalize the `qjs_libdom` backend and submit it to the upstream NetSurf `nsgenbind` repository.
+20. **Remediation Audit**: Perform a full pass of all 67 `.bnd` files to ensure they remain engine-agnostic and use byte-length string operations.

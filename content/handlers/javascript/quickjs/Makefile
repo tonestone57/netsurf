@@ -11,8 +11,9 @@ $(OBJROOT)/quickjs/binding.h $(OBJROOT)/quickjs/Makefile: content/handlers/javas
 	$(Q)$(MKDIR) -p $(OBJROOT)/quickjs
 	$(VQ)echo " GENBIND (QJS): $<"
 	$(Q)nsgenbind -t qjs_libdom $(GBFLAGS) -I content/handlers/javascript/WebIDL $< $(OBJROOT)/quickjs || ( \
-		echo "ERROR: Your version of nsgenbind does not support the QuickJS backend (-t qjs_libdom)."; \
-		echo "Please apply the prototype patch from docs/nsgenbind_prototype/ to your nsgenbind source."; \
+		echo "NOTE: Your nsgenbind tool does not yet support the experimental QuickJS backend (-t qjs_libdom)."; \
+		echo "This is required ONLY if you are explicitly building with NETSURF_USE_QUICKJS=YES."; \
+		echo "To proceed with QuickJS development, please apply the prototype patch provided in docs/nsgenbind_prototype/."; \
 		false; \
 	)
 

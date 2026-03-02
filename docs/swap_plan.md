@@ -15,11 +15,12 @@ A new backend has been prototyped for the `nsgenbind` tool.
 
 ## 3. NetSurf Integration (Functional Framework Implemented)
 - Directory: `content/handlers/javascript/quickjs/`
-- Engine: `quickjs.c` implements `js.h` with:
-    - Runtime/Context lifecycle.
+- Engine: `quickjs.c` implements the spec-compliant `js.h` adapter layer with:
+    - Runtime/Context lifecycle (mapping NetSurf `jsheap`/`jsthread` to QuickJS).
     - Memory limits and intrinsic initialization.
-    - [COMPLETED] Event dispatch and element attribute scanning.
-    - Window.alert and timer system bridges.
+    - [COMPLETED] Event dispatch and element attribute scanning adapter.
+    - [COMPLETED] Window.alert and timer system bridges.
+    - [COMPLETED] Fixed UTF-8 string encoding across all binding layers.
 - Layer: `qjsky.c` handles:
     - [COMPLETED] Robust DOM node memoization (using BigUint64 for pointer safety).
     - String conversion between `JSValue` and `dom_string`.
