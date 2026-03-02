@@ -25,18 +25,27 @@
 #ifndef DUKKY_H
 #define DUKKY_H
 
+#include <stdbool.h>
+#include "duktape.h"
+
+struct dom_node;
+struct dom_element;
+struct dom_event;
+struct dom_event_target;
+struct dom_string;
+
 duk_ret_t dukky_create_object(duk_context *ctx, const char *name, int args);
 duk_bool_t dukky_push_node_stacked(duk_context *ctx);
 duk_bool_t dukky_push_node(duk_context *ctx, struct dom_node *node);
 void dukky_inject_not_ctr(duk_context *ctx, int idx, const char *name);
 void dukky_register_event_listener_for(duk_context *ctx,
 				       struct dom_element *ele,
-				       dom_string *name,
+				       struct dom_string *name,
 				       bool capture);
 bool dukky_get_current_value_of_event_handler(duk_context *ctx,
-					      dom_string *name,
-					      dom_event_target *et);
-void dukky_push_event(duk_context *ctx, dom_event *evt);
+					      struct dom_string *name,
+					      struct dom_event_target *et);
+void dukky_push_event(duk_context *ctx, struct dom_event *evt);
 bool dukky_event_target_push_listeners(duk_context *ctx, bool dont_create);
 
 typedef enum {
@@ -56,5 +65,9 @@ void dukky_push_generics(duk_context *ctx, const char *generic);
 
 /* Log the current stack frame if possible */
 void dukky_log_stack_frame(duk_context *ctx, const char * reason);
+
+void dukky_push_children(duk_context *ctx, struct dom_node *root, int arr_idx, duk_uarridx_t *idx);
+void dukky_getElementsByClassName_recursive(duk_context *ctx, struct dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx);
+void dukky_getInnerText_recursive(duk_context *ctx, struct dom_node *node, duk_uarridx_t *idx, int arr_idx);
 
 #endif

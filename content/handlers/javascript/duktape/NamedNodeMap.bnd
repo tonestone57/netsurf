@@ -73,6 +73,43 @@ method NamedNodeMap::getNamedItem()
 	return 1;
 %}
 
+method NamedNodeMap::setNamedItem()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_namednodemap_set_named_item(priv->map, other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method NamedNodeMap::removeNamedItem()
+%{
+	duk_size_t size;
+	const char *s = duk_safe_to_lstring(ctx, 0, &size);
+	dom_exception exc;
+	dom_node *attr = NULL;
+	dom_string *name = NULL;
+
+	exc = dom_string_create((const uint8_t*)s, size, &name);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_namednodemap_remove_named_item(priv->map, name, &attr);
+	dom_string_unref(name);
+	if (exc != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, attr);
+	dom_node_unref(attr);
+	return 1;
+%}
+
 method NamedNodeMap::getNamedItemNS()
 %{
 	dom_string *namespace = NULL;

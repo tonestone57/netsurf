@@ -12,97 +12,8 @@ prologue HTMLElement()
 %{
 #include <utils/corestrings.h>
 #include <strings.h>
+#include "dukky.h"
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
-
-static void dukky_getInnerText_recursive(duk_context *ctx, dom_node *node, duk_uarridx_t *idx, int arr_idx)
-{
-	dom_node_type type;
-	dom_exception exc;
-	dom_node *child = NULL;
-	dom_node *next_child = NULL;
-
-	exc = dom_node_get_node_type(node, &type);
-	if (exc != DOM_NO_ERR) return;
-
-	if (type == DOM_TEXT_NODE) {
-		dom_string *content;
-		exc = dom_node_get_node_value(node, &content);
-		if (exc == DOM_NO_ERR && content != NULL) {
-			duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
-			duk_put_prop_index(ctx, arr_idx, (*idx)++);
-			dom_string_unref(content);
-		}
-	} else if (type == DOM_ELEMENT_NODE) {
-		dom_string *node_name = NULL;
-		exc = dom_node_get_node_name(node, &node_name);
-		if (exc != DOM_NO_ERR || node_name == NULL) return;
-
-		const char *s = dom_string_data(node_name);
-		size_t len = dom_string_byte_length(node_name);
-
-		if ((len == 6 && strncasecmp(s, "script", 6) == 0) ||
-		    (len == 5 && strncasecmp(s, "style", 5) == 0) ||
-		    (len == 4 && strncasecmp(s, "head", 4) == 0)) {
-			dom_string_unref(node_name);
-			return;
-		}
-
-		if (len == 2 && strncasecmp(s, "br", 2) == 0) {
-			duk_push_string(ctx, "\n");
-			duk_put_prop_index(ctx, arr_idx, (*idx)++);
-			dom_string_unref(node_name);
-			return;
-		}
-
-		/* Expanded block element check */
-		bool isBlock = false;
-		if (len == 1) {
-			if (s[0] == 'p' || s[0] == 'P') isBlock = true;
-		} else if (len == 2) {
-			if (strncasecmp(s, "li", 2) == 0 || strncasecmp(s, "tr", 2) == 0 ||
-			    strncasecmp(s, "dl", 2) == 0 || strncasecmp(s, "dt", 2) == 0 ||
-			    strncasecmp(s, "dd", 2) == 0 || (s[0] == 'h' && s[1] >= '1' && s[1] <= '6')) isBlock = true;
-		} else if (len == 3) {
-			if (strncasecmp(s, "div", 3) == 0 || strncasecmp(s, "pre", 3) == 0) isBlock = true;
-		} else if (len == 4) {
-			if (strncasecmp(s, "form", 4) == 0) isBlock = true;
-		} else if (len == 5) {
-			if (strncasecmp(s, "table", 5) == 0) isBlock = true;
-		}
-
-		if (isBlock && *idx > 0) {
-			/* Block start: add newline if needed */
-			duk_get_prop_index(ctx, arr_idx, *idx - 1);
-			const char *prev = duk_get_string(ctx, -1);
-			if (prev && strcmp(prev, "\n") != 0) {
-				duk_push_string(ctx, "\n");
-				duk_put_prop_index(ctx, arr_idx, (*idx)++);
-			}
-			duk_pop(ctx);
-		}
-
-		exc = dom_node_get_first_child(node, &child);
-		while (exc == DOM_NO_ERR && child != NULL) {
-			dukky_getInnerText_recursive(ctx, child, idx, arr_idx);
-			exc = dom_node_get_next_sibling(child, &next_child);
-			dom_node_unref(child);
-			child = next_child;
-		}
-
-		if (isBlock && *idx > 0) {
-			/* Block end: add newline if needed */
-			duk_get_prop_index(ctx, arr_idx, *idx - 1);
-			const char *prev = duk_get_string(ctx, -1);
-			if (prev && strcmp(prev, "\n") != 0) {
-				duk_push_string(ctx, "\n");
-				duk_put_prop_index(ctx, arr_idx, (*idx)++);
-			}
-			duk_pop(ctx);
-		}
-
-		dom_string_unref(node_name);
-	}
-}
 %}
 
 init HTMLElement(struct dom_html_element *html_element::element);
@@ -749,9 +660,9 @@ setter HTMLElement::innerText()
 
 	/* Clear children */
 	dom_node *child;
-	while (dom_node_get_first_child(priv->parent.node, &child) == DOM_NO_ERR && child != NULL) {
+	while (dom_node_get_first_child(priv->parent.parent.node, &child) == DOM_NO_ERR && child != NULL) {
 		dom_node *old;
-		exc = dom_node_remove_child(priv->parent.node, child, &old);
+		exc = dom_node_remove_child(priv->parent.parent.node, child, &old);
 		if (exc == DOM_NO_ERR) dom_node_unref(old);
 		dom_node_unref(child);
 	}
@@ -759,12 +670,12 @@ setter HTMLElement::innerText()
 	/* Create and append text node */
 	dom_node *text_node;
 	dom_document *doc;
-	exc = dom_node_get_owner_document(priv->parent.node, &doc);
+	exc = dom_node_get_owner_document(priv->parent.parent.node, &doc);
 	if (exc == DOM_NO_ERR && doc != NULL) {
 		exc = dom_document_create_text_node(doc, content, &text_node);
 		if (exc == DOM_NO_ERR) {
 			dom_node *old;
-			exc = dom_node_append_child(priv->parent.node, text_node, &old);
+			exc = dom_node_append_child(priv->parent.parent.node, text_node, &old);
 			if (exc == DOM_NO_ERR) dom_node_unref(old);
 			dom_node_unref(text_node);
 		}

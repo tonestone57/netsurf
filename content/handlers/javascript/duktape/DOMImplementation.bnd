@@ -11,12 +11,13 @@
 prologue DOMImplementation ()
 %{
 #include "utils/corestrings.h"
+#include "dukky.h"
 %}
 
 method DOMImplementation::hasFeature ()
 %{
 	/* Always return true */
-	duk_push_bool(ctx, true);
+	duk_push_boolean(ctx, true);
 	return 1;
 %}
 
@@ -26,18 +27,10 @@ method DOMImplementation::createDocumentType()
 	dom_document_type *doctype;
 	duk_size_t qn_len, pi_len, si_len;
 	const char *qn_str = duk_safe_to_lstring(ctx, 0, &qn_len);
-	const char *pi_str = duk_safe_to_lstring(ctx, 1, &pi_len);
-	const char *si_str = duk_safe_to_lstring(ctx, 2, &si_len);
-	dom_string *qn, *pi, *si;
+	const char *pi_str = duk_is_null(ctx, 1) ? NULL : duk_safe_to_lstring(ctx, 1, &pi_len);
+	const char *si_str = duk_is_null(ctx, 2) ? NULL : duk_safe_to_lstring(ctx, 2, &si_len);
 
-	dom_string_create((const uint8_t *)qn_str, qn_len, &qn);
-	dom_string_create((const uint8_t *)pi_str, pi_len, &pi);
-	dom_string_create((const uint8_t *)si_str, si_len, &si);
-
-	err = dom_implementation_create_document_type(qn, pi, si, &doctype);
-	dom_string_unref(qn);
-	dom_string_unref(pi);
-	dom_string_unref(si);
+	err = dom_implementation_create_document_type(qn_str, pi_str, si_str, &doctype);
 
 	if (err != DOM_NO_ERR) return 0;
 
@@ -51,16 +44,9 @@ method DOMImplementation::createDocument()
 	dom_exception err;
 	struct dom_document *doc;
 	duk_size_t ns_len, qn_len;
-	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
-	dom_string *ns = NULL, *qn = NULL;
+	const char *ns_str = duk_is_null(ctx, 0) ? NULL : duk_safe_to_lstring(ctx, 0, &ns_len);
+	const char *qn_str = duk_is_null(ctx, 1) ? NULL : duk_safe_to_lstring(ctx, 1, &qn_len);
 	dom_document_type *doctype = NULL;
-
-	if (!duk_is_null(ctx, 0)) {
-		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
-		dom_string_create((const uint8_t *)ns_str, ns_len, &ns);
-	}
-
-	dom_string_create((const uint8_t *)qn_str, qn_len, &qn);
 
 	if (!duk_is_null(ctx, 2) && !duk_is_undefined(ctx, 2)) {
 		if (!dukky_instanceof(ctx, 2, PROTO_NAME(NODE))) return 0;
@@ -70,9 +56,7 @@ method DOMImplementation::createDocument()
 		doctype = (dom_document_type *)priv->node;
 	}
 
-	err = dom_implementation_create_document(DOM_IMPLEMENTATION_XML, ns, qn, doctype, NULL, NULL, &doc);
-	if (ns) dom_string_unref(ns);
-	dom_string_unref(qn);
+	err = dom_implementation_create_document(DOM_IMPLEMENTATION_XML, ns_str, qn_str, doctype, NULL, NULL, &doc);
 
 	if (err != DOM_NO_ERR) return 0;
 

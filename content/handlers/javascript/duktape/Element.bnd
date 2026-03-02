@@ -14,83 +14,7 @@ class Element {
 #include <utils/corestrings.h>
 #include <dom/bindings/hubbub/parser.h>
 #include <ctype.h>
-
-void dukky_getElementsByClassName_recursive(duk_context *ctx, dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx);
-
-static bool dukky_element_has_classes(dom_element *ele, const char *cls, size_t clen)
-{
-	dom_string *class_attr;
-	dom_exception exc;
-	bool all_match = true;
-
-	exc = dom_element_get_attribute(ele, corestring_dom_class, &class_attr);
-	if (exc != DOM_NO_ERR || class_attr == NULL) return false;
-
-	const char *target_data = dom_string_data(class_attr);
-	size_t target_len = dom_string_byte_length(class_attr);
-
-	/* We need to check if ALL tokens in 'cls' are present in 'class_attr' */
-	const char *p = cls;
-	const char *end = cls + clen;
-
-	while (p < end) {
-		while (p < end && isspace((unsigned char)*p)) p++;
-		if (p >= end) break;
-		const char *start = p;
-		while (p < end && !isspace((unsigned char)*p)) p++;
-		size_t token_len = p - start;
-
-		/* Check if 'token' (start, token_len) is in target_data */
-		bool token_found = false;
-		const char *tp = target_data;
-		const char *tend = target_data + target_len;
-		while (tp < tend) {
-			while (tp < tend && isspace((unsigned char)*tp)) tp++;
-			if (tp >= tend) break;
-			const char *tstart = tp;
-			while (tp < tend && !isspace((unsigned char)*tp)) tp++;
-			size_t ttoken_len = tp - tstart;
-
-			if (ttoken_len == token_len && memcmp(tstart, start, token_len) == 0) {
-				token_found = true;
-				break;
-			}
-		}
-
-		if (!token_found) {
-			all_match = false;
-			break;
-		}
-	}
-
-	dom_string_unref(class_attr);
-	return all_match;
-}
-
-void dukky_getElementsByClassName_recursive(duk_context *ctx, dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx)
-{
-	dom_node *child;
-	dom_exception exc;
-
-	exc = dom_node_get_first_child(root, &child);
-	while (exc == DOM_NO_ERR && child != NULL) {
-		dom_node_type type;
-		dom_node_get_node_type(child, &type);
-
-		if (type == DOM_ELEMENT_NODE) {
-			if (dukky_element_has_classes((dom_element *)child, cls, clen)) {
-				dukky_push_node(ctx, child);
-				duk_put_prop_index(ctx, arr_idx, (*idx)++);
-			}
-			dukky_getElementsByClassName_recursive(ctx, child, cls, clen, idx, arr_idx);
-		}
-
-		dom_node *next;
-		exc = dom_node_get_next_sibling(child, &next);
-		dom_node_unref(child);
-		child = next;
-	}
-}
+#include "dukky.h"
 
 static void dukky_push_escaped_string(duk_context *ctx, dom_string *str)
 {
@@ -141,26 +65,6 @@ static bool dukky_is_void_element(dom_string *name)
 	if (len == 8 && strncasecmp(s, "bgsound", 8) == 0) return true;
 
 	return false;
-}
-
-void dukky_push_children(duk_context *ctx, dom_node *root, int arr_idx, duk_uarridx_t *idx)
-{
-	dom_node *child;
-	dom_exception exc;
-
-	exc = dom_node_get_first_child(root, &child);
-	while (exc == DOM_NO_ERR && child != NULL) {
-		dom_node_type type;
-		dom_node_get_node_type(child, &type);
-		if (type == DOM_ELEMENT_NODE) {
-			dukky_push_node(ctx, child);
-			duk_put_prop_index(ctx, arr_idx, (*idx)++);
-		}
-		dom_node *next;
-		exc = dom_node_get_next_sibling(child, &next);
-		dom_node_unref(child);
-		child = next;
-	}
 }
 
 static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarridx_t *idx, int arr_idx)

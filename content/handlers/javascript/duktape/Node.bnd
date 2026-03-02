@@ -109,6 +109,16 @@ method Node::hasChildNodes()
 	return 1;
 %}
 
+method Node::hasAttributes()
+%{
+	dom_exception exc;
+	bool res;
+	exc = dom_node_has_attributes(priv->node, &res);
+	if (exc != DOM_NO_ERR) return 0;
+	duk_push_boolean(ctx, res);
+	return 1;
+%}
+
 getter Node::childNodes()
 %{
 	dom_exception exc;

@@ -45,6 +45,9 @@
 #include "dukky.h"
 
 #include <dom/dom.h>
+#include <ctype.h>
+#include <string.h>
+#include <strings.h>
 
 #define EVENT_MAGIC MAGIC(EVENT_MAP)
 #define HANDLER_LISTENER_MAGIC MAGIC(HANDLER_LISTENER_MAP)
@@ -751,6 +754,191 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv, jsthread **th
 	*thread = ret;
 
 	return NSERROR_OK;
+}
+
+static bool dukky_element_has_classes(dom_element *ele, const char *cls, size_t clen)
+{
+	dom_string *class_attr;
+	dom_exception exc;
+	bool all_match = true;
+
+	exc = dom_element_get_attribute(ele, corestring_dom_class, &class_attr);
+	if (exc != DOM_NO_ERR || class_attr == NULL) return false;
+
+	const char *target_data = dom_string_data(class_attr);
+	size_t target_len = dom_string_byte_length(class_attr);
+
+	/* We need to check if ALL tokens in 'cls' are present in 'class_attr' */
+	const char *p = cls;
+	const char *end = cls + clen;
+
+	while (p < end) {
+		while (p < end && isspace((unsigned char)*p)) p++;
+		if (p >= end) break;
+		const char *start = p;
+		while (p < end && !isspace((unsigned char)*p)) p++;
+		size_t token_len = p - start;
+
+		/* Check if 'token' (start, token_len) is in target_data */
+		bool token_found = false;
+		const char *tp = target_data;
+		const char *tend = target_data + target_len;
+		while (tp < tend) {
+			while (tp < tend && isspace((unsigned char)*tp)) tp++;
+			if (tp >= tend) break;
+			const char *tstart = tp;
+			while (tp < tend && !isspace((unsigned char)*tp)) tp++;
+			size_t ttoken_len = tp - tstart;
+
+			if (ttoken_len == token_len && memcmp(tstart, start, token_len) == 0) {
+				token_found = true;
+				break;
+			}
+		}
+
+		if (!token_found) {
+			all_match = false;
+			break;
+		}
+	}
+
+	dom_string_unref(class_attr);
+	return all_match;
+}
+
+void dukky_getElementsByClassName_recursive(duk_context *ctx, dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx)
+{
+	dom_node *child;
+	dom_exception exc;
+
+	exc = dom_node_get_first_child(root, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type type;
+		dom_node_get_node_type(child, &type);
+
+		if (type == DOM_ELEMENT_NODE) {
+			if (dukky_element_has_classes((dom_element *)child, cls, clen)) {
+				dukky_push_node(ctx, child);
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			}
+			dukky_getElementsByClassName_recursive(ctx, child, cls, clen, idx, arr_idx);
+		}
+
+		dom_node *next;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+}
+
+void dukky_push_children(duk_context *ctx, dom_node *root, int arr_idx, duk_uarridx_t *idx)
+{
+	dom_node *child;
+	dom_exception exc;
+
+	exc = dom_node_get_first_child(root, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type type;
+		dom_node_get_node_type(child, &type);
+		if (type == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		}
+		dom_node *next;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+}
+
+void dukky_getInnerText_recursive(duk_context *ctx, dom_node *node, duk_uarridx_t *idx, int arr_idx)
+{
+	dom_node_type type;
+	dom_exception exc;
+	dom_node *child = NULL;
+	dom_node *next_child = NULL;
+
+	exc = dom_node_get_node_type(node, &type);
+	if (exc != DOM_NO_ERR) return;
+
+	if (type == DOM_TEXT_NODE) {
+		dom_string *content;
+		exc = dom_node_get_node_value(node, &content);
+		if (exc == DOM_NO_ERR && content != NULL) {
+			duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			dom_string_unref(content);
+		}
+	} else if (type == DOM_ELEMENT_NODE) {
+		dom_string *node_name = NULL;
+		exc = dom_node_get_node_name(node, &node_name);
+		if (exc != DOM_NO_ERR || node_name == NULL) return;
+
+		const char *s = dom_string_data(node_name);
+		size_t len = dom_string_byte_length(node_name);
+
+		if ((len == 6 && strncasecmp(s, "script", 6) == 0) ||
+		    (len == 5 && strncasecmp(s, "style", 5) == 0) ||
+		    (len == 4 && strncasecmp(s, "head", 4) == 0)) {
+			dom_string_unref(node_name);
+			return;
+		}
+
+		if (len == 2 && strncasecmp(s, "br", 2) == 0) {
+			duk_push_string(ctx, "\n");
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			dom_string_unref(node_name);
+			return;
+		}
+
+		/* Expanded block element check */
+		bool isBlock = false;
+		if (len == 1) {
+			if (s[0] == 'p' || s[0] == 'P') isBlock = true;
+		} else if (len == 2) {
+			if (strncasecmp(s, "li", 2) == 0 || strncasecmp(s, "tr", 2) == 0 ||
+			    strncasecmp(s, "dl", 2) == 0 || strncasecmp(s, "dt", 2) == 0 ||
+			    strncasecmp(s, "dd", 2) == 0 || (s[0] == 'h' && s[1] >= '1' && s[1] <= '6')) isBlock = true;
+		} else if (len == 3) {
+			if (strncasecmp(s, "div", 3) == 0 || strncasecmp(s, "pre", 3) == 0) isBlock = true;
+		} else if (len == 4) {
+			if (strncasecmp(s, "form", 4) == 0) isBlock = true;
+		} else if (len == 5) {
+			if (strncasecmp(s, "table", 5) == 0) isBlock = true;
+		}
+
+		if (isBlock && *idx > 0) {
+			/* Block start: add newline if needed */
+			duk_get_prop_index(ctx, arr_idx, *idx - 1);
+			const char *prev = duk_get_string(ctx, -1);
+			if (prev == NULL || strcmp(prev, "\n") != 0) {
+				duk_push_string(ctx, "\n");
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			}
+			duk_pop(ctx);
+		}
+
+		exc = dom_node_get_first_child(node, &child);
+		while (exc == DOM_NO_ERR && child != NULL) {
+			dukky_getInnerText_recursive(ctx, child, idx, arr_idx);
+			exc = dom_node_get_next_sibling(child, &next_child);
+			dom_node_unref(child);
+			child = next_child;
+		}
+
+		if (isBlock && *idx > 0) {
+			/* Block end: add newline if needed */
+			duk_get_prop_index(ctx, arr_idx, *idx - 1);
+			const char *prev = duk_get_string(ctx, -1);
+			if (prev == NULL || strcmp(prev, "\n") != 0) {
+				duk_push_string(ctx, "\n");
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			}
+			duk_pop(ctx);
+		}
+
+		dom_string_unref(node_name);
+	}
 }
 
 /* Now switch to the long term CTX behaviour */
