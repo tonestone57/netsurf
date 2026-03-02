@@ -27,7 +27,7 @@ getter HTMLElement::dir()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -58,7 +58,7 @@ getter HTMLElement::lang()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -89,7 +89,7 @@ getter HTMLElement::title()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}

@@ -21,7 +21,7 @@ getter HTMLImageElement::align()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -52,7 +52,7 @@ getter HTMLImageElement::alt()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -83,7 +83,7 @@ getter HTMLImageElement::border()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -137,7 +137,7 @@ getter HTMLImageElement::longDesc()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -168,7 +168,7 @@ getter HTMLImageElement::name()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -199,7 +199,7 @@ getter HTMLImageElement::src()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -230,7 +230,7 @@ getter HTMLImageElement::useMap()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
