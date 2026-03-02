@@ -21,6 +21,7 @@ class Window {
 #include "html/html.h"
 #include "html/private.h"
 #include "desktop/gui_internal.h"
+#include "desktop/browser_private.h"
 #include "netsurf/misc.h"
 #include "utils/ring.h"
 #include "netsurf/inttypes.h"
@@ -484,6 +485,18 @@ getter Window::name()
 	const char *name;
 	browser_window_get_name(priv->win, &name);
 	duk_push_string(ctx, name);
+	return 1;
+%}
+
+getter Window::innerWidth()
+%{
+	duk_push_int(ctx, priv->win->width);
+	return 1;
+%}
+
+getter Window::innerHeight()
+%{
+	duk_push_int(ctx, priv->win->height);
 	return 1;
 %}
 

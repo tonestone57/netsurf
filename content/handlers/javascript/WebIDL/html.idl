@@ -1412,6 +1412,10 @@ dictionary DragEventInit : MouseEventInit {
   attribute any opener;
   [Replaceable] readonly attribute WindowProxy parent;
   readonly attribute Element? frameElement;
+
+  readonly attribute long innerWidth;
+  readonly attribute long innerHeight;
+
   WindowProxy open(optional DOMString url = "about:blank", optional DOMString target = "_blank", [TreatNullAs=EmptyString] optional DOMString features = "", optional boolean replace = false);
   getter WindowProxy (unsigned long index);
   getter object (DOMString name);
@@ -1700,7 +1704,7 @@ partial interface NavigatorID {
 
 [NoInterfaceObject, Exposed=(Window,Worker)]
 interface NavigatorLanguage {
-  readonly attribute DOMString? language;
+  readonly attribute DOMString language;
   readonly attribute DOMString[] languages;
 };
 
