@@ -929,14 +929,14 @@ static bool layout_flex__place_line_items_main(
 		box_pos_main = ctx->horizontal ? &b->x : &b->y;
 
 		if (!lh__box_is_absolute(b)) {
-			int space = 0;
-
 			if (i != line->first) {
-				space = space_between;
+				int space = space_between;
 				if (space_between_remainder > 0) {
 					space++;
 					space_between_remainder--;
 				}
+				main_pos += pre_multiplier * space;
+				main_pos += post_multiplier * space;
 			}
 
 			if (b->margin[main_start] == AUTO) {
@@ -948,14 +948,14 @@ static bool layout_flex__place_line_items_main(
 			extra_total = extra_pre + extra_post;
 
 			main_pos += pre_multiplier *
-					(extra_total + space + box_size_main +
+					(extra_total + box_size_main +
 					 lh__delta_outer_main(ctx->flex, b));
 
 			*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
 					extra_pre + b->border[main_start].width;
 
 			main_pos += post_multiplier *
-					(extra_total + space + box_size_main +
+					(extra_total + box_size_main +
 					 lh__delta_outer_main(ctx->flex, b));
 		} else {
 			*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
@@ -1102,7 +1102,8 @@ static void layout_flex__place_lines(struct flex_ctx *ctx)
 
 	if (ctx->available_cross != AUTO &&
 	    ctx->available_cross > ctx->cross_size &&
-	    ctx->line.count > 0) {
+	    ctx->line.count > 0 &&
+	    ctx->wrap != CSS_FLEX_WRAP_NOWRAP) {
 		int free_cross = ctx->available_cross - ctx->cross_size;
 
 		switch (ctx->align_content) {
@@ -1148,19 +1149,20 @@ static void layout_flex__place_lines(struct flex_ctx *ctx)
 
 	for (size_t i = 0; i < ctx->line.count; i++) {
 		struct flex_line_data *line = &ctx->line.data[i];
-		int space = 0;
 
 		if (i != 0) {
-			space = space_between;
+			int space = space_between;
 			if (space_between_remainder > 0) {
 				space++;
 				space_between_remainder--;
 			}
+			line_pos += pre_multiplier * space;
+			line_pos += post_multiplier * space;
 		}
 
-		line_pos += pre_multiplier * (line->cross_size + space);
+		line_pos += pre_multiplier * line->cross_size;
 		line->pos = line_pos;
-		line_pos += post_multiplier * (line->cross_size + space) +
+		line_pos += post_multiplier * line->cross_size +
 				extra + (extra_remainder > 0 ? 1 : 0);
 
 		layout_flex__place_line_items_cross(ctx, line,
@@ -1218,6 +1220,26 @@ bool layout_flex(struct box *flex, int available_width,
 			flex, ctx->available_cross);
 
 	layout_flex_ctx__populate_item_data(ctx, flex, available_width);
+
+	/* Reorder box children according to the 'order' property */
+	if (ctx->item.count > 1) {
+		struct box *prev = NULL;
+		for (size_t i = 0; i < ctx->item.count; i++) {
+			struct box *b = ctx->item.data[i].box;
+			if (i == 0) {
+				flex->children = b;
+				b->prev = NULL;
+			} else {
+				prev->next = b;
+				b->prev = prev;
+			}
+			prev = b;
+		}
+		if (prev) {
+			prev->next = NULL;
+			flex->last = prev;
+		}
+	}
 
 	/* Place items onto lines. */
 	success = layout_flex__collect_items_into_lines(ctx);
