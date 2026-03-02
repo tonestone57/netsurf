@@ -123,7 +123,7 @@ method NamedNodeMap::getNamedItemNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
@@ -174,7 +174,7 @@ method NamedNodeMap::removeNamedItemNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
