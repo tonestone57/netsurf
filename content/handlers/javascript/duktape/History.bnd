@@ -13,7 +13,9 @@ class History {
 
 prologue History()
 %{
+#include "netsurf/types.h"
 #include "netsurf/browser_window.h"
+#include "desktop/browser_private.h"
 #include "desktop/browser_history.h"
 #include "javascript/duktape/dukky.h"
 

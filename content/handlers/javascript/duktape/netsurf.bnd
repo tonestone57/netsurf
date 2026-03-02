@@ -69,6 +69,7 @@ struct dom_html_br_element;
 #include "Navigator.bnd"
 #include "History.bnd"
 #include "Screen.bnd"
+#include "BarProp.bnd"
 #include "DOMImplementation.bnd"
 
 /* events */

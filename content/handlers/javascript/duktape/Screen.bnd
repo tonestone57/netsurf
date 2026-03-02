@@ -13,6 +13,7 @@ class Screen {
 
 prologue Screen()
 %{
+#include "netsurf/types.h"
 #include "netsurf/browser_window.h"
 #include "desktop/browser_private.h"
 #include "javascript/duktape/dukky.h"

@@ -8,8 +8,12 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+class Navigator {
+};
+
 prologue Navigator()
 %{
+#include <string.h>
 #include "utils/useragent.h"
 #include "utils/nsoption.h"
 %}

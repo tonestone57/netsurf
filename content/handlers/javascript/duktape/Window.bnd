@@ -22,6 +22,7 @@ class Window {
 #include "html/private.h"
 #include "desktop/gui_internal.h"
 #include "desktop/browser_private.h"
+#include "desktop/scrollbar.h"
 #include "netsurf/misc.h"
 #include "utils/ring.h"
 #include "netsurf/inttypes.h"
@@ -425,6 +426,65 @@ getter Window::window()
 	return 1;
 %}
 
+getter Window::self()
+%{
+	duk_push_this(ctx);
+	return 1;
+%}
+
+getter Window::frames()
+%{
+	duk_push_this(ctx);
+	return 1;
+%}
+
+getter Window::top()
+%{
+	struct browser_window *top = browser_window_get_root(priv->win);
+	/* We need to push the Window object for this browser_window.
+	 * Currently our infrastructure doesn't easily map back from
+	 * browser_window to its Window JS object if it's a different one.
+	 * For now, if it's us, return us.
+	 */
+	if (top == priv->win) {
+		duk_push_this(ctx);
+	} else {
+		/* TODO: Proper cross-window support */
+		duk_push_null(ctx);
+	}
+	return 1;
+%}
+
+getter Window::parent()
+%{
+	struct browser_window *parent = priv->win->parent;
+	if (parent == NULL || parent == priv->win) {
+		duk_push_this(ctx);
+	} else {
+		/* TODO: Proper cross-window support */
+		duk_push_null(ctx);
+	}
+	return 1;
+%}
+
+getter Window::opener()
+%{
+	/* NetSurf doesn't currently track the opener window */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::length()
+%{
+	/* total number of frames + iframes */
+	int count = priv->win->iframe_count;
+	if (priv->win->browser_window_type == BROWSER_WINDOW_FRAMESET) {
+		count += priv->win->rows * priv->win->cols;
+	}
+	duk_push_int(ctx, count);
+	return 1;
+%}
+
 getter Window::console()
 %{
 	duk_push_this(ctx);
@@ -436,6 +496,90 @@ getter Window::console()
 		}
 		duk_dup(ctx, -1);
 		duk_put_prop_string(ctx, -3, MAGIC(Console));
+	}
+	return 1;
+%}
+
+getter Window::locationbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(locationbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(locationbar));
+		}
+	}
+	return 1;
+%}
+
+getter Window::menubar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(menubar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(menubar));
+		}
+	}
+	return 1;
+%}
+
+getter Window::personalbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(personalbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(personalbar));
+		}
+	}
+	return 1;
+%}
+
+getter Window::scrollbars()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(scrollbars));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(scrollbars));
+		}
+	}
+	return 1;
+%}
+
+getter Window::statusbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(statusbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(statusbar));
+		}
+	}
+	return 1;
+%}
+
+getter Window::toolbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(toolbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) == DUK_EXEC_SUCCESS) {
+			duk_dup(ctx, -1);
+			duk_put_prop_string(ctx, -3, MAGIC(toolbar));
+		}
 	}
 	return 1;
 %}
@@ -607,6 +751,26 @@ method Window::alert()
 	return 0;
 %}
 
+method Window::confirm()
+%{
+	/* confirm always returns true for now as we don't have a UI popup */
+	duk_push_boolean(ctx, true);
+	return 1;
+%}
+
+method Window::prompt()
+%{
+	/* prompt returns null for now */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Window::print()
+%{
+	/* print is a no-op */
+	return 0;
+%}
+
 method Window::setTimeout()
 %{
 	duk_idx_t argc = duk_get_top(ctx);
@@ -684,6 +848,29 @@ method Window::clearInterval()
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 
 	return 0;
+%}
+
+method Window::btoa()
+%{
+	duk_idx_t nargs = duk_get_top(ctx);
+	if (nargs < 1) return 0;
+	duk_to_string(ctx, 0);
+	duk_base64_encode(ctx, 0);
+	return 1;
+%}
+
+method Window::atob()
+%{
+	duk_idx_t nargs = duk_get_top(ctx);
+	if (nargs < 1) return 0;
+	/* atob is supposed to throw if the input contains non-latin1 characters
+	 * or is not valid base64. duk_base64_decode handles the latter.
+	 */
+	duk_to_string(ctx, 0);
+	duk_base64_decode(ctx, 0);
+	/* Convert the decoded buffer back to a string for compliance */
+	duk_to_string(ctx, 0);
+	return 1;
 %}
 
 getter Window::onabort();
