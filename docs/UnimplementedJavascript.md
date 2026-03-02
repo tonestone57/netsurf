@@ -175,8 +175,6 @@ getter | HTMLElement::commandIcon(string);
 getter | HTMLElement::commandHidden(boolean);
 getter | HTMLElement::commandDisabled(boolean);
 getter | HTMLElement::commandChecked(boolean);
-getter | HTMLElement::onerror(user);
-setter | HTMLElement::onerror(user);
 getter | HTMLElement::contentEditable(string);
 setter | HTMLElement::contentEditable(string);
 getter | HTMLElement::isContentEditable(boolean);
@@ -1386,9 +1384,6 @@ getter | Attr::textContent(string);
 setter | Attr::textContent(string);
 getter | Attr::ownerElement(user);
 getter | Attr::specified(boolean);
-method | DOMImplementation::createDocumentType();
-method | DOMImplementation::createDocument();
-method | DOMImplementation::hasFeature();
 method | Document::createRange();
 method | Document::createNodeIterator();
 method | Document::createTreeWalker();
@@ -1483,5 +1478,5 @@ method | EventListener::handleEvent();
 method | CustomEvent::initCustomEvent();
 getter | CustomEvent::detail(any);
 
- 1477 unimplemented bindings
+ 1472 unimplemented bindings
 
