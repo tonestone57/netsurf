@@ -1249,8 +1249,18 @@ bool layout_flex(struct box *flex, int available_width,
 
 	layout_flex_ctx__populate_item_data(ctx, flex, available_width);
 
-	/* Reorder box children according to the 'order' property */
-	if (ctx->item.count > 1) {
+	/* The sort and reorder only needs to happen if any items have non-zero
+	 * order property. If all order values are 0, document order is preserved.
+	 */
+	bool reorder = false;
+	for (size_t i = 0; i < ctx->item.count; i++) {
+		if (ctx->item.data[i].order != 0) {
+			reorder = true;
+			break;
+		}
+	}
+
+	if (reorder && ctx->item.count > 1) {
 		struct box *prev = NULL;
 		for (size_t i = 0; i < ctx->item.count; i++) {
 			struct box *b = ctx->item.data[i].box;

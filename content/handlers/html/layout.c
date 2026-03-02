@@ -587,11 +587,6 @@ static void layout_minmax_table(struct box *table,
 				h, hu));
 	}
 
-	/** \todo Handle colspan="0" correctly.
-	 *  As per 4.9.11, "0" means that the cell is to span all remaining
-	 *  columns in the row group.
-	 */
-
 	/* 1st pass: consider cells with colspan 1 only */
 	for (row_group = table->children; row_group; row_group =row_group->next)
 	for (row = row_group->children; row; row = row->next)
@@ -2382,29 +2377,48 @@ bool layout_table(
 		}
 
 		if (num_rows > 0) {
-			row_extra = spare_table_height / num_rows;
-			row_extra_remainder = spare_table_height % num_rows;
+			int *row_extras;
+			int row_idx = 0;
 
-			for (row_group = table->children; row_group;
-					row_group = row_group->next) {
-				int current_group_y = 0;
-				row_group->y = current_table_y;
+			row_extras = calloc(num_rows, sizeof(int));
+			if (row_extras != NULL) {
+				row_extra = spare_table_height / num_rows;
+				row_extra_remainder = spare_table_height % num_rows;
 
-				for (row = row_group->children; row; row = row->next) {
-					int extra = row_extra + (row_extra_remainder > 0 ? 1 : 0);
+				for (int i = 0; i < num_rows; i++) {
+					row_extras[i] = row_extra + (row_extra_remainder > 0 ? 1 : 0);
 					if (row_extra_remainder > 0) row_extra_remainder--;
-
-					row->y = current_group_y;
-					row->height += extra;
-
-					for (c = row->children; c; c = c->next) {
-						c->height += extra;
-					}
-
-					current_group_y += row->height + border_spacing_v;
 				}
-				row_group->height = current_group_y;
-				current_table_y += row_group->height;
+
+				for (row_group = table->children; row_group;
+						row_group = row_group->next) {
+					int current_group_y = 0;
+
+					row_group->y = current_table_y;
+
+					for (row = row_group->children; row; row = row->next) {
+						int extra = row_extras[row_idx];
+
+						row->y = current_group_y;
+						row->height += extra;
+
+						for (c = row->children; c; c = c->next) {
+							int cell_extra = 0;
+							for (unsigned int j = 0; j < c->rows; j++) {
+								if (row_idx + j < (unsigned int)num_rows) {
+									cell_extra += row_extras[row_idx + j];
+								}
+							}
+							c->height += cell_extra;
+						}
+
+						current_group_y += row->height + border_spacing_v;
+						row_idx++;
+					}
+					row_group->height = current_group_y;
+					current_table_y += row_group->height;
+				}
+				free(row_extras);
 			}
 		}
 		table_height = min_height;
