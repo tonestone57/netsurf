@@ -248,8 +248,10 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		css_fixed value = 0;
 		css_unit unit = CSS_UNIT_PX;
 		int h;
+		const css_computed_style *style = d->style ? d->style :
+				first->parent->parent->style;
 
-		if (d->style == NULL || lh__box_is_absolute(d))
+		if (lh__box_is_absolute(d))
 			continue;
 
 		if (d->type == BOX_TEXT || d->type == BOX_BR ||
@@ -265,8 +267,10 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			continue;
 		}
 
-		switch (css_computed_vertical_align(d->style, &value, &unit)) {
+		switch (css_computed_vertical_align(style, &value, &unit)) {
 		case CSS_VERTICAL_ALIGN_SUPER:
+			d->y -= line_height(unit_len_ctx, style) / 3;
+			break;
 		case CSS_VERTICAL_ALIGN_TOP:
 		case CSS_VERTICAL_ALIGN_TEXT_TOP:
 			/* already at top */
@@ -275,17 +279,19 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			d->y += (used_height - h) / 2;
 			break;
 		case CSS_VERTICAL_ALIGN_SUB:
+			d->y += line_height(unit_len_ctx, style) / 5;
+			break;
 		case CSS_VERTICAL_ALIGN_BOTTOM:
 		case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
 			d->y += used_height - h;
 			break;
 		case CSS_VERTICAL_ALIGN_SET:
 			if (unit == CSS_UNIT_PCT) {
-				int lh = line_height(unit_len_ctx, d->style);
+				int lh = line_height(unit_len_ctx, style);
 				d->y -= FPCT_OF_INT_TOINT(value, lh);
 			} else {
 				d->y -= FIXTOINT(css_unit_len2device_px(
-						d->style, unit_len_ctx,
+						style, unit_len_ctx,
 						value, unit));
 			}
 			break;
@@ -1317,7 +1323,8 @@ static void layout_minmax_block(
 				layout_minmax_table(child, font_func,
 						content);
 				/* todo: fix for zero height tables */
-				if (child->children != NULL) {
+				if (child->children != NULL &&
+						child->children->children != NULL) {
 					child_has_height = true;
 					child->flags |= MAKE_HEIGHT;
 				}
@@ -1437,10 +1444,12 @@ static void layout_minmax_block(
 
 	extra_fixed = 0;
 	extra_frac = 0;
-	calculate_mbp_width(&content->unit_len_ctx, block->style, LEFT,
-			true, true, true, &extra_fixed, &extra_frac);
-	calculate_mbp_width(&content->unit_len_ctx, block->style, RIGHT,
-			true, true, true, &extra_fixed, &extra_frac);
+	if (block->style) {
+		calculate_mbp_width(&content->unit_len_ctx, block->style, LEFT,
+				true, true, true, &extra_fixed, &extra_frac);
+		calculate_mbp_width(&content->unit_len_ctx, block->style, RIGHT,
+				true, true, true, &extra_fixed, &extra_frac);
+	}
 
 	if (extra_fixed < 0)
 		extra_fixed = 0;

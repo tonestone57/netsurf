@@ -612,9 +612,8 @@ box_normalise_table_spans(struct box *table,
 			assert(rows_left > 0);
 
 			rows_left--;
+			group_rows_left--;
 		}
-
-		group_rows_left--;
 	}
 
 	return true;
