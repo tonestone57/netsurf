@@ -21,7 +21,7 @@ getter HTMLAnchorElement::charset()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -52,7 +52,7 @@ getter HTMLAnchorElement::coords()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -83,7 +83,7 @@ getter HTMLAnchorElement::hreflang()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -114,7 +114,7 @@ getter HTMLAnchorElement::name()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -145,7 +145,7 @@ getter HTMLAnchorElement::rel()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -176,7 +176,7 @@ getter HTMLAnchorElement::rev()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -207,7 +207,7 @@ getter HTMLAnchorElement::shape()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -238,7 +238,7 @@ getter HTMLAnchorElement::target()
 		return 1;
 	}
 
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_length(str));
+	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
 	dom_string_unref(str);
 	return 1;
 %}
@@ -267,7 +267,7 @@ getter HTMLAnchorElement::text()
 	if (err != DOM_NO_ERR) return 0;
 
 	if (content != NULL) {
-		duk_push_lstring(ctx, dom_string_data(content), dom_string_length(content));
+		duk_push_lstring(ctx, dom_string_data(content), dom_string_byte_length(content));
 		dom_string_unref(content);
 		return 1;
 	}

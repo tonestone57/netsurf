@@ -1564,6 +1564,17 @@ void js_event_cleanup(jsthread *thread, struct dom_event *evt)
 	dukky_leave_thread(thread);
 }
 
+bool
+js_dom_event_add_listener(jsthread *thread,
+			  struct dom_document *document,
+			  struct dom_node *node,
+			  struct dom_string *event_type_dom,
+			  void *js_funcval)
+{
+	/* Bridge for manually adding event listeners from the core */
+	return false;
+}
+
 bool js_fire_event(jsthread *thread, const char *type, struct dom_document *doc, struct dom_node *target)
 {
 	dom_exception exc;

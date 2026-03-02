@@ -78,3 +78,13 @@ void js_handle_new_element(jsthread *thread, struct dom_element *node)
 void js_event_cleanup(jsthread *thread, struct dom_event *evt)
 {
 }
+
+bool
+js_dom_event_add_listener(jsthread *thread,
+			  struct dom_document *document,
+			  struct dom_node *node,
+			  struct dom_string *event_type_dom,
+			  void *js_funcval)
+{
+	return false;
+}
