@@ -278,7 +278,8 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			break;
 		case CSS_VERTICAL_ALIGN_SET:
 			if (unit == CSS_UNIT_PCT) {
-				d->y -= FPCT_OF_INT_TOINT(value, used_height);
+				int lh = line_height(unit_len_ctx, d->style);
+				d->y -= FPCT_OF_INT_TOINT(value, lh);
 			} else {
 				d->y -= FIXTOINT(css_unit_len2device_px(
 						d->style, unit_len_ctx,
@@ -287,7 +288,7 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			break;
 		default:
 		case CSS_VERTICAL_ALIGN_BASELINE:
-			d->y += 0.75 * (used_height - h);
+			d->y += (used_height - h) * 3 / 4;
 			break;
 		}
 	}
