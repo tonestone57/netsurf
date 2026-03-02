@@ -21,6 +21,8 @@ typedef struct qjsky_timer_s {
 	struct qjsky_timer_s *r_prev;
 } qjsky_timer_t;
 
+static JSClassID qjsky_event_class_id = 0;
+
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
@@ -30,15 +32,34 @@ static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 	}
 }
 
+static void qjsky_event_finalizer(JSRuntime *rt, JSValue val)
+{
+	struct dom_event *evt = JS_GetOpaque(val, qjsky_event_class_id);
+	if (evt) {
+		dom_event_unref(evt);
+	}
+}
+
 static JSClassDef qjsky_node_class = {
 	"Node",
 	.finalizer = qjsky_node_finalizer,
+};
+
+static JSClassDef qjsky_event_class = {
+	"Event",
+	.finalizer = qjsky_event_finalizer,
 };
 
 void qjsky_init_runtime(struct jsheap *heap)
 {
 	JS_NewClassID(&heap->node_class_id);
 	JS_NewClass(heap->rt, heap->node_class_id, &qjsky_node_class);
+
+	if (qjsky_event_class_id == 0) {
+		JS_NewClassID(&qjsky_event_class_id);
+	}
+	JS_NewClass(heap->rt, qjsky_event_class_id, &qjsky_event_class);
+
 	JS_SetRuntimeOpaque(heap->rt, heap);
 }
 
@@ -111,6 +132,7 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JSValue args[2] = { key, JS_DupValue(ctx, obj) };
 	JSValue ret = JS_Call(ctx, set_fn, map, 2, args);
 	JS_FreeValue(ctx, ret);
+	JS_FreeValue(ctx, args[1]); /* Fix leak */
 	JS_FreeValue(ctx, set_fn);
 	JS_FreeValue(ctx, key);
 
@@ -238,15 +260,38 @@ void qjsky_timer_cleanup(JSContext *ctx)
 
 /* Console Integration */
 
-static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static void qjsky_log_at_level(JSContext *ctx, int argc, JSValueConst *argv, nslog_level level)
 {
 	for (int i = 0; i < argc; i++) {
 		const char *str = JS_ToCString(ctx, argv[i]);
 		if (str) {
-			NSLOG(jserrors, INFO, "%s", str);
+			/* NetSurf NSLOG expects a literal for the level, so we dispatch based on our own switch */
+			switch(level) {
+				case NSLOG_LEVEL_WARNING: NSLOG(jserrors, WARNING, "%s", str); break;
+				case NSLOG_LEVEL_ERROR: NSLOG(jserrors, ERROR, "%s", str); break;
+				case NSLOG_LEVEL_INFO:
+				default: NSLOG(jserrors, INFO, "%s", str); break;
+			}
 			JS_FreeCString(ctx, str);
 		}
 	}
+}
+
+static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_INFO);
+	return JS_UNDEFINED;
+}
+
+static JSValue qjsky_console_warn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_WARNING);
+	return JS_UNDEFINED;
+}
+
+static JSValue qjsky_console_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_ERROR);
 	return JS_UNDEFINED;
 }
 
@@ -255,8 +300,8 @@ void qjsky_init_console(JSContext *ctx)
 	static const JSCFunctionListEntry qjsky_console_funcs[] = {
 		JS_CFUNC_DEF("log", 1, qjsky_console_log),
 		JS_CFUNC_DEF("info", 1, qjsky_console_log),
-		JS_CFUNC_DEF("warn", 1, qjsky_console_log),
-		JS_CFUNC_DEF("error", 1, qjsky_console_log),
+		JS_CFUNC_DEF("warn", 1, qjsky_console_warn),
+		JS_CFUNC_DEF("error", 1, qjsky_console_error),
 	};
 	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue console = JS_NewObject(ctx);
@@ -265,7 +310,40 @@ void qjsky_init_console(JSContext *ctx)
 	JS_FreeValue(ctx, global);
 }
 
+/* Window.alert */
+
+static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	const char *msg = "";
+	if (argc > 0) {
+		msg = JS_ToCString(ctx, argv[0]);
+	}
+
+	NSLOG(netsurf, INFO, "JS ALERT: %s", msg);
+
+	if (argc > 0) {
+		JS_FreeCString(ctx, msg);
+	}
+
+	return JS_UNDEFINED;
+}
+
 /* Event Support */
+
+static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	dom_string *type;
+	dom_event_get_type(evt, &type);
+	JSValue val = qjsky_dom_string_to_js_value(ctx, type);
+	dom_string_unref(type);
+	return val;
+}
+
+static const JSCFunctionListEntry qjsky_event_proto_funcs[] = {
+	JS_CGETSET_DEF("type", qjsky_event_get_type, NULL),
+};
 
 static JSValue qjsky_get_handler(JSContext *ctx, struct dom_element *ele, dom_string *name)
 {
@@ -315,17 +393,41 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 	}
 	JS_FreeValue(ctx, handler);
 
-	dom_node_unref(targ);
+	dom_node_unref((struct dom_node *)targ);
 	dom_string_unref(name);
 }
 
-void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, bool capture)
+void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, dom_string *value, bool capture)
 {
 	dom_event_listener *listen = NULL;
 	dom_exception exc;
 
-	/* Create a wrapper if it's the first time */
-	/* In a real implementation we would track if we've already registered a C handler for this name on this element */
+	if (value != NULL) {
+		JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)ele);
+		struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+		JSValue handler_map = JS_GetProperty(ctx, node_val, heap->handler_map_atom);
+
+		size_t vlen = dom_string_byte_length(value);
+		const char *vdata = (const char *)dom_string_data(value);
+		const char *prefix = "(function(event){";
+		const char *suffix = "})";
+		size_t code_len = strlen(prefix) + vlen + strlen(suffix);
+		char *code = malloc(code_len + 1);
+		if (code) {
+			sprintf(code, "%s%.*s%s", prefix, (int)vlen, vdata, suffix);
+			JSValue func = JS_Eval(ctx, code, code_len, "inline-handler", JS_EVAL_TYPE_GLOBAL);
+			if (!JS_IsException(func)) {
+				JSAtom prop = JS_NewAtomLen(ctx, (const char *)dom_string_data(name), dom_string_byte_length(name));
+				JS_SetProperty(ctx, handler_map, prop, func);
+				JS_FreeAtom(ctx, prop);
+			} else {
+				qjs_log_exception(ctx, "Failed to compile inline handler");
+			}
+			free(code);
+		}
+		JS_FreeValue(ctx, handler_map);
+		JS_FreeValue(ctx, node_val);
+	}
 
 	exc = dom_event_listener_create(qjsky_generic_event_handler, ctx, &listen);
 	if (exc != DOM_NO_ERR) return;
@@ -336,22 +438,31 @@ void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, 
 
 JSValue qjsky_push_event(JSContext *ctx, dom_event *evt)
 {
-	/* Simple placeholder for now */
+	JSValue obj = JS_NewObjectClass(ctx, qjsky_event_class_id);
+	if (JS_IsException(obj)) return obj;
+
+	JS_SetOpaque(obj, evt);
+	dom_event_ref(evt);
+
+	/* Set prototype if it hasn't been set yet */
 	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue event_ctor = JS_GetPropertyStr(ctx, global, "Event");
-	dom_string *type_dom;
-	dom_event_get_type(evt, &type_dom);
-
-	JSValue type_val = qjsky_dom_string_to_js_value(ctx, type_dom);
-	JSValue event_obj = JS_CallConstructor(ctx, event_ctor, 1, &type_val);
-
-	JS_FreeValue(ctx, type_val);
-	JS_FreeValue(ctx, event_ctor);
+	JSValue event_proto = JS_GetPropertyStr(ctx, global, "__qjskyEventProto");
+	if (JS_IsUndefined(event_proto)) {
+		JS_FreeValue(ctx, event_proto);
+		event_proto = JS_NewObject(ctx);
+		JS_SetPropertyFunctionList(ctx, event_proto, qjsky_event_proto_funcs, sizeof(qjsky_event_proto_funcs)/sizeof(qjsky_event_proto_funcs[0]));
+		JS_SetPropertyStr(ctx, global, "__qjskyEventProto", JS_DupValue(ctx, event_proto));
+	}
+	JS_SetPrototype(ctx, obj, event_proto);
+	JS_FreeValue(ctx, event_proto);
 	JS_FreeValue(ctx, global);
-	dom_string_unref(type_dom);
 
-	/* In a real implementation we would associate the dom_event* with the JS object
-	   but we need the ClassID for Event which is currently generated but not easily accessible here. */
+	return obj;
+}
 
-	return event_obj;
+void qjsky_init_window(JSContext *ctx)
+{
+	JSValue global = JS_GetGlobalObject(ctx);
+	JS_SetPropertyStr(ctx, global, "alert", JS_NewCFunction(ctx, qjsky_window_alert, "alert", 1));
+	JS_FreeValue(ctx, global);
 }

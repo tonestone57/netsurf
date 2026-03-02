@@ -16,6 +16,8 @@ struct jsheap {
 struct jsthread {
 	JSContext *ctx;
 	struct jsheap *heap;
+	void *win_priv;
+	void *doc_priv;
 };
 
 #endif

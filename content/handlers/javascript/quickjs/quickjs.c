@@ -75,10 +75,15 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 		return NSERROR_NOMEM;
 	}
 	thread->heap = heap;
+	thread->win_priv = win_priv;
+	thread->doc_priv = doc_priv;
+
+	JS_SetContextOpaque(thread->ctx, thread);
 
 	/* NetSurf-specific builtins */
 	qjsky_init_context(thread->ctx);
 	qjsky_init_console(thread->ctx);
+	qjsky_init_window(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -199,11 +204,14 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 			const uint8_t *data = (const uint8_t *)dom_string_data(key);
 			if (data[0] == 'o' && data[1] == 'n') {
 				dom_string *sub = NULL;
+				dom_string *val = NULL;
 				dom_string_substr(key, 2, dom_string_byte_length(key), &sub);
-				if (sub) {
-					qjsky_register_event_listener_for(thread->ctx, node, sub, false);
-					dom_string_unref(sub);
+				dom_element_get_attribute(node, key, &val);
+				if (sub && val) {
+					qjsky_register_event_listener_for(thread->ctx, node, sub, val, false);
 				}
+				if (sub) dom_string_unref(sub);
+				if (val) dom_string_unref(val);
 			}
 		}
 

@@ -19,7 +19,8 @@ A new backend has been prototyped for the `nsgenbind` tool.
     - Runtime/Context lifecycle (mapping NetSurf `jsheap`/`jsthread` to QuickJS).
     - Memory limits and intrinsic initialization.
     - [COMPLETED] Event dispatch and element attribute scanning adapter.
-    - [COMPLETED] Window.alert and timer system bridges.
+- [COMPLETED] Window.alert bridge.
+- [COMPLETED] Timer system implementation (setTimeout/setInterval).
     - [COMPLETED] Fixed UTF-8 string encoding across all binding layers.
 - Layer: `qjsky.c` handles:
     - [COMPLETED] Robust DOM node memoization (using BigUint64 for pointer safety).
@@ -40,7 +41,7 @@ A new backend has been prototyped for the `nsgenbind` tool.
 4.  **Backend Integration**: Merge the `qjs_libdom` backend into the official `nsgenbind` repository.
 
 ### Phase 2: Core Browser API (Glue Layer Completion)
-5.  **Event Listeners**: Implement `addEventListener` and `removeEventListener` in `qjsky.c`.
+5.  **[COMPLETED] Event Listeners**: Implement `addEventListener` and `removeEventListener` in `qjsky.c`.
 6.  **Event Construction**: Port the `Event` class hierarchy (UIEvent, MouseEvent) to the new engine.
 7.  **Timer Refinement**: Implement `clearTimeout`/`clearInterval` and robust timer tracking.
 8.  **Location API**: Port the `Location` object and navigation hooks to QuickJS.
