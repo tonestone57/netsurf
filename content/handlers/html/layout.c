@@ -194,7 +194,7 @@ static void layout_line_set_positions(struct box *first, struct box *last,
 	for (d = first; d != last; d = d->next) {
 		d->flags &= ~NEW_LINE;
 
-		if (lh__box_is_absolute(d)) {
+		if (layout__box_is_absolute(d)) {
 			/* positioned inline-blocks:
 			 * set static position (x,y) only, rest of positioning
 			 * is handled later */
@@ -202,7 +202,7 @@ static void layout_line_set_positions(struct box *first, struct box *last,
 			d->y = *y;
 			continue;
 		} else if ((d->type == BOX_INLINE &&
-				lh__box_is_replace(d) == false) ||
+				layout__box_is_replace(d) == false) ||
 				d->type == BOX_BR ||
 				d->type == BOX_TEXT ||
 				d->type == BOX_INLINE_END) {
@@ -251,7 +251,7 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		const css_computed_style *style = d->style ? d->style :
 				first->parent->parent->style;
 
-		if (lh__box_is_absolute(d))
+		if (layout__box_is_absolute(d))
 			continue;
 
 		int margin_top = 0;
@@ -266,7 +266,7 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			h = d->border[TOP].width + d->padding[TOP] + d->height +
 					d->padding[BOTTOM] +
 					d->border[BOTTOM].width;
-			if (d->type != BOX_INLINE || lh__box_is_replace(d)) {
+			if (d->type != BOX_INLINE || layout__box_is_replace(d)) {
 				margin_top = d->margin[TOP];
 				margin_bottom = d->margin[BOTTOM];
 			}
@@ -279,7 +279,7 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 
 		if (d->type != BOX_TEXT && d->type != BOX_BR &&
 				d->type != BOX_INLINE_END &&
-				lh__box_is_replace(d)) {
+				layout__box_is_replace(d)) {
 			/* Baseline of replaced element is the bottom of its margin box */
 			baseline_shift = used_height * 3 / 4 - outer_h;
 		} else {
@@ -834,7 +834,7 @@ layout_minmax_line(struct box *first,
 		css_fixed value = 0;
 		css_unit unit = CSS_UNIT_PX;
 
-		assert(lh__box_is_inline_content(b));
+		assert(layout__box_is_inline_content(b));
 
 		NSLOG(layout, DEBUG, "%p: min %i, max %i", b, min, max);
 
@@ -843,7 +843,7 @@ layout_minmax_line(struct box *first,
 			break;
 		}
 
-		if (lh__box_is_float_box(b)) {
+		if (layout__box_is_float_box(b)) {
 			assert(b->children);
 			if (b->children->type == BOX_TABLE)
 				layout_minmax_table(b->children, font_func,
@@ -916,7 +916,7 @@ layout_minmax_line(struct box *first,
 			continue;
 		}
 
-		if (lh__box_is_replace(b) == false) {
+		if (layout__box_is_replace(b) == false) {
 			/* inline non-replaced, 10.3.1 and 10.6.1 */
 			bool no_wrap_box;
 			if (!b->text)
@@ -1257,7 +1257,7 @@ static void layout_minmax_block(
 	}
 
 	/* set whether the minimum width is of any interest for this box */
-	if (((block->parent && lh__box_is_float_box(block->parent)) ||
+	if (((block->parent && layout__box_is_float_box(block->parent)) ||
 			block->type == BOX_INLINE_BLOCK ||
 			block->type == BOX_INLINE_FLEX) &&
 			wtype != CSS_WIDTH_SET) {
@@ -1281,7 +1281,7 @@ static void layout_minmax_block(
 			block->gadget->type == GADGET_TEXTAREA) &&
 			block->style && wtype == CSS_WIDTH_AUTO) {
 		css_fixed size = INTTOFIX(10);
-		css_unit unit = CSS_UNIT_EM;
+		unit = CSS_UNIT_EM;
 
 		min = max = FIXTOINT(css_unit_len2device_px(block->style,
 				&content->unit_len_ctx, size, unit));
@@ -1293,7 +1293,7 @@ static void layout_minmax_block(
 			block->gadget->type == GADGET_CHECKBOX) &&
 			block->style && wtype == CSS_WIDTH_AUTO) {
 		css_fixed size = INTTOFIX(1);
-		css_unit unit = CSS_UNIT_EM;
+		unit = CSS_UNIT_EM;
 
 		/* form checkbox or radio button
 		 * if width is AUTO, set it to 1em */
@@ -1371,8 +1371,8 @@ static void layout_minmax_block(
 				continue;
 			}
 
-			if (lh__box_is_flex_container(block) &&
-			    lh__flex_main_is_horizontal(block)) {
+			if (layout__box_is_flex_container(block) &&
+			    layout__flex_main_is_horizontal(block)) {
 				if (block->style != NULL &&
 				    css_computed_flex_wrap(block->style) ==
 						CSS_FLEX_WRAP_NOWRAP) {
@@ -1403,7 +1403,7 @@ static void layout_minmax_block(
 	/* fixed width takes priority */
 	if (block->style != NULL) {
 		if (block->type != BOX_TABLE_CELL &&
-				!lh__box_is_flex_item(block)) {
+				!layout__box_is_flex_item(block)) {
 			bool border_box = bs == CSS_BOX_SIZING_BORDER_BOX;
 			enum css_max_width_e max_type;
 			enum css_min_width_e min_type;
@@ -1445,7 +1445,7 @@ static void layout_minmax_block(
 			block->flags |= HAS_HEIGHT;
 		}
 
-		if (ns_computed_min_height(block->style, &value, &unit) ==
+			if (css_computed_min_height(block->style, &value, &unit) ==
 				CSS_MIN_HEIGHT_SET && unit != CSS_UNIT_PCT &&
 				value > 0) {
 			block->flags |= MAKE_HEIGHT;
@@ -2401,7 +2401,7 @@ bool layout_table(
 					c->height = row_height;
 
 				/* also consider cell's min-height */
-				if (ns_computed_min_height(c->style, &value, &unit) ==
+				if (css_computed_min_height(c->style, &value, &unit) ==
 						CSS_MIN_HEIGHT_SET &&
 						unit != CSS_UNIT_PCT) {
 					int h = FIXTOINT(css_unit_len2device_px(
@@ -2692,7 +2692,7 @@ static bool layout_apply_minmax_height(
 		}
 
 		/* min-height */
-		if (ns_computed_min_height(box->style, &value, &unit) ==
+		if (css_computed_min_height(box->style, &value, &unit) ==
 				CSS_MIN_HEIGHT_SET) {
 			if (unit == CSS_UNIT_PCT) {
 				if (containing_block &&
@@ -3005,7 +3005,7 @@ void layout_find_dimensions_internal(
 		css_fixed value = 0;
 		css_unit unit = CSS_UNIT_PX;
 
-		type = ns_computed_min_height(style, &value, &unit);
+		type = css_computed_min_height(style, &value, &unit);
 
 		if (type == CSS_MIN_HEIGHT_SET) {
 			if (unit == CSS_UNIT_PCT) {
@@ -3641,14 +3641,14 @@ layout_line(struct box *first,
 	for (x = 0, b = first; x <= x1 - x0 && b != 0; b = b->next) {
 		int min_width, max_width, min_height, max_height;
 
-		assert(lh__box_is_inline_content(b));
+		assert(layout__box_is_inline_content(b));
 
 		NSLOG(layout, DEBUG,  "pass 1: b %p, x %i", b, x);
 
 		if (b->type == BOX_BR)
 			break;
 
-		if (lh__box_is_float_box(b))
+		if (layout__box_is_float_box(b))
 			continue;
 		if (b->type == BOX_INLINE_BLOCK &&
 				(css_computed_position(b->style) ==
@@ -3717,7 +3717,7 @@ layout_line(struct box *first,
 			continue;
 		}
 
-		if (lh__box_is_replace(b) == false) {
+		if (layout__box_is_replace(b) == false) {
 			/* inline non-replaced, 10.3.1 and 10.6.1 */
 			b->height = line_height(&content->unit_len_ctx,
 					b->style ? b->style :
@@ -3874,9 +3874,9 @@ layout_line(struct box *first,
 
 		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
 
-		if (lh__box_is_absolute(b)) {
+		if (layout__box_is_absolute(b)) {
 			b->x = x + space_after;
-		} else if (lh__box_is_inline_flow(b)) {
+		} else if (layout__box_is_inline_flow(b)) {
 			assert(b->width != UNKNOWN_WIDTH);
 
 			x_previous = x;
@@ -4273,7 +4273,7 @@ static bool layout_inline_container(struct box *inline_container, int width,
 				whitespace == CSS_WHITE_SPACE_PRE_WRAP);
 		}
 
-		if ((lh__box_is_object(c) == false &&
+		if ((layout__box_is_object(c) == false &&
 				c->text && (c->length || is_pre)) ||
 				c->type == BOX_BR)
 			has_text_children = true;
@@ -4406,7 +4406,7 @@ bool layout_block_context(
 		 * correct handling of floats.
 		 */
 
-		if (lh__box_is_absolute(box)) {
+		if (layout__box_is_absolute(box)) {
 			box->x = box->parent->padding[LEFT];
 			/* absolute positioned; this element will establish
 			 * its own block context when it gets laid out later,
@@ -4445,7 +4445,7 @@ bool layout_block_context(
 		if (box->type == BOX_FLEX ||
 		    box->type == BOX_BLOCK ||
 		    box->flags & IFRAME) {
-			if (lh__box_is_object(box) == false &&
+			if (layout__box_is_object(box) == false &&
 					box->style &&
 					(overflow_x != CSS_OVERFLOW_VISIBLE ||
 					 overflow_y != CSS_OVERFLOW_VISIBLE)) {
