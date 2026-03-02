@@ -100,19 +100,21 @@ getter Navigator::language()
 		duk_push_string(ctx, "en-GB");
 	} else {
 		/* Extract first language from comma-separated list and strip q-value */
-		const char *comma = strchr(accept_language, ',');
-		size_t len = comma ? (size_t)(comma - accept_language) : strlen(accept_language);
-		const char *semi = memchr(accept_language, ';', len);
+		const char *p = accept_language;
+		while (*p == ' ') p++; /* Skip leading spaces */
+		const char *comma = strchr(p, ',');
+		size_t len = comma ? (size_t)(comma - p) : strlen(p);
+		const char *semi = memchr(p, ';', len);
 		if (semi) {
-			len = semi - accept_language;
+			len = semi - p;
 		}
 		/* Strip trailing spaces */
-		while (len > 0 && accept_language[len-1] == ' ') len--;
+		while (len > 0 && p[len-1] == ' ') len--;
 
 		if (len == 0) {
 			duk_push_string(ctx, "en-GB");
 		} else {
-			duk_push_lstring(ctx, accept_language, len);
+			duk_push_lstring(ctx, p, len);
 		}
 	}
 	return 1;
@@ -130,6 +132,7 @@ getter Navigator::languages()
 		const char *p = accept_language;
 		duk_uarridx_t i = 0;
 		while (p != NULL && *p != '\0') {
+			while (*p == ' ') p++; /* Skip leading spaces */
 			const char *end = strchr(p, ',');
 			size_t len = end ? (size_t)(end - p) : strlen(p);
 			const char *semi = memchr(p, ';', len);
@@ -146,7 +149,6 @@ getter Navigator::languages()
 			}
 			if (end == NULL) break;
 			p = end + 1;
-			while (*p == ' ') p++; /* Skip space after comma */
 		}
 	}
 	return 1;

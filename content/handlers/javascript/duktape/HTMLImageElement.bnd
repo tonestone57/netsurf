@@ -11,6 +11,7 @@
 prologue HTMLImageElement()
 %{
 #include "utils/corestrings.h"
+#include "netsurf/content.h"
 #include "content/hlcache.h"
 #include "content/content_protected.h"
 #include "html/box.h"
@@ -28,10 +29,7 @@ getter HTMLImageElement::naturalWidth()
 				     corestring_dom___ns_key_box_node_data,
 				     (void **)&box);
 	if (err == DOM_NO_ERR && box != NULL && box->object != NULL) {
-		struct content *c = hlcache_handle_get_content(box->object);
-		if (c != NULL) {
-			width = content_get_width(box->object);
-		}
+		width = content_get_width(box->object);
 	}
 
 	duk_push_uint(ctx, (duk_uint_t)width);
@@ -48,10 +46,7 @@ getter HTMLImageElement::naturalHeight()
 				     corestring_dom___ns_key_box_node_data,
 				     (void **)&box);
 	if (err == DOM_NO_ERR && box != NULL && box->object != NULL) {
-		struct content *c = hlcache_handle_get_content(box->object);
-		if (c != NULL) {
-			height = content_get_height(box->object);
-		}
+		height = content_get_height(box->object);
 	}
 
 	duk_push_uint(ctx, (duk_uint_t)height);
