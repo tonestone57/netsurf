@@ -351,8 +351,62 @@ static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
 	return val;
 }
 
+static JSValue qjsky_event_get_target(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	dom_event_target *targ;
+	dom_event_get_target(evt, &targ);
+	JSValue val = qjsky_push_node(ctx, (struct dom_node *)targ);
+	dom_node_unref((struct dom_node *)targ);
+	return val;
+}
+
+static JSValue qjsky_event_get_currentTarget(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	dom_event_target *targ;
+	dom_event_get_current_target(evt, &targ);
+	JSValue val = qjsky_push_node(ctx, (struct dom_node *)targ);
+	dom_node_unref((struct dom_node *)targ);
+	return val;
+}
+
+static JSValue qjsky_event_get_eventPhase(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	dom_event_flow_phase phase;
+	dom_event_get_event_phase(evt, &phase);
+	return JS_NewInt32(ctx, phase);
+}
+
+static JSValue qjsky_event_get_bubbles(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	bool bubbles;
+	dom_event_get_bubbles(evt, &bubbles);
+	return JS_NewBool(ctx, bubbles);
+}
+
+static JSValue qjsky_event_get_cancelable(JSContext *ctx, JSValueConst this_val)
+{
+	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, qjsky_event_class_id);
+	if (!evt) return JS_EXCEPTION;
+	bool cancelable;
+	dom_event_get_cancelable(evt, &cancelable);
+	return JS_NewBool(ctx, cancelable);
+}
+
 static const JSCFunctionListEntry qjsky_event_proto_funcs[] = {
 	JS_CGETSET_DEF("type", qjsky_event_get_type, NULL),
+	JS_CGETSET_DEF("target", qjsky_event_get_target, NULL),
+	JS_CGETSET_DEF("currentTarget", qjsky_event_get_currentTarget, NULL),
+	JS_CGETSET_DEF("eventPhase", qjsky_event_get_eventPhase, NULL),
+	JS_CGETSET_DEF("bubbles", qjsky_event_get_bubbles, NULL),
+	JS_CGETSET_DEF("cancelable", qjsky_event_get_cancelable, NULL),
 };
 
 static JSValue qjsky_get_handler(JSContext *ctx, struct dom_element *ele, dom_string *name)

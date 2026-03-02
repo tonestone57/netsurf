@@ -47,7 +47,7 @@ A new backend has been prototyped for the `nsgenbind` tool.
  8.  **[COMPLETED] Location API**: Port the `Location` object and navigation hooks to QuickJS.
 
 ### Phase 3: Web Features & Refinement
-9.  **Asynchronous XHR**: Connect `xhr.c` to NetSurf's asynchronous fetcher and implement readyState transitions.
+ 9.  **[COMPLETED] Asynchronous XHR**: Connect `xhr.c` to NetSurf's asynchronous fetcher and implement readyState transitions.
 10. **Cookie/Storage API**: Implement the `Document.cookie` and `localStorage` bridges.
 11. **Memory Safety**: Migrate the memoization map to a native-managed registry to eliminate the current strong-reference leak.
 12. **IDL Migration**: Systematic migration of all 67 `.bnd` binding definitions to the new engine-neutral API.

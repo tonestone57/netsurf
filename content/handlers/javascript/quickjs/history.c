@@ -9,6 +9,7 @@ static JSClassID qjsky_history_class_id = 0;
 
 static JSClassDef qjsky_history_class = {
 	"History",
+	.finalizer = NULL,
 };
 
 static JSValue qjsky_history_back(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)

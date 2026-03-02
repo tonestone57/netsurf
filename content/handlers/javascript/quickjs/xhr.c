@@ -4,20 +4,112 @@
 #include "content/handlers/javascript/quickjs/xhr.h"
 #include "content/handlers/javascript/quickjs/qjs_utils.h"
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
+#include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/fetch.h"
+#include "content/content_protected.h"
+#include "content/hlcache.h"
 #include "utils/nsurl.h"
 #include "utils/log.h"
 
 typedef struct qjsky_xhr_s {
 	JSContext *ctx;
+	JSValue xhr_obj;
 	int ready_state;
 	int status;
 	char *status_text;
 	char *response_text;
+	nsurl *url;
+	char *method;
 	struct fetch *fetch;
 } qjsky_xhr_t;
 
 static JSClassID qjsky_xhr_class_id = 0;
+
+static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
+{
+	/* 1. Call onreadystatechange handler */
+	JSValue onready = JS_GetPropertyStr(xhr->ctx, this_val, "__onreadystatechange");
+	if (JS_IsFunction(xhr->ctx, onready)) {
+		JSValue ret = JS_Call(xhr->ctx, onready, this_val, 0, NULL);
+		if (JS_IsException(ret)) qjs_log_exception(xhr->ctx, "XHR onreadystatechange error");
+		JS_FreeValue(xhr->ctx, ret);
+	}
+	JS_FreeValue(xhr->ctx, onready);
+
+	/* 2. Dispatch readystatechange event */
+	JSValue global = JS_GetGlobalObject(xhr->ctx);
+	JSValue event_ctor = JS_GetPropertyStr(xhr->ctx, global, "Event");
+	if (JS_IsFunction(xhr->ctx, event_ctor)) {
+		JSValue type_val = JS_NewString(xhr->ctx, "readystatechange");
+		JSValue event_obj = JS_CallConstructor(xhr->ctx, event_ctor, 1, &type_val);
+
+		JSValue dispatch_fn = JS_GetPropertyStr(xhr->ctx, this_val, "dispatchEvent");
+		if (JS_IsFunction(xhr->ctx, dispatch_fn)) {
+			JSValue ret = JS_Call(xhr->ctx, dispatch_fn, this_val, 1, &event_obj);
+			JS_FreeValue(xhr->ctx, ret);
+		}
+
+		JS_FreeValue(xhr->ctx, dispatch_fn);
+		JS_FreeValue(xhr->ctx, event_obj);
+		JS_FreeValue(xhr->ctx, type_val);
+	}
+	JS_FreeValue(xhr->ctx, event_ctor);
+	JS_FreeValue(xhr->ctx, global);
+
+	/* Run pending jobs */
+	JSContext *ctx1;
+	while (JS_ExecutePendingJob(JS_GetRuntime(xhr->ctx), &ctx1) > 0);
+}
+
+static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
+{
+	qjsky_xhr_t *xhr = p;
+	switch (msg->type) {
+	case FETCH_HEADER:
+		/* For simplicity, we just note that headers are received */
+		if (xhr->ready_state < 2) {
+			xhr->ready_state = 2; /* HEADERS_RECEIVED */
+			qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
+		}
+		break;
+	case FETCH_DATA:
+		{
+			size_t old_len = xhr->response_text ? strlen(xhr->response_text) : 0;
+			char *new_text = realloc(xhr->response_text, old_len + msg->data.header_or_data.len + 1);
+			if (new_text) {
+				xhr->response_text = new_text;
+				memcpy(xhr->response_text + old_len, msg->data.header_or_data.buf, msg->data.header_or_data.len);
+				xhr->response_text[old_len + msg->data.header_or_data.len] = '\0';
+			}
+
+			if (xhr->ready_state < 3) {
+				xhr->ready_state = 3; /* LOADING */
+				qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
+			}
+		}
+		break;
+	case FETCH_FINISHED:
+		xhr->status = fetch_http_code(xhr->fetch);
+		xhr->ready_state = 4; /* DONE */
+		qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
+
+		/* Cleanup flight state */
+		JSValue obj = xhr->xhr_obj;
+		xhr->xhr_obj = JS_UNDEFINED;
+		JS_FreeValue(xhr->ctx, obj);
+		break;
+	case FETCH_ERROR:
+		xhr->ready_state = 4; /* DONE */
+		qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
+
+		JSValue obj_err = xhr->xhr_obj;
+		xhr->xhr_obj = JS_UNDEFINED;
+		JS_FreeValue(xhr->ctx, obj_err);
+		break;
+	default:
+		break;
+	}
+}
 
 static void qjsky_xhr_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -26,6 +118,8 @@ static void qjsky_xhr_finalizer(JSRuntime *rt, JSValue val)
 		if (xhr->fetch) fetch_free(xhr->fetch);
 		free(xhr->status_text);
 		free(xhr->response_text);
+		if (xhr->url) nsurl_unref(xhr->url);
+		free(xhr->method);
 		free(xhr);
 	}
 }
@@ -46,6 +140,7 @@ static JSValue qjsky_xhr_ctor(JSContext *ctx, JSValueConst new_target, int argc,
 		return JS_EXCEPTION;
 	}
 	xhr->ctx = ctx;
+	xhr->xhr_obj = JS_UNDEFINED;
 	xhr->ready_state = 0; /* UNSENT */
 
 	JS_SetOpaque(obj, xhr);
@@ -60,8 +155,33 @@ static JSValue qjsky_xhr_open(JSContext *ctx, JSValueConst this_val, int argc, J
 
 	if (argc < 2) return JS_EXCEPTION;
 
-	/* TODO: Implementation */
+	const char *method = JS_ToCString(ctx, argv[0]);
+	const char *url_str = JS_ToCString(ctx, argv[1]);
+
+	if (!method || !url_str) {
+		JS_FreeCString(ctx, method);
+		JS_FreeCString(ctx, url_str);
+		return JS_EXCEPTION;
+	}
+
+	free(xhr->method);
+	xhr->method = strdup(method);
+
+	if (xhr->url) nsurl_unref(xhr->url);
+
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	nsurl *base = NULL;
+	if (thread && thread->doc_priv) {
+		base = llcache_handle_get_url(((struct content *)thread->doc_priv)->llcache);
+	}
+
+	nsurl_join(base, url_str, &xhr->url);
+
+	JS_FreeCString(ctx, method);
+	JS_FreeCString(ctx, url_str);
+
 	xhr->ready_state = 1; /* OPENED */
+	qjsky_xhr_on_state_change(xhr, this_val);
 
 	return JS_UNDEFINED;
 }
@@ -71,7 +191,18 @@ static JSValue qjsky_xhr_send(JSContext *ctx, JSValueConst this_val, int argc, J
 	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
 
-	/* TODO: Trigger asynchronous fetch */
+	if (xhr->ready_state != 1 || xhr->url == NULL) return JS_EXCEPTION;
+
+	xhr->xhr_obj = JS_DupValue(ctx, this_val);
+
+	nserror err = fetch_start(xhr->url, NULL, qjsky_xhr_fetch_callback, xhr,
+				  false, NULL, NULL, false, false, NULL, &xhr->fetch);
+
+	if (err != NSERROR_OK) {
+		JS_FreeValue(ctx, xhr->xhr_obj);
+		xhr->xhr_obj = JS_UNDEFINED;
+		return JS_EXCEPTION;
+	}
 
 	return JS_UNDEFINED;
 }
@@ -141,6 +272,14 @@ void qjsky_init_xhr(JSContext *ctx)
 
 	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, ctor, proto);
+
+	/* Constants */
+	JS_DefinePropertyValueStr(ctx, ctor, "UNSENT", JS_NewInt32(ctx, 0), JS_PROP_ENUMERABLE);
+	JS_DefinePropertyValueStr(ctx, ctor, "OPENED", JS_NewInt32(ctx, 1), JS_PROP_ENUMERABLE);
+	JS_DefinePropertyValueStr(ctx, ctor, "HEADERS_RECEIVED", JS_NewInt32(ctx, 2), JS_PROP_ENUMERABLE);
+	JS_DefinePropertyValueStr(ctx, ctor, "LOADING", JS_NewInt32(ctx, 3), JS_PROP_ENUMERABLE);
+	JS_DefinePropertyValueStr(ctx, ctor, "DONE", JS_NewInt32(ctx, 4), JS_PROP_ENUMERABLE);
+
 	JS_SetPropertyStr(ctx, global, "XMLHttpRequest", ctor);
 
 	JS_FreeValue(ctx, proto);
