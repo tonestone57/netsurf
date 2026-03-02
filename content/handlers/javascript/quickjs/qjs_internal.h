@@ -9,6 +9,7 @@ struct jsheap {
 	JSAtom node_map_atom;
 	JSAtom handler_map_atom;
 	JSAtom handler_listener_map_atom;
+	JSAtom event_proto_atom;
 	void *timer_ring;
 	int next_timer_handle;
 };

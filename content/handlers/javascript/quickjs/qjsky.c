@@ -75,16 +75,42 @@ void qjsky_init_context(JSContext *ctx)
 
 	/* Initialize atoms */
 	if (heap->node_map_atom == JS_ATOM_NULL) {
-		heap->node_map_atom = JS_NewAtom(ctx, "__qjskyNodeMap");
-		heap->handler_map_atom = JS_NewAtom(ctx, "__qjskyHandlerMap");
-		heap->handler_listener_map_atom = JS_NewAtom(ctx, "__qjskyHandlerListenerMap");
+		JSValue sym_ctor = JS_GetPropertyStr(ctx, global, "Symbol");
+		JSValue arg;
+		JSValue sym;
+
+		arg = JS_NewString(ctx, "nodeMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "handlerMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->handler_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "handlerListenerMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->handler_listener_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "eventProto");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->event_proto_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		JS_FreeValue(ctx, sym_ctor);
 	}
 
 	JSValue map_ctor = JS_GetPropertyStr(ctx, global, "Map");
 	JSValue map = JS_CallConstructor(ctx, map_ctor, 0, NULL);
 	JS_FreeValue(ctx, map_ctor);
 
-	JS_DefinePropertyValue(ctx, global, heap->node_map_atom, map, JS_PROP_CONFIGURABLE);
+	JS_SetProperty(ctx, global, heap->node_map_atom, map);
 	JS_FreeValue(ctx, global);
 }
 
@@ -124,8 +150,8 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	dom_node_ref(node);
 
 	/* Attach private maps for handlers and listeners */
-	JS_DefinePropertyValue(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx), 0);
-	JS_DefinePropertyValue(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx), 0);
+	JS_SetProperty(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx));
+	JS_SetProperty(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx));
 
 	/* Store in memoization map */
 	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
@@ -514,13 +540,14 @@ JSValue qjsky_push_event(JSContext *ctx, dom_event *evt)
 	dom_event_ref(evt);
 
 	/* Set prototype if it hasn't been set yet */
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue event_proto = JS_GetPropertyStr(ctx, global, "__qjskyEventProto");
+	JSValue event_proto = JS_GetProperty(ctx, global, heap->event_proto_atom);
 	if (JS_IsUndefined(event_proto)) {
 		JS_FreeValue(ctx, event_proto);
 		event_proto = JS_NewObject(ctx);
 		JS_SetPropertyFunctionList(ctx, event_proto, qjsky_event_proto_funcs, sizeof(qjsky_event_proto_funcs)/sizeof(qjsky_event_proto_funcs[0]));
-		JS_SetPropertyStr(ctx, global, "__qjskyEventProto", JS_DupValue(ctx, event_proto));
+		JS_SetProperty(ctx, global, heap->event_proto_atom, JS_DupValue(ctx, event_proto));
 	}
 	JS_SetPrototype(ctx, obj, event_proto);
 	JS_FreeValue(ctx, event_proto);

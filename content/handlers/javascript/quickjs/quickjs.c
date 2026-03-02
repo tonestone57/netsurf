@@ -57,14 +57,16 @@ nserror js_newheap(int timeout, struct jsheap **heap_out)
 void js_destroyheap(struct jsheap *heap)
 {
 	if (heap == NULL) return;
-	/* Atoms are freed automatically when the runtime is destroyed,
-	   but we should be clean if we were to reuse it. */
+
 	if (heap->node_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
 	if (heap->handler_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->handler_map_atom);
 	if (heap->handler_listener_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
+	if (heap->event_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->event_proto_atom);
+
 	JS_FreeRuntime(heap->rt);
 	free(heap);
 }
@@ -248,12 +250,12 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 			break;
 		}
 
-		if (dom_string_byte_length(key) > 2) {
+		if (dom_string_length(key) > 2) {
 			const uint8_t *data = (const uint8_t *)dom_string_data(key);
 			if (data[0] == 'o' && data[1] == 'n') {
 				dom_string *sub = NULL;
 				dom_string *val = NULL;
-				dom_string_substr(key, 2, dom_string_byte_length(key) - 2, &sub);
+				dom_string_substr(key, 2, dom_string_length(key) - 2, &sub);
 				dom_element_get_attribute(node, key, &val);
 				if (sub && val) {
 					qjsky_register_event_listener_for(thread->ctx, node, sub, val, false);

@@ -10,6 +10,7 @@
 #include "content/hlcache.h"
 #include "utils/nsurl.h"
 #include "utils/log.h"
+#include "utils/messages.h"
 
 typedef struct qjsky_xhr_s {
 	JSContext *ctx;
@@ -24,6 +25,16 @@ typedef struct qjsky_xhr_s {
 } qjsky_xhr_t;
 
 static JSClassID qjsky_xhr_class_id = 0;
+
+static void qjsky_xhr_set_status(qjsky_xhr_t *xhr)
+{
+	xhr->status = fetch_http_code(xhr->fetch);
+	char key[16];
+	snprintf(key, sizeof(key), "HTTP%03d", xhr->status);
+	const char *msg_str = messages_get(key);
+	free(xhr->status_text);
+	xhr->status_text = strdup(msg_str);
+}
 
 static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
 {
@@ -66,8 +77,8 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 	qjsky_xhr_t *xhr = p;
 	switch (msg->type) {
 	case FETCH_HEADER:
-		/* For simplicity, we just note that headers are received */
 		if (xhr->ready_state < 2) {
+			qjsky_xhr_set_status(xhr);
 			xhr->ready_state = 2; /* HEADERS_RECEIVED */
 			qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 		}
@@ -89,7 +100,7 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 		}
 		break;
 	case FETCH_FINISHED:
-		xhr->status = fetch_http_code(xhr->fetch);
+		qjsky_xhr_set_status(xhr);
 		xhr->ready_state = 4; /* DONE */
 		qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 
