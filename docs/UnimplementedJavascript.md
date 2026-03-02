@@ -140,8 +140,6 @@ method | MediaList::deleteMedium();
 getter | MediaList::mediaText(string);
 setter | MediaList::mediaText(string);
 getter | MediaList::length(unsigned long);
-method | Element::closest();
-method | Element::matches();
 method | Element::pseudo();
 method | Element::query();
 method | Element::queryAll();
@@ -1485,5 +1483,5 @@ method | EventListener::handleEvent();
 method | CustomEvent::initCustomEvent();
 getter | CustomEvent::detail(any);
 
- 1479 unimplemented bindings
+ 1477 unimplemented bindings
 
