@@ -115,6 +115,9 @@ static void layout_minmax_block(
 		struct box *block,
 		const struct gui_layout_table *font_func,
 		const html_content *content);
+static int line_height(
+		const css_unit_ctx *unit_len_ctx,
+		const css_computed_style *style);
 
 static void
 find_sides(struct box *fl,
@@ -789,10 +792,11 @@ layout_minmax_line(struct box *first,
 	assert(first->parent->parent->style);
 
 	block = first->parent->parent;
-	no_wrap = (css_computed_white_space(block->style) ==
-			CSS_WHITE_SPACE_NOWRAP ||
+	no_wrap = (block->style != NULL &&
+			(css_computed_white_space(block->style) ==
+					CSS_WHITE_SPACE_NOWRAP ||
 			css_computed_white_space(block->style) ==
-			CSS_WHITE_SPACE_PRE);
+					CSS_WHITE_SPACE_PRE));
 
 	*line_has_height = false;
 
@@ -982,7 +986,7 @@ layout_minmax_line(struct box *first,
 		/* inline replaced, 10.3.2 and 10.6.2 */
 		assert(b->style);
 
-		bs = css_computed_box_sizing(block->style);
+		bs = css_computed_box_sizing(b->style);
 
 		/* calculate box width */
 		wtype = css_computed_width_px(b->style,
@@ -991,11 +995,11 @@ layout_minmax_line(struct box *first,
 			if (bs == CSS_BOX_SIZING_BORDER_BOX) {
 				fixed = frac = 0;
 				calculate_mbp_width(&content->unit_len_ctx,
-						block->style, LEFT,
+						b->style, LEFT,
 						false, true, true,
 						&fixed, &frac);
 				calculate_mbp_width(&content->unit_len_ctx,
-						block->style, RIGHT,
+						b->style, RIGHT,
 						false, true, true,
 						&fixed, &frac);
 				if (width < fixed) {
@@ -1095,7 +1099,7 @@ layout_minmax_line(struct box *first,
 		*line_has_height = true;
 	}
 
-	if (first_line) {
+	if (first_line && block->style != NULL) {
 		/* todo: handle text-indent interaction with floats */
 		css_fixed value = 0;
 		css_unit unit = CSS_UNIT_PX;
@@ -1430,10 +1434,12 @@ static void layout_minmax_block(
 		min = max;
 	}
 
+	extra_fixed = 0;
+	extra_frac = 0;
 	calculate_mbp_width(&content->unit_len_ctx, block->style, LEFT,
-			true, false, false, &extra_fixed, &extra_frac);
+			true, true, true, &extra_fixed, &extra_frac);
 	calculate_mbp_width(&content->unit_len_ctx, block->style, RIGHT,
-			true, false, false, &extra_fixed, &extra_frac);
+			true, true, true, &extra_fixed, &extra_frac);
 
 	if (extra_fixed < 0)
 		extra_fixed = 0;
