@@ -10,6 +10,9 @@
 
 class NamedNodeMap {
 	private struct dom_namednodemap *map;
+	prologue %{
+#include "javascript/duktape/dukky.h"
+%};
 };
 
 init NamedNodeMap(struct dom_namednodemap *map)
@@ -48,7 +51,7 @@ method NamedNodeMap::item()
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
 	dukky_push_node(ctx, node);
-	dom_node_unref(node);
+	if (node != NULL) dom_node_unref(node);
 
 	return 1;
 %}
@@ -69,7 +72,7 @@ method NamedNodeMap::getNamedItem()
 	if (exc != DOM_NO_ERR) return 0; /* coerced to undefined */
 	
 	dukky_push_node(ctx, attr);
-	dom_node_unref(attr);
+	if (attr != NULL) dom_node_unref(attr);
 	return 1;
 %}
 
@@ -80,13 +83,13 @@ method NamedNodeMap::setNamedItem()
 	node_private_t *other = duk_get_pointer(ctx, -1);
 	duk_pop(ctx);
 
-	dom_node *result;
+	dom_node *result = NULL;
 	dom_exception err;
 	err = dom_namednodemap_set_named_item(priv->map, other->node, &result);
 	if (err != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, result);
-	dom_node_unref(result);
+	if (result != NULL) dom_node_unref(result);
 	return 1;
 %}
 
@@ -106,7 +109,7 @@ method NamedNodeMap::removeNamedItem()
 	if (exc != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, attr);
-	dom_node_unref(attr);
+	if (attr != NULL) dom_node_unref(attr);
 	return 1;
 %}
 
@@ -140,7 +143,7 @@ method NamedNodeMap::getNamedItemNS()
 	if (exc != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, attr);
-	dom_node_unref(attr);
+	if (attr != NULL) dom_node_unref(attr);
 	return 1;
 %}
 
@@ -151,13 +154,13 @@ method NamedNodeMap::setNamedItemNS()
 	node_private_t *other = duk_get_pointer(ctx, -1);
 	duk_pop(ctx);
 
-	dom_node *result;
+	dom_node *result = NULL;
 	dom_exception err;
 	err = dom_namednodemap_set_named_item_ns(priv->map, other->node, &result);
 	if (err != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, result);
-	dom_node_unref(result);
+	if (result != NULL) dom_node_unref(result);
 	return 1;
 %}
 
@@ -191,6 +194,6 @@ method NamedNodeMap::removeNamedItemNS()
 	if (exc != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, attr);
-	dom_node_unref(attr);
+	if (attr != NULL) dom_node_unref(attr);
 	return 1;
 %}

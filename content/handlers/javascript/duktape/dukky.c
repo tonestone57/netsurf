@@ -42,7 +42,7 @@
 #include "duktape/polyfill.js.inc"
 
 #include "duktape.h"
-#include "dukky.h"
+#include "javascript/duktape/dukky.h"
 
 #include <dom/dom.h>
 #include <ctype.h>

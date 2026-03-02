@@ -10,7 +10,7 @@
 
 prologue Document()
 %{
-#include "dukky.h"
+#include "javascript/duktape/dukky.h"
 #include "utils/corestrings.h"
 #include "utils/libdom.h"
 #include "utils/utils.h"
@@ -691,7 +691,12 @@ method Document::getElementsByTagNameNS()
 	if (ns) dom_string_unref(ns);
 	dom_string_unref(ln);
 
-	if (err != DOM_NO_ERR || nodes == NULL) return 0;
+	if (err != DOM_NO_ERR) return 0;
+
+	if (nodes == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
 
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_push_pointer(ctx, nodes);
@@ -729,6 +734,11 @@ method Document::createAttributeNS()
 	dom_string_unref(qn);
 
 	if (err != DOM_NO_ERR) return 0;
+
+	if (attr == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
 
 	dukky_push_node(ctx, attr);
 	dom_node_unref(attr);
@@ -1141,7 +1151,8 @@ getter Document::implementation ()
 
 getter Document::onabort()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onabort()
 %{
@@ -1149,7 +1160,8 @@ setter Document::onabort()
 %}
 getter Document::onautocompleteerror()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onautocompleteerror()
 %{
@@ -1157,7 +1169,8 @@ setter Document::onautocompleteerror()
 %}
 getter Document::onautocomplete()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onautocomplete()
 %{
@@ -1165,7 +1178,8 @@ setter Document::onautocomplete()
 %}
 getter Document::onblur()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onblur()
 %{
@@ -1173,7 +1187,8 @@ setter Document::onblur()
 %}
 getter Document::oncancel()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oncancel()
 %{
@@ -1181,7 +1196,8 @@ setter Document::oncancel()
 %}
 getter Document::oncanplaythrough()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oncanplaythrough()
 %{
@@ -1189,7 +1205,8 @@ setter Document::oncanplaythrough()
 %}
 getter Document::oncanplay()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oncanplay()
 %{
@@ -1197,7 +1214,8 @@ setter Document::oncanplay()
 %}
 getter Document::onchange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onchange()
 %{
@@ -1205,7 +1223,8 @@ setter Document::onchange()
 %}
 getter Document::onclick()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onclick()
 %{
@@ -1213,7 +1232,8 @@ setter Document::onclick()
 %}
 getter Document::onclose()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onclose()
 %{
@@ -1221,7 +1241,8 @@ setter Document::onclose()
 %}
 getter Document::oncontextmenu()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oncontextmenu()
 %{
@@ -1229,7 +1250,8 @@ setter Document::oncontextmenu()
 %}
 getter Document::oncuechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oncuechange()
 %{
@@ -1237,7 +1259,8 @@ setter Document::oncuechange()
 %}
 getter Document::ondblclick()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondblclick()
 %{
@@ -1245,7 +1268,8 @@ setter Document::ondblclick()
 %}
 getter Document::ondragend()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragend()
 %{
@@ -1253,7 +1277,8 @@ setter Document::ondragend()
 %}
 getter Document::ondragenter()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragenter()
 %{
@@ -1261,7 +1286,8 @@ setter Document::ondragenter()
 %}
 getter Document::ondragexit()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragexit()
 %{
@@ -1269,7 +1295,8 @@ setter Document::ondragexit()
 %}
 getter Document::ondragleave()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragleave()
 %{
@@ -1277,7 +1304,8 @@ setter Document::ondragleave()
 %}
 getter Document::ondragover()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragover()
 %{
@@ -1285,7 +1313,8 @@ setter Document::ondragover()
 %}
 getter Document::ondragstart()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondragstart()
 %{
@@ -1293,7 +1322,8 @@ setter Document::ondragstart()
 %}
 getter Document::ondrag()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondrag()
 %{
@@ -1301,7 +1331,8 @@ setter Document::ondrag()
 %}
 getter Document::ondrop()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondrop()
 %{
@@ -1309,7 +1340,8 @@ setter Document::ondrop()
 %}
 getter Document::ondurationchange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ondurationchange()
 %{
@@ -1317,7 +1349,8 @@ setter Document::ondurationchange()
 %}
 getter Document::onemptied()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onemptied()
 %{
@@ -1325,7 +1358,8 @@ setter Document::onemptied()
 %}
 getter Document::onended()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onended()
 %{
@@ -1333,7 +1367,8 @@ setter Document::onended()
 %}
 getter Document::onfocus()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onfocus()
 %{
@@ -1341,7 +1376,8 @@ setter Document::onfocus()
 %}
 getter Document::oninput()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oninput()
 %{
@@ -1349,7 +1385,8 @@ setter Document::oninput()
 %}
 getter Document::oninvalid()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::oninvalid()
 %{
@@ -1357,7 +1394,8 @@ setter Document::oninvalid()
 %}
 getter Document::onkeydown()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onkeydown()
 %{
@@ -1365,7 +1403,8 @@ setter Document::onkeydown()
 %}
 getter Document::onkeypress()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onkeypress()
 %{
@@ -1373,7 +1412,8 @@ setter Document::onkeypress()
 %}
 getter Document::onkeyup()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onkeyup()
 %{
@@ -1381,7 +1421,8 @@ setter Document::onkeyup()
 %}
 getter Document::onloadeddata()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onloadeddata()
 %{
@@ -1389,7 +1430,8 @@ setter Document::onloadeddata()
 %}
 getter Document::onloadedmetadata()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onloadedmetadata()
 %{
@@ -1397,7 +1439,8 @@ setter Document::onloadedmetadata()
 %}
 getter Document::onloadstart()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onloadstart()
 %{
@@ -1405,7 +1448,8 @@ setter Document::onloadstart()
 %}
 getter Document::onload()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onload()
 %{
@@ -1413,7 +1457,8 @@ setter Document::onload()
 %}
 getter Document::onmousedown()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmousedown()
 %{
@@ -1421,7 +1466,8 @@ setter Document::onmousedown()
 %}
 getter Document::onmouseenter()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmouseenter()
 %{
@@ -1429,7 +1475,8 @@ setter Document::onmouseenter()
 %}
 getter Document::onmouseleave()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmouseleave()
 %{
@@ -1437,7 +1484,8 @@ setter Document::onmouseleave()
 %}
 getter Document::onmousemove()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmousemove()
 %{
@@ -1445,7 +1493,8 @@ setter Document::onmousemove()
 %}
 getter Document::onmouseout()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmouseout()
 %{
@@ -1453,7 +1502,8 @@ setter Document::onmouseout()
 %}
 getter Document::onmouseover()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmouseover()
 %{
@@ -1461,7 +1511,8 @@ setter Document::onmouseover()
 %}
 getter Document::onmouseup()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onmouseup()
 %{
@@ -1469,7 +1520,8 @@ setter Document::onmouseup()
 %}
 getter Document::onpause()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onpause()
 %{
@@ -1477,7 +1529,8 @@ setter Document::onpause()
 %}
 getter Document::onplaying()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onplaying()
 %{
@@ -1485,7 +1538,8 @@ setter Document::onplaying()
 %}
 getter Document::onplay()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onplay()
 %{
@@ -1493,7 +1547,8 @@ setter Document::onplay()
 %}
 getter Document::onprogress()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onprogress()
 %{
@@ -1501,7 +1556,8 @@ setter Document::onprogress()
 %}
 getter Document::onratechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onratechange()
 %{
@@ -1509,7 +1565,8 @@ setter Document::onratechange()
 %}
 getter Document::onreadystatechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onreadystatechange()
 %{
@@ -1517,7 +1574,8 @@ setter Document::onreadystatechange()
 %}
 getter Document::onreset()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onreset()
 %{
@@ -1525,7 +1583,8 @@ setter Document::onreset()
 %}
 getter Document::onresize()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onresize()
 %{
@@ -1533,7 +1592,8 @@ setter Document::onresize()
 %}
 getter Document::onscroll()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onscroll()
 %{
@@ -1541,7 +1601,8 @@ setter Document::onscroll()
 %}
 getter Document::onseeked()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onseeked()
 %{
@@ -1549,7 +1610,8 @@ setter Document::onseeked()
 %}
 getter Document::onseeking()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onseeking()
 %{
@@ -1557,7 +1619,8 @@ setter Document::onseeking()
 %}
 getter Document::onselect()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onselect()
 %{
@@ -1565,7 +1628,8 @@ setter Document::onselect()
 %}
 getter Document::onshow()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onshow()
 %{
@@ -1573,7 +1637,8 @@ setter Document::onshow()
 %}
 getter Document::onsort()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onsort()
 %{
@@ -1581,7 +1646,8 @@ setter Document::onsort()
 %}
 getter Document::onstalled()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onstalled()
 %{
@@ -1589,7 +1655,8 @@ setter Document::onstalled()
 %}
 getter Document::onsubmit()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onsubmit()
 %{
@@ -1597,7 +1664,8 @@ setter Document::onsubmit()
 %}
 getter Document::onsuspend()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onsuspend()
 %{
@@ -1605,7 +1673,8 @@ setter Document::onsuspend()
 %}
 getter Document::ontimeupdate()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ontimeupdate()
 %{
@@ -1613,7 +1682,8 @@ setter Document::ontimeupdate()
 %}
 getter Document::ontoggle()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::ontoggle()
 %{
@@ -1621,7 +1691,8 @@ setter Document::ontoggle()
 %}
 getter Document::onvolumechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onvolumechange()
 %{
@@ -1629,7 +1700,8 @@ setter Document::onvolumechange()
 %}
 getter Document::onwaiting()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onwaiting()
 %{
@@ -1637,7 +1709,8 @@ setter Document::onwaiting()
 %}
 getter Document::onwheel()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter Document::onwheel()
 %{

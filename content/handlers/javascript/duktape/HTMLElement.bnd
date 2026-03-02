@@ -12,7 +12,7 @@ prologue HTMLElement()
 %{
 #include <utils/corestrings.h>
 #include <strings.h>
-#include "dukky.h"
+#include "javascript/duktape/dukky.h"
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 %}
 
@@ -113,7 +113,8 @@ setter HTMLElement::title()
 
 getter HTMLElement::onchange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onchange()
 %{
@@ -126,12 +127,14 @@ setter HTMLElement::onclick()
 %}
 getter HTMLElement::onclick()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 
 getter HTMLElement::onabort()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onabort()
 %{
@@ -139,7 +142,8 @@ setter HTMLElement::onabort()
 %}
 getter HTMLElement::onautocompleteerror()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onautocompleteerror()
 %{
@@ -147,7 +151,8 @@ setter HTMLElement::onautocompleteerror()
 %}
 getter HTMLElement::onautocomplete()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onautocomplete()
 %{
@@ -155,7 +160,8 @@ setter HTMLElement::onautocomplete()
 %}
 getter HTMLElement::onblur()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onblur()
 %{
@@ -163,7 +169,8 @@ setter HTMLElement::onblur()
 %}
 getter HTMLElement::oncancel()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oncancel()
 %{
@@ -171,7 +178,8 @@ setter HTMLElement::oncancel()
 %}
 getter HTMLElement::oncanplaythrough()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oncanplaythrough()
 %{
@@ -179,7 +187,8 @@ setter HTMLElement::oncanplaythrough()
 %}
 getter HTMLElement::oncanplay()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oncanplay()
 %{
@@ -187,7 +196,8 @@ setter HTMLElement::oncanplay()
 %}
 getter HTMLElement::onclose()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onclose()
 %{
@@ -195,7 +205,8 @@ setter HTMLElement::onclose()
 %}
 getter HTMLElement::oncontextmenu()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oncontextmenu()
 %{
@@ -203,7 +214,8 @@ setter HTMLElement::oncontextmenu()
 %}
 getter HTMLElement::oncuechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oncuechange()
 %{
@@ -211,7 +223,8 @@ setter HTMLElement::oncuechange()
 %}
 getter HTMLElement::ondblclick()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondblclick()
 %{
@@ -219,7 +232,8 @@ setter HTMLElement::ondblclick()
 %}
 getter HTMLElement::ondragend()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragend()
 %{
@@ -227,7 +241,8 @@ setter HTMLElement::ondragend()
 %}
 getter HTMLElement::ondragenter()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragenter()
 %{
@@ -235,7 +250,8 @@ setter HTMLElement::ondragenter()
 %}
 getter HTMLElement::ondragexit()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragexit()
 %{
@@ -243,7 +259,8 @@ setter HTMLElement::ondragexit()
 %}
 getter HTMLElement::ondragleave()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragleave()
 %{
@@ -251,7 +268,8 @@ setter HTMLElement::ondragleave()
 %}
 getter HTMLElement::ondragover()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragover()
 %{
@@ -259,7 +277,8 @@ setter HTMLElement::ondragover()
 %}
 getter HTMLElement::ondragstart()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondragstart()
 %{
@@ -267,7 +286,8 @@ setter HTMLElement::ondragstart()
 %}
 getter HTMLElement::ondrag()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondrag()
 %{
@@ -275,7 +295,8 @@ setter HTMLElement::ondrag()
 %}
 getter HTMLElement::ondrop()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondrop()
 %{
@@ -283,7 +304,8 @@ setter HTMLElement::ondrop()
 %}
 getter HTMLElement::ondurationchange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ondurationchange()
 %{
@@ -291,7 +313,8 @@ setter HTMLElement::ondurationchange()
 %}
 getter HTMLElement::onemptied()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onemptied()
 %{
@@ -299,7 +322,8 @@ setter HTMLElement::onemptied()
 %}
 getter HTMLElement::onended()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onended()
 %{
@@ -307,7 +331,8 @@ setter HTMLElement::onended()
 %}
 getter HTMLElement::onfocus()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onfocus()
 %{
@@ -315,7 +340,8 @@ setter HTMLElement::onfocus()
 %}
 getter HTMLElement::oninput()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oninput()
 %{
@@ -323,7 +349,8 @@ setter HTMLElement::oninput()
 %}
 getter HTMLElement::oninvalid()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::oninvalid()
 %{
@@ -331,7 +358,8 @@ setter HTMLElement::oninvalid()
 %}
 getter HTMLElement::onkeydown()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onkeydown()
 %{
@@ -339,7 +367,8 @@ setter HTMLElement::onkeydown()
 %}
 getter HTMLElement::onkeypress()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onkeypress()
 %{
@@ -347,7 +376,8 @@ setter HTMLElement::onkeypress()
 %}
 getter HTMLElement::onkeyup()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onkeyup()
 %{
@@ -355,7 +385,8 @@ setter HTMLElement::onkeyup()
 %}
 getter HTMLElement::onloadeddata()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onloadeddata()
 %{
@@ -363,7 +394,8 @@ setter HTMLElement::onloadeddata()
 %}
 getter HTMLElement::onloadedmetadata()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onloadedmetadata()
 %{
@@ -371,7 +403,8 @@ setter HTMLElement::onloadedmetadata()
 %}
 getter HTMLElement::onloadstart()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onloadstart()
 %{
@@ -379,7 +412,8 @@ setter HTMLElement::onloadstart()
 %}
 getter HTMLElement::onload()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onload()
 %{
@@ -387,7 +421,8 @@ setter HTMLElement::onload()
 %}
 getter HTMLElement::onmousedown()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmousedown()
 %{
@@ -395,7 +430,8 @@ setter HTMLElement::onmousedown()
 %}
 getter HTMLElement::onmouseenter()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmouseenter()
 %{
@@ -403,7 +439,8 @@ setter HTMLElement::onmouseenter()
 %}
 getter HTMLElement::onmouseleave()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmouseleave()
 %{
@@ -411,7 +448,8 @@ setter HTMLElement::onmouseleave()
 %}
 getter HTMLElement::onmousemove()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmousemove()
 %{
@@ -419,7 +457,8 @@ setter HTMLElement::onmousemove()
 %}
 getter HTMLElement::onmouseout()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmouseout()
 %{
@@ -427,7 +466,8 @@ setter HTMLElement::onmouseout()
 %}
 getter HTMLElement::onmouseover()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmouseover()
 %{
@@ -435,7 +475,8 @@ setter HTMLElement::onmouseover()
 %}
 getter HTMLElement::onmouseup()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onmouseup()
 %{
@@ -443,7 +484,8 @@ setter HTMLElement::onmouseup()
 %}
 getter HTMLElement::onpause()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onpause()
 %{
@@ -451,7 +493,8 @@ setter HTMLElement::onpause()
 %}
 getter HTMLElement::onplaying()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onplaying()
 %{
@@ -459,7 +502,8 @@ setter HTMLElement::onplaying()
 %}
 getter HTMLElement::onplay()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onplay()
 %{
@@ -467,7 +511,8 @@ setter HTMLElement::onplay()
 %}
 getter HTMLElement::onprogress()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onprogress()
 %{
@@ -475,7 +520,8 @@ setter HTMLElement::onprogress()
 %}
 getter HTMLElement::onratechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onratechange()
 %{
@@ -483,7 +529,8 @@ setter HTMLElement::onratechange()
 %}
 getter HTMLElement::onreset()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onreset()
 %{
@@ -491,7 +538,8 @@ setter HTMLElement::onreset()
 %}
 getter HTMLElement::onresize()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onresize()
 %{
@@ -499,7 +547,8 @@ setter HTMLElement::onresize()
 %}
 getter HTMLElement::onscroll()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onscroll()
 %{
@@ -507,7 +556,8 @@ setter HTMLElement::onscroll()
 %}
 getter HTMLElement::onseeked()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onseeked()
 %{
@@ -515,7 +565,8 @@ setter HTMLElement::onseeked()
 %}
 getter HTMLElement::onseeking()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onseeking()
 %{
@@ -523,7 +574,8 @@ setter HTMLElement::onseeking()
 %}
 getter HTMLElement::onselect()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onselect()
 %{
@@ -531,7 +583,8 @@ setter HTMLElement::onselect()
 %}
 getter HTMLElement::onshow()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onshow()
 %{
@@ -539,7 +592,8 @@ setter HTMLElement::onshow()
 %}
 getter HTMLElement::onsort()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onsort()
 %{
@@ -547,7 +601,8 @@ setter HTMLElement::onsort()
 %}
 getter HTMLElement::onstalled()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onstalled()
 %{
@@ -555,7 +610,8 @@ setter HTMLElement::onstalled()
 %}
 getter HTMLElement::onsubmit()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onsubmit()
 %{
@@ -563,7 +619,8 @@ setter HTMLElement::onsubmit()
 %}
 getter HTMLElement::onsuspend()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onsuspend()
 %{
@@ -571,7 +628,8 @@ setter HTMLElement::onsuspend()
 %}
 getter HTMLElement::ontimeupdate()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ontimeupdate()
 %{
@@ -579,7 +637,8 @@ setter HTMLElement::ontimeupdate()
 %}
 getter HTMLElement::ontoggle()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::ontoggle()
 %{
@@ -587,7 +646,8 @@ setter HTMLElement::ontoggle()
 %}
 getter HTMLElement::onvolumechange()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onvolumechange()
 %{
@@ -595,7 +655,8 @@ setter HTMLElement::onvolumechange()
 %}
 getter HTMLElement::onwaiting()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onwaiting()
 %{
@@ -603,7 +664,8 @@ setter HTMLElement::onwaiting()
 %}
 getter HTMLElement::onwheel()
 %{
-	return 0;
+	duk_push_null(ctx);
+	return 1;
 %}
 setter HTMLElement::onwheel()
 %{

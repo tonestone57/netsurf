@@ -11,7 +11,7 @@
 prologue DOMImplementation ()
 %{
 #include "utils/corestrings.h"
-#include "dukky.h"
+#include "javascript/duktape/dukky.h"
 %}
 
 method DOMImplementation::hasFeature ()

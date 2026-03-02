@@ -311,7 +311,10 @@ method Node::isSameNode()
 %{
 	bool result;
 
-	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
 	node_private_t *other = duk_get_pointer(ctx, -1);
