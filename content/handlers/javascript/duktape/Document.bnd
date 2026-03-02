@@ -10,6 +10,7 @@
 
 prologue Document()
 %{
+extern void dukky_getElementsByClassName_recursive(duk_context *ctx, struct dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx);
 #include "utils/corestrings.h"
 #include "utils/libdom.h"
 #include "utils/utils.h"
@@ -743,11 +744,27 @@ getter Document::childElementCount()
 
 getter Document::children()
 %{
-	dukky_push_generics(ctx, "getChildren");
-	duk_push_this(ctx);
-	if (dukky_pcall(ctx, 1, false) != 0) {
-		return 0;
+	dom_node *child;
+	dom_exception exc;
+	duk_uarridx_t idx = 0;
+
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+
+	exc = dom_node_get_first_child(priv->parent.node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type type;
+		dom_node_get_node_type(child, &type);
+		if (type == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			duk_put_prop_index(ctx, arr_idx, idx++);
+		}
+		dom_node *next;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
 	}
+
 	/* Wrap result array in a proxy to make it look like a NodeList/HTMLCollection */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
@@ -842,14 +859,18 @@ method Document::getElementsByTagName()
 	return 1; /* The Proxy(NodeList) wrapper */
 %}
 
+
 method Document::getElementsByClassName()
 %{
-	dukky_push_generics(ctx, "getElementsByClassName");
-	duk_push_this(ctx);
-	duk_dup(ctx, 0);
-	if (dukky_pcall(ctx, 2, false) != 0) {
-		return 0;
-	}
+	duk_size_t clen;
+	const char *cls = duk_to_lstring(ctx, 0, &clen);
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	/* Simplified: only supports single class name for now to avoid complex parsing in C */
+	dukky_getElementsByClassName_recursive(ctx, priv->parent.node, cls, clen, &idx, arr_idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);

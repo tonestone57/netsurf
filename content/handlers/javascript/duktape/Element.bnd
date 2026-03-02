@@ -13,6 +13,62 @@ class Element {
 #include <strings.h>
 #include <utils/corestrings.h>
 #include <dom/bindings/hubbub/parser.h>
+#include <ctype.h>
+
+static bool dukky_element_has_class(dom_element *ele, const char *cls, size_t clen)
+{
+	dom_string *class_attr;
+	dom_exception exc;
+	bool found = false;
+
+	exc = dom_element_get_attribute(ele, corestring_dom_class, &class_attr);
+	if (exc != DOM_NO_ERR || class_attr == NULL) return false;
+
+	const char *data = dom_string_data(class_attr);
+	size_t len = dom_string_byte_length(class_attr);
+	const char *p = data;
+	const char *end = data + len;
+
+	while (p < end) {
+		while (p < end && isspace((unsigned char)*p)) p++;
+		const char *start = p;
+		while (p < end && !isspace((unsigned char)*p)) p++;
+		size_t token_len = p - start;
+
+		if (token_len == clen && memcmp(start, cls, clen) == 0) {
+			found = true;
+			break;
+		}
+	}
+
+	dom_string_unref(class_attr);
+	return found;
+}
+
+void dukky_getElementsByClassName_recursive(duk_context *ctx, dom_node *root, const char *cls, size_t clen, duk_uarridx_t *idx, int arr_idx)
+{
+	dom_node *child;
+	dom_exception exc;
+
+	exc = dom_node_get_first_child(root, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type type;
+		dom_node_get_node_type(child, &type);
+
+		if (type == DOM_ELEMENT_NODE) {
+			if (dukky_element_has_class((dom_element *)child, cls, clen)) {
+				dukky_push_node(ctx, child);
+				duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			}
+			dukky_getElementsByClassName_recursive(ctx, child, cls, clen, idx, arr_idx);
+		}
+
+		dom_node *next;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+}
 
 static void dukky_push_escaped_string(duk_context *ctx, dom_string *str)
 {
@@ -529,12 +585,15 @@ method Element::getElementsByTagName ()
 
 method Element::getElementsByClassName()
 %{
-	dukky_push_generics(ctx, "getElementsByClassName");
-	duk_push_this(ctx);
-	duk_dup(ctx, 0);
-	if (dukky_pcall(ctx, 2, false) != 0) {
-		return 0;
-	}
+	duk_size_t clen;
+	const char *cls = duk_to_lstring(ctx, 0, &clen);
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	/* Simplified: only supports single class name for now to avoid complex parsing in C */
+	dukky_getElementsByClassName_recursive(ctx, priv->parent.node, cls, clen, &idx, arr_idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
@@ -1304,11 +1363,27 @@ out:
 
 getter Element::children()
 %{
-	dukky_push_generics(ctx, "getChildren");
-	duk_push_this(ctx);
-	if (dukky_pcall(ctx, 1, false) != 0) {
-		return 0;
+	dom_node *child;
+	dom_exception exc;
+	duk_uarridx_t idx = 0;
+
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+
+	exc = dom_node_get_first_child(priv->parent.node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type type;
+		dom_node_get_node_type(child, &type);
+		if (type == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			duk_put_prop_index(ctx, arr_idx, idx++);
+		}
+		dom_node *next;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
 	}
+
 	/* Wrap result array in a proxy to make it look like a NodeList/HTMLCollection */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
