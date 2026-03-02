@@ -1069,7 +1069,7 @@ layout_minmax_line(struct box *first,
 	if (first_line) {
 		/* todo: handle text-indent interaction with floats */
 		int text_indent = layout_text_indent(&content->unit_len_ctx,
-				first->parent->parent->style, 0);
+				first->parent->parent->style, 100);
 		min = (min + text_indent < 0) ? 0 : min + text_indent;
 		max = (max + text_indent < 0) ? 0 : max + text_indent;
 	}
@@ -2399,7 +2399,6 @@ bool layout_table(
 
 					for (c = row->children; c; c = c->next) {
 						c->height += extra;
-						c->padding[BOTTOM] += extra;
 					}
 
 					current_group_y += row->height + border_spacing_v;
