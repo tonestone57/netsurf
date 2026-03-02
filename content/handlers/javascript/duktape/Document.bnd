@@ -551,7 +551,7 @@ method Document::createElementNS()
 	dom_string *qn_str = NULL;
 	dom_string *ns_str = NULL;
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		const char *ns = duk_safe_to_lstring(ctx, 0, &ns_len);
 		err = dom_string_create((const uint8_t*)ns, ns_len, &ns_str);
 		if (err != DOM_NO_ERR) return 0;
@@ -675,9 +675,9 @@ method Document::getElementsByTagNameNS()
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 	dom_string *ns = NULL, *ln = NULL;
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
-		err = dom_string_create((uint8_t*)ns_str, ns_len, &ns);
+		err = dom_string_create((const uint8_t*)ns_str, ns_len, &ns);
 		if (err != DOM_NO_ERR) return 0;
 	}
 
@@ -716,10 +716,10 @@ method Document::createAttributeNS()
 	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
 	dom_string *ns = NULL, *qn = NULL;
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
-		err = dom_string_create((uint8_t*)ns_str, ns_len, &ns);
+		err = dom_string_create((const uint8_t*)ns_str, ns_len, &ns);
 		if (err != DOM_NO_ERR) return 0;
 	}
 

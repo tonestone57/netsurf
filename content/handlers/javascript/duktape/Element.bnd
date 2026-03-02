@@ -231,6 +231,12 @@ static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarr
 
 init Element(struct dom_element *element::node);
 
+
+
+
+
+
+
 getter Element::tagName()
 %{
 	dom_exception exc;
@@ -242,54 +248,8 @@ getter Element::tagName()
 	return 1;
 %}
 
-getter Element::localName()
-%{
-	dom_exception exc;
-	dom_string *name;
-	exc = dom_node_get_local_name(priv->parent.node, &name);
-	if (exc != DOM_NO_ERR) return 0;
-	if (name == NULL) {
-		/* Per spec: localName is the same as tagName if not in a namespace */
-		exc = dom_node_get_node_name(priv->parent.node, &name);
-		if (exc != DOM_NO_ERR || name == NULL) return 0;
-		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-		dom_string_unref(name);
-	} else {
-		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-		dom_string_unref(name);
-	}
-	return 1;
-%}
 
-getter Element::namespaceURI()
-%{
-	dom_exception exc;
-	dom_string *uri;
-	exc = dom_node_get_namespace(priv->parent.node, &uri);
-	if (exc != DOM_NO_ERR) return 0;
-	if (uri == NULL) {
-		duk_push_null(ctx);
-	} else {
-		duk_push_lstring(ctx, dom_string_data(uri), dom_string_byte_length(uri));
-		dom_string_unref(uri);
-	}
-	return 1;
-%}
 
-getter Element::prefix()
-%{
-	dom_exception exc;
-	dom_string *pfx;
-	exc = dom_node_get_prefix(priv->parent.node, &pfx);
-	if (exc != DOM_NO_ERR) return 0;
-	if (pfx == NULL) {
-		duk_push_null(ctx);
-		return 1;
-	}
-	duk_push_lstring(ctx, dom_string_data(pfx), dom_string_byte_length(pfx));
-	dom_string_unref(pfx);
-	return 1;
-%}
 
 getter Element::firstElementChild()
 %{
@@ -991,7 +951,7 @@ method Element::getAttributeNodeNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
@@ -1046,7 +1006,7 @@ method Element::getAttributeNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
@@ -1085,7 +1045,7 @@ method Element::setAttributeNS()
 	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
 	const char *v_str = duk_safe_to_lstring(ctx, 2, &v_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
@@ -1123,7 +1083,7 @@ method Element::removeAttributeNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
@@ -1154,7 +1114,7 @@ method Element::hasAttributeNS()
 
 	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
 
-	if (!duk_is_null(ctx, 0)) {
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
 		duk_size_t ns_len;
 		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
 		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
