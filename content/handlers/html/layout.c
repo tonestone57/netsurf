@@ -254,6 +254,9 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		if (lh__box_is_absolute(d))
 			continue;
 
+		int margin_top = 0;
+		int margin_bottom = 0;
+
 		if (d->type == BOX_TEXT || d->type == BOX_BR ||
 				d->type == BOX_INLINE_END) {
 			h = d->height;
@@ -263,11 +266,16 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			h = d->border[TOP].width + d->padding[TOP] + d->height +
 					d->padding[BOTTOM] +
 					d->border[BOTTOM].width;
+			if (d->type != BOX_INLINE || lh__box_is_replace(d)) {
+				margin_top = d->margin[TOP];
+				margin_bottom = d->margin[BOTTOM];
+			}
 		} else {
 			continue;
 		}
 
-		int baseline_offset = (used_height - h) * 3 / 4;
+		int outer_h = h + margin_top + margin_bottom;
+		int baseline_offset = (used_height - outer_h) * 3 / 4;
 
 		switch (css_computed_vertical_align(style, &value, &unit)) {
 		case CSS_VERTICAL_ALIGN_SUPER:
@@ -275,17 +283,17 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 			break;
 		case CSS_VERTICAL_ALIGN_TOP:
 		case CSS_VERTICAL_ALIGN_TEXT_TOP:
-			/* already at top */
+			/* already at top, d->y was set to line_top + margin_top + border_top */
 			break;
 		case CSS_VERTICAL_ALIGN_MIDDLE:
-			d->y += (used_height - h) / 2;
+			d->y += (used_height - outer_h) / 2;
 			break;
 		case CSS_VERTICAL_ALIGN_SUB:
 			d->y += baseline_offset + line_height(unit_len_ctx, style) / 5;
 			break;
 		case CSS_VERTICAL_ALIGN_BOTTOM:
 		case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
-			d->y += used_height - h;
+			d->y += used_height - outer_h;
 			break;
 		case CSS_VERTICAL_ALIGN_SET:
 			if (unit == CSS_UNIT_PCT) {
@@ -1427,6 +1435,13 @@ static void layout_minmax_block(
 		block->flags |= HAS_HEIGHT;
 	}
 
+	if (ns_computed_min_height(block->style, &value, &unit) ==
+			CSS_MIN_HEIGHT_SET && unit != CSS_UNIT_PCT &&
+			value > 0) {
+		block->flags |= MAKE_HEIGHT;
+		block->flags |= HAS_HEIGHT;
+	}
+
 	/* add margins, border, padding to min, max widths */
 	/* Note: we don't know available width here so percentage margin
 	 * and paddings are wrong. */
@@ -2373,6 +2388,18 @@ bool layout_table(
 				 */
 				if (c->height < row_height)
 					c->height = row_height;
+
+				/* also consider cell's min-height */
+				if (ns_computed_min_height(c->style, &value, &unit) ==
+						CSS_MIN_HEIGHT_SET &&
+						unit != CSS_UNIT_PCT) {
+					int h = FIXTOINT(css_unit_len2device_px(
+							c->style,
+							&content->unit_len_ctx,
+							value, unit));
+					if (c->height < h)
+						c->height = h;
+				}
 				c->x = xs[c->start_column] +
 						c->border[LEFT].width;
 				c->y = c->border[TOP].width;
