@@ -472,14 +472,15 @@ box_normalise_table_spans(struct box *table,
 
 	ctx.root_style = root->style;
 
-	/* Clear span data */
-	memset(spans, 0, table->columns * sizeof(struct span_info));
-
 	/* Scan table, filling in width and height of table cells with
 	 * colspan = 0 and rowspan = 0. Also generate empty cells */
 	for (table_row_group = table->children;
 	     table_row_group != NULL;
 	     table_row_group = table_row_group->next) {
+
+		/* Clear span data for each row group - rowspans do not cross
+		 * row group boundaries. */
+		memset(spans, 0, table->columns * sizeof(struct span_info));
 
 		group_rows_left = table_row_group->rows;
 
