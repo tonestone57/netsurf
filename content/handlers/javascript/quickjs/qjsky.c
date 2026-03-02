@@ -315,13 +315,19 @@ void qjsky_init_console(JSContext *ctx)
 static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
 	const char *msg = "";
+	bool free_msg = false;
 	if (argc > 0) {
 		msg = JS_ToCString(ctx, argv[0]);
+		if (msg == NULL) {
+			msg = "[Error converting message]";
+		} else {
+			free_msg = true;
+		}
 	}
 
 	NSLOG(netsurf, INFO, "JS ALERT: %s", msg);
 
-	if (argc > 0) {
+	if (free_msg) {
 		JS_FreeCString(ctx, msg);
 	}
 

@@ -83,10 +83,34 @@ static JSValue qjsky_xhr_get_readyState(JSContext *ctx, JSValueConst this_val)
 	return JS_NewInt32(ctx, xhr->ready_state);
 }
 
+static JSValue qjsky_xhr_get_status(JSContext *ctx, JSValueConst this_val)
+{
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	if (!xhr) return JS_EXCEPTION;
+	return JS_NewInt32(ctx, xhr->status);
+}
+
+static JSValue qjsky_xhr_get_statusText(JSContext *ctx, JSValueConst this_val)
+{
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	if (!xhr) return JS_EXCEPTION;
+	return JS_NewString(ctx, xhr->status_text ? xhr->status_text : "");
+}
+
+static JSValue qjsky_xhr_get_responseText(JSContext *ctx, JSValueConst this_val)
+{
+	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, qjsky_xhr_class_id);
+	if (!xhr) return JS_EXCEPTION;
+	return JS_NewString(ctx, xhr->response_text ? xhr->response_text : "");
+}
+
 static const JSCFunctionListEntry qjsky_xhr_proto_funcs[] = {
 	JS_CFUNC_DEF("open", 2, qjsky_xhr_open),
 	JS_CFUNC_DEF("send", 1, qjsky_xhr_send),
 	JS_CGETSET_DEF("readyState", qjsky_xhr_get_readyState, NULL),
+	JS_CGETSET_DEF("status", qjsky_xhr_get_status, NULL),
+	JS_CGETSET_DEF("statusText", qjsky_xhr_get_statusText, NULL),
+	JS_CGETSET_DEF("responseText", qjsky_xhr_get_responseText, NULL),
 };
 
 void qjsky_init_xhr(JSContext *ctx)
