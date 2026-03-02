@@ -297,6 +297,21 @@ method Node::isEqualNode()
 	return 1;
 %}
 
+method Node::isSameNode()
+%{
+	bool result;
+
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	result = (priv->node == other->node);
+	duk_push_boolean(ctx, result);
+	return 1;
+%}
+
 method Node::compareDocumentPosition()
 %{
 	dom_exception exc;

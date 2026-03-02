@@ -200,132 +200,504 @@ setter HTMLElement::title()
 	return 0;
 %}
 
-getter HTMLElement::onchange();
-setter HTMLElement::onchange();
+getter HTMLElement::onchange()
+%{
+	return 0;
+%}
+setter HTMLElement::onchange()
+%{
+	return 0;
+%}
 
-setter HTMLElement::onclick();
-getter HTMLElement::onclick();
+setter HTMLElement::onclick()
+%{
+	return 0;
+%}
+getter HTMLElement::onclick()
+%{
+	return 0;
+%}
 
-getter HTMLElement::onabort();
-setter HTMLElement::onabort();
-getter HTMLElement::onautocompleteerror();
-setter HTMLElement::onautocompleteerror();
-getter HTMLElement::onautocomplete();
-setter HTMLElement::onautocomplete();
-getter HTMLElement::onblur();
-setter HTMLElement::onblur();
-getter HTMLElement::oncancel();
-setter HTMLElement::oncancel();
-getter HTMLElement::oncanplaythrough();
-setter HTMLElement::oncanplaythrough();
-getter HTMLElement::oncanplay();
-setter HTMLElement::oncanplay();
-getter HTMLElement::onclose();
-setter HTMLElement::onclose();
-getter HTMLElement::oncontextmenu();
-setter HTMLElement::oncontextmenu();
-getter HTMLElement::oncuechange();
-setter HTMLElement::oncuechange();
-getter HTMLElement::ondblclick();
-setter HTMLElement::ondblclick();
-getter HTMLElement::ondragend();
-setter HTMLElement::ondragend();
-getter HTMLElement::ondragenter();
-setter HTMLElement::ondragenter();
-getter HTMLElement::ondragexit();
-setter HTMLElement::ondragexit();
-getter HTMLElement::ondragleave();
-setter HTMLElement::ondragleave();
-getter HTMLElement::ondragover();
-setter HTMLElement::ondragover();
-getter HTMLElement::ondragstart();
-setter HTMLElement::ondragstart();
-getter HTMLElement::ondrag();
-setter HTMLElement::ondrag();
-getter HTMLElement::ondrop();
-setter HTMLElement::ondrop();
-getter HTMLElement::ondurationchange();
-setter HTMLElement::ondurationchange();
-getter HTMLElement::onemptied();
-setter HTMLElement::onemptied();
-getter HTMLElement::onended();
-setter HTMLElement::onended();
-getter HTMLElement::onfocus();
-setter HTMLElement::onfocus();
-getter HTMLElement::oninput();
-setter HTMLElement::oninput();
-getter HTMLElement::oninvalid();
-setter HTMLElement::oninvalid();
-getter HTMLElement::onkeydown();
-setter HTMLElement::onkeydown();
-getter HTMLElement::onkeypress();
-setter HTMLElement::onkeypress();
-getter HTMLElement::onkeyup();
-setter HTMLElement::onkeyup();
-getter HTMLElement::onloadeddata();
-setter HTMLElement::onloadeddata();
-getter HTMLElement::onloadedmetadata();
-setter HTMLElement::onloadedmetadata();
-getter HTMLElement::onloadstart();
-setter HTMLElement::onloadstart();
-getter HTMLElement::onload();
-setter HTMLElement::onload();
-getter HTMLElement::onmousedown();
-setter HTMLElement::onmousedown();
-getter HTMLElement::onmouseenter();
-setter HTMLElement::onmouseenter();
-getter HTMLElement::onmouseleave();
-setter HTMLElement::onmouseleave();
-getter HTMLElement::onmousemove();
-setter HTMLElement::onmousemove();
-getter HTMLElement::onmouseout();
-setter HTMLElement::onmouseout();
-getter HTMLElement::onmouseover();
-setter HTMLElement::onmouseover();
-getter HTMLElement::onmouseup();
-setter HTMLElement::onmouseup();
-getter HTMLElement::onpause();
-setter HTMLElement::onpause();
-getter HTMLElement::onplaying();
-setter HTMLElement::onplaying();
-getter HTMLElement::onplay();
-setter HTMLElement::onplay();
-getter HTMLElement::onprogress();
-setter HTMLElement::onprogress();
-getter HTMLElement::onratechange();
-setter HTMLElement::onratechange();
-getter HTMLElement::onreset();
-setter HTMLElement::onreset();
-getter HTMLElement::onresize();
-setter HTMLElement::onresize();
-getter HTMLElement::onscroll();
-setter HTMLElement::onscroll();
-getter HTMLElement::onseeked();
-setter HTMLElement::onseeked();
-getter HTMLElement::onseeking();
-setter HTMLElement::onseeking();
-getter HTMLElement::onselect();
-setter HTMLElement::onselect();
-getter HTMLElement::onshow();
-setter HTMLElement::onshow();
-getter HTMLElement::onsort();
-setter HTMLElement::onsort();
-getter HTMLElement::onstalled();
-setter HTMLElement::onstalled();
-getter HTMLElement::onsubmit();
-setter HTMLElement::onsubmit();
-getter HTMLElement::onsuspend();
-setter HTMLElement::onsuspend();
-getter HTMLElement::ontimeupdate();
-setter HTMLElement::ontimeupdate();
-getter HTMLElement::ontoggle();
-setter HTMLElement::ontoggle();
-getter HTMLElement::onvolumechange();
-setter HTMLElement::onvolumechange();
-getter HTMLElement::onwaiting();
-setter HTMLElement::onwaiting();
-getter HTMLElement::onwheel();
-setter HTMLElement::onwheel();
+getter HTMLElement::onabort()
+%{
+	return 0;
+%}
+setter HTMLElement::onabort()
+%{
+	return 0;
+%}
+getter HTMLElement::onautocompleteerror()
+%{
+	return 0;
+%}
+setter HTMLElement::onautocompleteerror()
+%{
+	return 0;
+%}
+getter HTMLElement::onautocomplete()
+%{
+	return 0;
+%}
+setter HTMLElement::onautocomplete()
+%{
+	return 0;
+%}
+getter HTMLElement::onblur()
+%{
+	return 0;
+%}
+setter HTMLElement::onblur()
+%{
+	return 0;
+%}
+getter HTMLElement::oncancel()
+%{
+	return 0;
+%}
+setter HTMLElement::oncancel()
+%{
+	return 0;
+%}
+getter HTMLElement::oncanplaythrough()
+%{
+	return 0;
+%}
+setter HTMLElement::oncanplaythrough()
+%{
+	return 0;
+%}
+getter HTMLElement::oncanplay()
+%{
+	return 0;
+%}
+setter HTMLElement::oncanplay()
+%{
+	return 0;
+%}
+getter HTMLElement::onclose()
+%{
+	return 0;
+%}
+setter HTMLElement::onclose()
+%{
+	return 0;
+%}
+getter HTMLElement::oncontextmenu()
+%{
+	return 0;
+%}
+setter HTMLElement::oncontextmenu()
+%{
+	return 0;
+%}
+getter HTMLElement::oncuechange()
+%{
+	return 0;
+%}
+setter HTMLElement::oncuechange()
+%{
+	return 0;
+%}
+getter HTMLElement::ondblclick()
+%{
+	return 0;
+%}
+setter HTMLElement::ondblclick()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragend()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragend()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragenter()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragenter()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragexit()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragexit()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragleave()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragleave()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragover()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragover()
+%{
+	return 0;
+%}
+getter HTMLElement::ondragstart()
+%{
+	return 0;
+%}
+setter HTMLElement::ondragstart()
+%{
+	return 0;
+%}
+getter HTMLElement::ondrag()
+%{
+	return 0;
+%}
+setter HTMLElement::ondrag()
+%{
+	return 0;
+%}
+getter HTMLElement::ondrop()
+%{
+	return 0;
+%}
+setter HTMLElement::ondrop()
+%{
+	return 0;
+%}
+getter HTMLElement::ondurationchange()
+%{
+	return 0;
+%}
+setter HTMLElement::ondurationchange()
+%{
+	return 0;
+%}
+getter HTMLElement::onemptied()
+%{
+	return 0;
+%}
+setter HTMLElement::onemptied()
+%{
+	return 0;
+%}
+getter HTMLElement::onended()
+%{
+	return 0;
+%}
+setter HTMLElement::onended()
+%{
+	return 0;
+%}
+getter HTMLElement::onfocus()
+%{
+	return 0;
+%}
+setter HTMLElement::onfocus()
+%{
+	return 0;
+%}
+getter HTMLElement::oninput()
+%{
+	return 0;
+%}
+setter HTMLElement::oninput()
+%{
+	return 0;
+%}
+getter HTMLElement::oninvalid()
+%{
+	return 0;
+%}
+setter HTMLElement::oninvalid()
+%{
+	return 0;
+%}
+getter HTMLElement::onkeydown()
+%{
+	return 0;
+%}
+setter HTMLElement::onkeydown()
+%{
+	return 0;
+%}
+getter HTMLElement::onkeypress()
+%{
+	return 0;
+%}
+setter HTMLElement::onkeypress()
+%{
+	return 0;
+%}
+getter HTMLElement::onkeyup()
+%{
+	return 0;
+%}
+setter HTMLElement::onkeyup()
+%{
+	return 0;
+%}
+getter HTMLElement::onloadeddata()
+%{
+	return 0;
+%}
+setter HTMLElement::onloadeddata()
+%{
+	return 0;
+%}
+getter HTMLElement::onloadedmetadata()
+%{
+	return 0;
+%}
+setter HTMLElement::onloadedmetadata()
+%{
+	return 0;
+%}
+getter HTMLElement::onloadstart()
+%{
+	return 0;
+%}
+setter HTMLElement::onloadstart()
+%{
+	return 0;
+%}
+getter HTMLElement::onload()
+%{
+	return 0;
+%}
+setter HTMLElement::onload()
+%{
+	return 0;
+%}
+getter HTMLElement::onmousedown()
+%{
+	return 0;
+%}
+setter HTMLElement::onmousedown()
+%{
+	return 0;
+%}
+getter HTMLElement::onmouseenter()
+%{
+	return 0;
+%}
+setter HTMLElement::onmouseenter()
+%{
+	return 0;
+%}
+getter HTMLElement::onmouseleave()
+%{
+	return 0;
+%}
+setter HTMLElement::onmouseleave()
+%{
+	return 0;
+%}
+getter HTMLElement::onmousemove()
+%{
+	return 0;
+%}
+setter HTMLElement::onmousemove()
+%{
+	return 0;
+%}
+getter HTMLElement::onmouseout()
+%{
+	return 0;
+%}
+setter HTMLElement::onmouseout()
+%{
+	return 0;
+%}
+getter HTMLElement::onmouseover()
+%{
+	return 0;
+%}
+setter HTMLElement::onmouseover()
+%{
+	return 0;
+%}
+getter HTMLElement::onmouseup()
+%{
+	return 0;
+%}
+setter HTMLElement::onmouseup()
+%{
+	return 0;
+%}
+getter HTMLElement::onpause()
+%{
+	return 0;
+%}
+setter HTMLElement::onpause()
+%{
+	return 0;
+%}
+getter HTMLElement::onplaying()
+%{
+	return 0;
+%}
+setter HTMLElement::onplaying()
+%{
+	return 0;
+%}
+getter HTMLElement::onplay()
+%{
+	return 0;
+%}
+setter HTMLElement::onplay()
+%{
+	return 0;
+%}
+getter HTMLElement::onprogress()
+%{
+	return 0;
+%}
+setter HTMLElement::onprogress()
+%{
+	return 0;
+%}
+getter HTMLElement::onratechange()
+%{
+	return 0;
+%}
+setter HTMLElement::onratechange()
+%{
+	return 0;
+%}
+getter HTMLElement::onreset()
+%{
+	return 0;
+%}
+setter HTMLElement::onreset()
+%{
+	return 0;
+%}
+getter HTMLElement::onresize()
+%{
+	return 0;
+%}
+setter HTMLElement::onresize()
+%{
+	return 0;
+%}
+getter HTMLElement::onscroll()
+%{
+	return 0;
+%}
+setter HTMLElement::onscroll()
+%{
+	return 0;
+%}
+getter HTMLElement::onseeked()
+%{
+	return 0;
+%}
+setter HTMLElement::onseeked()
+%{
+	return 0;
+%}
+getter HTMLElement::onseeking()
+%{
+	return 0;
+%}
+setter HTMLElement::onseeking()
+%{
+	return 0;
+%}
+getter HTMLElement::onselect()
+%{
+	return 0;
+%}
+setter HTMLElement::onselect()
+%{
+	return 0;
+%}
+getter HTMLElement::onshow()
+%{
+	return 0;
+%}
+setter HTMLElement::onshow()
+%{
+	return 0;
+%}
+getter HTMLElement::onsort()
+%{
+	return 0;
+%}
+setter HTMLElement::onsort()
+%{
+	return 0;
+%}
+getter HTMLElement::onstalled()
+%{
+	return 0;
+%}
+setter HTMLElement::onstalled()
+%{
+	return 0;
+%}
+getter HTMLElement::onsubmit()
+%{
+	return 0;
+%}
+setter HTMLElement::onsubmit()
+%{
+	return 0;
+%}
+getter HTMLElement::onsuspend()
+%{
+	return 0;
+%}
+setter HTMLElement::onsuspend()
+%{
+	return 0;
+%}
+getter HTMLElement::ontimeupdate()
+%{
+	return 0;
+%}
+setter HTMLElement::ontimeupdate()
+%{
+	return 0;
+%}
+getter HTMLElement::ontoggle()
+%{
+	return 0;
+%}
+setter HTMLElement::ontoggle()
+%{
+	return 0;
+%}
+getter HTMLElement::onvolumechange()
+%{
+	return 0;
+%}
+setter HTMLElement::onvolumechange()
+%{
+	return 0;
+%}
+getter HTMLElement::onwaiting()
+%{
+	return 0;
+%}
+setter HTMLElement::onwaiting()
+%{
+	return 0;
+%}
+getter HTMLElement::onwheel()
+%{
+	return 0;
+%}
+setter HTMLElement::onwheel()
+%{
+	return 0;
+%}
 
 getter HTMLElement::dataset()
 %{
