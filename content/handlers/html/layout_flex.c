@@ -1208,10 +1208,38 @@ bool layout_flex(struct box *flex, int available_width,
 
 	if (ctx->horizontal) {
 		ctx->available_main = available_width;
-		ctx->available_cross = ctx->flex->height;
+		ctx->available_cross = flex->height;
 	} else {
-		ctx->available_main = ctx->flex->height;
+		ctx->available_main = flex->height;
 		ctx->available_cross = available_width;
+	}
+
+	if (ctx->horizontal == false) {
+		if (ctx->available_main == AUTO) {
+			if (min_height > 0) {
+				ctx->available_main = min_height;
+			}
+		} else {
+			if (max_height >= 0 && ctx->available_main > max_height) {
+				ctx->available_main = max_height;
+			}
+			if (min_height > 0 && ctx->available_main < min_height) {
+				ctx->available_main = min_height;
+			}
+		}
+	} else {
+		if (ctx->available_cross == AUTO) {
+			if (min_height > 0) {
+				ctx->available_cross = min_height;
+			}
+		} else {
+			if (max_height >= 0 && ctx->available_cross > max_height) {
+				ctx->available_cross = max_height;
+			}
+			if (min_height > 0 && ctx->available_cross < min_height) {
+				ctx->available_cross = min_height;
+			}
+		}
 	}
 
 	NSLOG(flex, DEEPDEBUG, "box %p: available_main: %i",

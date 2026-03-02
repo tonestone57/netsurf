@@ -587,6 +587,11 @@ static void layout_minmax_table(struct box *table,
 				h, hu));
 	}
 
+	/** \todo Handle colspan="0" correctly.
+	 *  As per 4.9.11, "0" means that the cell is to span all remaining
+	 *  columns in the row group.
+	 */
+
 	/* 1st pass: consider cells with colspan 1 only */
 	for (row_group = table->children; row_group; row_group =row_group->next)
 	for (row = row_group->children; row; row = row->next)
@@ -1062,10 +1067,9 @@ layout_minmax_line(struct box *first,
 	}
 
 	if (first_line) {
-		/* todo: handle percentage values properly */
 		/* todo: handle text-indent interaction with floats */
 		int text_indent = layout_text_indent(&content->unit_len_ctx,
-				first->parent->parent->style, 100);
+				first->parent->parent->style, 0);
 		min = (min + text_indent < 0) ? 0 : min + text_indent;
 		max = (max + text_indent < 0) ? 0 : max + text_indent;
 	}
@@ -1264,9 +1268,12 @@ static void layout_minmax_block(
 			case BOX_TABLE:
 				layout_minmax_table(child, font_func,
 						content);
-				/* todo: fix for zero height tables */
-				child_has_height = true;
-				child->flags |= MAKE_HEIGHT;
+
+				if (child->children != NULL ||
+						child->height != AUTO) {
+					child_has_height = true;
+					child->flags |= MAKE_HEIGHT;
+				}
 				break;
 			default:
 				assert(0);
@@ -2362,8 +2369,47 @@ bool layout_table(
 	}
 	/* Table height is either the height of the contents, or specified
 	 * height if greater */
-	table_height = max(table_height, min_height);
-	/** \todo distribute spare height over the row groups / rows / cells */
+	if (table_height < min_height) {
+		int spare_table_height = min_height - table_height;
+		int num_rows = 0;
+		int row_extra;
+		int row_extra_remainder;
+		int current_table_y = 0;
+
+		for (row_group = table->children; row_group;
+				row_group = row_group->next) {
+			num_rows += row_group->rows;
+		}
+
+		if (num_rows > 0) {
+			row_extra = spare_table_height / num_rows;
+			row_extra_remainder = spare_table_height % num_rows;
+
+			for (row_group = table->children; row_group;
+					row_group = row_group->next) {
+				int current_group_y = 0;
+				row_group->y = current_table_y;
+
+				for (row = row_group->children; row; row = row->next) {
+					int extra = row_extra + (row_extra_remainder > 0 ? 1 : 0);
+					if (row_extra_remainder > 0) row_extra_remainder--;
+
+					row->y = current_group_y;
+					row->height += extra;
+
+					for (c = row->children; c; c = c->next) {
+						c->height += extra;
+						c->padding[BOTTOM] += extra;
+					}
+
+					current_group_y += row->height + border_spacing_v;
+				}
+				row_group->height = current_group_y;
+				current_table_y += row_group->height;
+			}
+		}
+		table_height = min_height;
+	}
 
 	/* perform vertical alignment */
 	for (row_group = table->children; row_group;
