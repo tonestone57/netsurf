@@ -2926,7 +2926,7 @@ void layout_find_dimensions_internal(
 		css_fixed value = 0;
 		css_unit unit = CSS_UNIT_PX;
 
-		type = ns_computed_min_width(style, &value, &unit);
+		type = css_computed_min_width(style, &value, &unit);
 
 		if (type == CSS_MIN_WIDTH_SET) {
 			if (unit == CSS_UNIT_PCT) {
