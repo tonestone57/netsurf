@@ -205,7 +205,7 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 			if (data[0] == 'o' && data[1] == 'n') {
 				dom_string *sub = NULL;
 				dom_string *val = NULL;
-				dom_string_substr(key, 2, dom_string_byte_length(key), &sub);
+				dom_string_substr(key, 2, dom_string_byte_length(key) - 2, &sub);
 				dom_element_get_attribute(node, key, &val);
 				if (sub && val) {
 					qjsky_register_event_listener_for(thread->ctx, node, sub, val, false);

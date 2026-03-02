@@ -132,7 +132,7 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JSValue args[2] = { key, JS_DupValue(ctx, obj) };
 	JSValue ret = JS_Call(ctx, set_fn, map, 2, args);
 	JS_FreeValue(ctx, ret);
-	JS_FreeValue(ctx, args[1]); /* Fix leak */
+	JS_FreeValue(ctx, args[1]); /* Fix leak from review */
 	JS_FreeValue(ctx, set_fn);
 	JS_FreeValue(ctx, key);
 
@@ -413,6 +413,7 @@ void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, 
 		struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 		JSValue handler_map = JS_GetProperty(ctx, node_val, heap->handler_map_atom);
 
+		/* Wrap attribute code in a function expression: (function(event){ ... }) */
 		size_t vlen = dom_string_byte_length(value);
 		const char *vdata = (const char *)dom_string_data(value);
 		const char *prefix = "(function(event){";
