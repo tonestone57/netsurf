@@ -4,14 +4,12 @@ on: [push, pull_request]
 
 jobs:
   codeql:
+    name: codeql
+    runs-on: ubuntu-22.04
     permissions:
       security-events: write
       actions: read
       contents: read
-    name: codeql
-    permissions:
-      security-events: write
-    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false

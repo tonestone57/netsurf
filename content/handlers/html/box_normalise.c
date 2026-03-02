@@ -103,12 +103,10 @@ calculate_table_row(struct columns *col_info,
 	/* Update current column with calculated start */
 	col_info->current_column = cell_start_col;
 
-	/* If this cell has a colspan of 0, then assume 1.
-	 * No other browser supports colspan=0, anyway. */
-	if (col_span == 0)
-		col_span = 1;
-
-	cell_end_col = cell_start_col + col_span;
+	/* If this cell has a colspan of 0, then it spans all remaining
+	 * columns. We don't know how many that is yet, so assume 1 for
+	 * now, to ensure that the table has at least one column. */
+	cell_end_col = cell_start_col + ((col_span == 0) ? 1 : col_span);
 
 	if (col_info->num_columns < cell_end_col) {
 		/* It appears that this row has more columns than
@@ -488,10 +486,12 @@ box_normalise_table_spans(struct box *table,
 			     table_cell != NULL;
 			     table_cell = table_cell->next) {
 
-				/* colspan = 0 -> spans all remaining columns */
+				/* colspan = 0 -> span all remaining columns */
 				if (table_cell->columns == 0) {
 					table_cell->columns = table->columns -
 							table_cell->start_column;
+					if (table_cell->columns == 0)
+						table_cell->columns = 1;
 				}
 
 				/* if rowspan is 0 it is expanded to
