@@ -1063,7 +1063,6 @@ layout_minmax_line(struct box *first,
 
 	if (first_line) {
 		/* todo: handle percentage values properly */
-		/* todo: handle text-indent interaction with floats */
 		int text_indent = layout_text_indent(&content->unit_len_ctx,
 				first->parent->parent->style, 100);
 		min = (min + text_indent < 0) ? 0 : min + text_indent;

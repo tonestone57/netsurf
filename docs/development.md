@@ -95,6 +95,13 @@ provides a way for downloaded content to be kept on a persistent
 storage medium such as hard disc to make future retrieval of that
 content quickly.
 
+# Layout Engine
+
+The NetSurf layout engine supports various HTML and CSS features. Recent work has significantly improved support for:
+- **Flexbox**: Full support for `justify-content`, `align-content`, and the `order` property (including painting order reordering).
+- **Tables**: Proportional vertical spare height distribution and correct row-spanning alignment.
+- **Inline Layout**: Spec-compliant `text-indent` interaction with floats.
+
 # Javascript
 
 Javascript provision is split into four parts:
