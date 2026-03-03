@@ -900,11 +900,18 @@ void dukky_getInnerText_recursive(duk_context *ctx, dom_node *node, duk_uarridx_
 			    strncasecmp(s, "dl", 2) == 0 || strncasecmp(s, "dt", 2) == 0 ||
 			    strncasecmp(s, "dd", 2) == 0 || (s[0] == 'h' && s[1] >= '1' && s[1] <= '6')) isBlock = true;
 		} else if (len == 3) {
-			if (strncasecmp(s, "div", 3) == 0 || strncasecmp(s, "pre", 3) == 0) isBlock = true;
+			if (strncasecmp(s, "div", 3) == 0 || strncasecmp(s, "pre", 3) == 0 ||
+			    strncasecmp(s, "nav", 3) == 0) isBlock = true;
 		} else if (len == 4) {
-			if (strncasecmp(s, "form", 4) == 0) isBlock = true;
+			if (strncasecmp(s, "form", 4) == 0 || strncasecmp(s, "main", 4) == 0) isBlock = true;
 		} else if (len == 5) {
-			if (strncasecmp(s, "table", 5) == 0) isBlock = true;
+			if (strncasecmp(s, "table", 5) == 0 || strncasecmp(s, "aside", 5) == 0) isBlock = true;
+		} else if (len == 6) {
+			if (strncasecmp(s, "header", 6) == 0 || strncasecmp(s, "footer", 6) == 0 ||
+			    strncasecmp(s, "figure", 6) == 0) isBlock = true;
+		} else if (len == 7) {
+			if (strncasecmp(s, "article", 7) == 0 || strncasecmp(s, "section", 7) == 0 ||
+			    strncasecmp(s, "address", 7) == 0) isBlock = true;
 		}
 
 		if (isBlock && *idx > 0) {

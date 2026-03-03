@@ -778,7 +778,6 @@ getter | HTMLDataListElement::options(user);
 method | HTMLSelectElement::item();
 method | HTMLSelectElement::namedItem();
 method | HTMLSelectElement::add();
-method | HTMLSelectElement::remove();
 method | HTMLSelectElement::checkValidity();
 method | HTMLSelectElement::reportValidity();
 method | HTMLSelectElement::setCustomValidity();
@@ -1384,9 +1383,6 @@ getter | Attr::textContent(string);
 setter | Attr::textContent(string);
 getter | Attr::ownerElement(user);
 getter | Attr::specified(boolean);
-method | Document::createRange();
-method | Document::createNodeIterator();
-method | Document::createTreeWalker();
 method | Document::getElementsByName();
 method | Document::open();
 method | Document::close();
@@ -1411,10 +1407,6 @@ getter | Document::characterSet(string);
 getter | Document::inputEncoding(string);
 getter | Document::contentType(string);
 getter | Document::doctype(user);
-getter | Document::lastModified(string);
-getter | Document::dir(string);
-setter | Document::dir(string);
-setter | Document::body(user);
 getter | Document::embeds(user);
 getter | Document::plugins(user);
 getter | Document::cssElementMap(user);
@@ -1470,13 +1462,9 @@ method | DocumentFragment::query();
 method | DocumentFragment::queryAll();
 method | DocumentFragment::querySelector();
 method | DocumentFragment::querySelectorAll();
-getter | DocumentFragment::children(user);
-getter | DocumentFragment::firstElementChild(user);
-getter | DocumentFragment::lastElementChild(user);
-getter | DocumentFragment::childElementCount(unsigned long);
 method | EventListener::handleEvent();
 method | CustomEvent::initCustomEvent();
 getter | CustomEvent::detail(any);
 
- 1472 unimplemented bindings
+ 1460 unimplemented bindings
 
