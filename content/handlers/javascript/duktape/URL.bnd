@@ -1,0 +1,296 @@
+/* URL binding for browser using duktape and libdom
+ *
+ * Copyright 2024 Jules
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class URL {
+	private nsurl *url;
+};
+
+prologue URL()
+%{
+#include "netsurf/browser_window.h"
+#include "utils/nsurl.h"
+%}
+
+init URL(nsurl *url)
+%{
+	if (duk_get_top(ctx) > 0) {
+		const char *url_s = duk_safe_to_string(ctx, 0);
+		nsurl *base = NULL;
+		if (duk_get_top(ctx) > 1 && !duk_is_undefined(ctx, 1)) {
+			const char *base_s = duk_safe_to_string(ctx, 1);
+			nsurl_create(base_s, &base);
+		}
+		if (base) {
+			nsurl_join(base, url_s, &priv->url);
+			nsurl_unref(base);
+		} else {
+			nsurl_create(url_s, &priv->url);
+		}
+	} else {
+		priv->url = NULL;
+	}
+%}
+
+fini URL()
+%{
+	if (priv->url) nsurl_unref(priv->url);
+%}
+
+getter URL::href()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_COMPLETE, &url_s, &url_l);
+	if (url_s == NULL) return 0;
+	duk_push_lstring(ctx, url_s, url_l);
+	free(url_s);
+	return 1;
+%}
+
+setter URL::href()
+%{
+	const char *url_s = duk_safe_to_string(ctx, 0);
+	nsurl *new_url;
+	if (nsurl_create(url_s, &new_url) == NSERROR_OK) {
+		if (priv->url) nsurl_unref(priv->url);
+		priv->url = new_url;
+	}
+	return 0;
+%}
+
+getter URL::origin()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_SCHEME | NSURL_HOST | NSURL_PORT, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+getter URL::protocol()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_SCHEME, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::protocol()
+%{
+	if (!priv->url) return 0;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (slen > 0 && s[slen-1] == ':') slen--;
+	lwc_string *scheme;
+	if (lwc_intern_string(s, slen, &scheme) == lwc_error_ok) {
+		nsurl *new_url;
+		nsurl_replace_scheme(priv->url, scheme, &new_url);
+		lwc_string_unref(scheme);
+		nsurl_unref(priv->url);
+		priv->url = new_url;
+	}
+	return 0;
+%}
+
+getter URL::host()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_HOST | NSURL_PORT, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::host()
+%{
+	if (!priv->url) return 0;
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+	const char *new_host = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s%s", new_host, (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+	nsurl_unref(priv->url);
+	priv->url = new_url;
+	duk_pop(ctx);
+	free(path_s);
+	return 0;
+%}
+
+getter URL::hostname()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_HOST, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::hostname()
+%{
+	if (!priv->url) return 0;
+	char *port_s = NULL;
+	size_t port_l = 0;
+	nsurl_get(priv->url, NSURL_PORT, &port_s, &port_l);
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+	const char *new_hostname = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s%s%s%s", new_hostname, (port_s != NULL ? ":" : ""), (port_s != NULL ? port_s : ""), (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+	nsurl_unref(priv->url);
+	priv->url = new_url;
+	duk_pop(ctx);
+	free(port_s);
+	free(path_s);
+	return 0;
+%}
+
+getter URL::port()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_PORT, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::port()
+%{
+	if (!priv->url) return 0;
+	char *host_s = NULL;
+	size_t host_l = 0;
+	nsurl_get(priv->url, NSURL_HOST, &host_s, &host_l);
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+	const char *new_port = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s:%s%s", (host_s != NULL ? host_s : ""), new_port, (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+	nsurl_unref(priv->url);
+	priv->url = new_url;
+	duk_pop(ctx);
+	free(host_s);
+	free(path_s);
+	return 0;
+%}
+
+getter URL::pathname()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_PATH, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::pathname()
+%{
+	if (!priv->url) return 0;
+	char *query_s = NULL;
+	size_t query_l = 0;
+	nsurl_get(priv->url, NSURL_QUERY | NSURL_FRAGMENT, &query_s, &query_l);
+	const char *new_path = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	const char *rel = duk_get_string(ctx, -1);
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+	nsurl_unref(priv->url);
+	priv->url = new_url;
+	duk_pop(ctx);
+	free(query_s);
+	return 0;
+%}
+
+getter URL::search()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_QUERY, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::search()
+%{
+	if (!priv->url) return 0;
+	const char *s = duk_safe_to_string(ctx, 0);
+	if (s[0] == '?') s++;
+	nsurl *new_url;
+	nsurl_replace_query(priv->url, s, &new_url);
+	nsurl_unref(priv->url);
+	priv->url = new_url;
+	return 0;
+%}
+
+getter URL::searchParams()
+%{
+	if (!priv->url) return 0;
+	char *url_s = NULL;
+	size_t url_l;
+	nsurl_get(priv->url, NSURL_QUERY, &url_s, &url_l);
+	duk_push_string(ctx, url_s ? url_s : "");
+	if (dukky_create_object(ctx, PROTO_NAME(URLSEARCHPARAMS), 1) != DUK_EXEC_SUCCESS) {
+		if (url_s) free(url_s);
+		return 0;
+	}
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+getter URL::hash()
+%{
+	char *url_s = NULL;
+	size_t url_l;
+	if (!priv->url) return 0;
+	nsurl_get(priv->url, NSURL_FRAGMENT, &url_s, &url_l);
+	duk_push_lstring(ctx, url_s ? url_s : "", url_l);
+	if (url_s) free(url_s);
+	return 1;
+%}
+
+setter URL::hash()
+%{
+	if (!priv->url) return 0;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (slen > 0 && s[0] == '#') { s++; slen--; }
+	lwc_string *frag;
+	if (lwc_intern_string(s, slen, &frag) == lwc_error_ok) {
+		nsurl *new_url;
+		nsurl_refragment(priv->url, frag, &new_url);
+		lwc_string_unref(frag);
+		nsurl_unref(priv->url);
+		priv->url = new_url;
+	}
+	return 0;
+%}
