@@ -218,7 +218,11 @@ setter URL::pathname()
 	size_t query_l = 0;
 	nsurl_get(priv->url, NSURL_QUERY | NSURL_FRAGMENT, &query_s, &query_l);
 	const char *new_path = duk_safe_to_string(ctx, 0);
-	duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	if (new_path[0] == '/') {
+		duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	} else {
+		duk_push_sprintf(ctx, "/%s%s", new_path, (query_s != NULL ? query_s : ""));
+	}
 	const char *rel = duk_get_string(ctx, -1);
 	nsurl *new_url;
 	nsurl_join(priv->url, rel, &new_url);
@@ -255,15 +259,32 @@ setter URL::search()
 getter URL::searchParams()
 %{
 	if (!priv->url) return 0;
+
+	/* Attempt to retrieve cached searchParams */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(searchParams));
+	if (!duk_is_undefined(ctx, -1)) {
+		duk_remove(ctx, -2);
+		return 1;
+	}
+	duk_pop(ctx);
+
 	char *url_s = NULL;
 	size_t url_l;
 	nsurl_get(priv->url, NSURL_QUERY, &url_s, &url_l);
 	duk_push_string(ctx, url_s ? url_s : "");
 	if (dukky_create_object(ctx, PROTO_NAME(URLSEARCHPARAMS), 1) != DUK_EXEC_SUCCESS) {
 		if (url_s) free(url_s);
+		duk_pop(ctx); /* this */
 		return 0;
 	}
 	if (url_s) free(url_s);
+
+	/* Cache the object */
+	duk_dup(ctx, -1);
+	duk_put_prop_string(ctx, -3, MAGIC(searchParams));
+	duk_remove(ctx, -2); /* this */
+
 	return 1;
 %}
 

@@ -17,6 +17,7 @@ prologue URLSearchParams()
 #include <string.h>
 #include <stdlib.h>
 #include "utils/utils.h"
+#include "utils/url.h"
 
 typedef struct param_entry {
 	char *key;
@@ -51,19 +52,23 @@ static void parse_params(param_list_t *list, const char *s)
 	char *pair = strtok_r(copy, "&", &saveptr);
 	while (pair) {
 		char *sep = strchr(pair, '=');
-		char *key, *val;
+		char *key_enc, *val_enc;
 		if (sep) {
 			*sep = '\0';
-			key = pair;
-			val = sep + 1;
+			key_enc = pair;
+			val_enc = sep + 1;
 		} else {
-			key = pair;
-			val = "";
+			key_enc = pair;
+			val_enc = "";
 		}
 
+		char *key, *val;
+		if (url_unescape(key_enc, 0, NULL, &key) != NSERROR_OK) key = strdup(key_enc);
+		if (url_unescape(val_enc, 0, NULL, &val) != NSERROR_OK) val = strdup(val_enc);
+
 		param_entry_t *entry = calloc(1, sizeof(*entry));
-		entry->key = strdup(key);
-		entry->value = strdup(val);
+		entry->key = key;
+		entry->value = val;
 
 		/* Append to end */
 		if (!list->head) {
@@ -253,8 +258,15 @@ method URLSearchParams::toString()
 			duk_push_string(ctx, "&");
 			duk_concat(ctx, 2);
 		}
-		duk_push_sprintf(ctx, "%s=%s", curr->key, curr->value);
+		char *key_esc, *val_esc;
+		url_escape(curr->key, true, NULL, &key_esc);
+		url_escape(curr->value, true, NULL, &val_esc);
+
+		duk_push_sprintf(ctx, "%s=%s", key_esc, val_esc);
 		duk_concat(ctx, 2);
+
+		free(key_esc);
+		free(val_esc);
 		curr = curr->next;
 	}
 	return 1;

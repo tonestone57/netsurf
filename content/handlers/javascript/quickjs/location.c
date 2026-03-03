@@ -335,10 +335,14 @@ static JSValue qjsky_location_set_pathname(JSContext *ctx, JSValueConst this_val
 		return JS_EXCEPTION;
 	}
 
-	size_t rel_len = strlen(new_path) + (query_s ? query_l : 0) + 1;
+	size_t rel_len = strlen(new_path) + (query_s ? query_l : 0) + 2;
 	char *rel = malloc(rel_len);
 	if (rel) {
-		snprintf(rel, rel_len, "%s%s", new_path, (query_s ? query_s : ""));
+		if (new_path[0] == '/') {
+			snprintf(rel, rel_len, "%s%s", new_path, (query_s ? query_s : ""));
+		} else {
+			snprintf(rel, rel_len, "/%s%s", new_path, (query_s ? query_s : ""));
+		}
 		nsurl *new_url;
 		nsurl_join(loc->url, rel, &new_url);
 		if (new_url) {

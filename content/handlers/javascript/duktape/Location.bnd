@@ -454,7 +454,11 @@ setter Location::pathname()
 	nsurl_get(priv->url, NSURL_QUERY | NSURL_FRAGMENT, &query_s, &query_l);
 
 	const char *new_path = duk_safe_to_string(ctx, 0);
-	duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	if (new_path[0] == '/') {
+		duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	} else {
+		duk_push_sprintf(ctx, "/%s%s", new_path, (query_s != NULL ? query_s : ""));
+	}
 	const char *rel = duk_get_string(ctx, -1);
 
 	nsurl *new_url;
