@@ -3922,14 +3922,16 @@ bool urldb_set_cookie(const char *header, nsurl *url, nsurl *referer)
 
 	scheme = nsurl_get_component(url, NSURL_SCHEME);
 	if (scheme == NULL) {
-		nsurl_unref(urlt);
+		if (urlt != NULL)
+			nsurl_unref(urlt);
 		return false;
 	}
 
 	path = nsurl_get_component(url, NSURL_PATH);
 	if (path == NULL) {
 		lwc_string_unref(scheme);
-		nsurl_unref(urlt);
+		if (urlt != NULL)
+			nsurl_unref(urlt);
 		return false;
 	}
 
@@ -3937,7 +3939,8 @@ bool urldb_set_cookie(const char *header, nsurl *url, nsurl *referer)
 	if (host == NULL) {
 		lwc_string_unref(path);
 		lwc_string_unref(scheme);
-		nsurl_unref(urlt);
+		if (urlt != NULL)
+			nsurl_unref(urlt);
 		return false;
 	}
 
@@ -4155,7 +4158,8 @@ bool urldb_set_cookie(const char *header, nsurl *url, nsurl *referer)
 	lwc_string_unref(host);
 	lwc_string_unref(path);
 	lwc_string_unref(scheme);
-	nsurl_unref(urlt);
+	if (urlt != NULL)
+		nsurl_unref(urlt);
 
 	return true;
 
@@ -4163,7 +4167,8 @@ error:
 	lwc_string_unref(host);
 	lwc_string_unref(path);
 	lwc_string_unref(scheme);
-	nsurl_unref(urlt);
+	if (urlt != NULL)
+		nsurl_unref(urlt);
 
 	return false;
 }
@@ -4556,11 +4561,13 @@ nserror urldb_load_cookies(const char *filename)
 			/* And insert it into database */
 			if (!urldb_insert_cookie(c, scheme_lwc, url_nsurl)) {
 				/* Cookie freed for us */
-				nsurl_unref(url_nsurl);
+				if (url_nsurl != NULL)
+					nsurl_unref(url_nsurl);
 				lwc_string_unref(scheme_lwc);
 				break;
 			}
-			nsurl_unref(url_nsurl);
+			if (url_nsurl != NULL)
+				nsurl_unref(url_nsurl);
 			lwc_string_unref(scheme_lwc);
 
 		} else {

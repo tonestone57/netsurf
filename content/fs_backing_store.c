@@ -267,7 +267,8 @@ entries_hashmap_value_destroy(void *value)
 {
 	struct store_entry *ent = value;
 	/** \todo Do we need to do any disk cleanup here?  if so, meep! */
-	nsurl_unref(ent->url);
+	if (ent->url != NULL)
+		nsurl_unref(ent->url);
 	free(ent);
 }
 
@@ -1170,7 +1171,8 @@ read_entries(struct store_state *state)
 			/* We have to be careful here about nsurl refs */
 			ent = hashmap_insert(state->entries, nsurl);
 			if (ent == NULL) {
-				nsurl_unref(nsurl);
+				if (nsurl != NULL)
+					nsurl_unref(nsurl);
 				close(fd);
 				free(fname);
 				return NSERROR_NOMEM;
@@ -1179,13 +1181,15 @@ read_entries(struct store_state *state)
 			if (read(fd, ent, sizeof(*ent)) != sizeof(*ent)) {
 				/* The read failed, so reset the ptr */
 				ent->url = nsurl; /* It already had a ref */
-				nsurl_unref(nsurl);
+				if (nsurl != NULL)
+					nsurl_unref(nsurl);
 				close(fd);
 				free(fname);
 				return NSERROR_INIT_FAILED;
 			}
 			ent->url = nsurl; /* It already owns a ref */
-			nsurl_unref(nsurl);
+			if (nsurl != NULL)
+				nsurl_unref(nsurl);
 			NSLOG(netsurf, DEBUG, "Successfully read entry for %s", nsurl_access(ent->url));
 			read_entries++;
 			/* Note the size allocation */

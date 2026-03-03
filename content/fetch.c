@@ -568,7 +568,9 @@ void fetch_free(struct fetch *f)
 
 	fetch_unref_fetcher(f->fetcherd);
 
-	nsurl_unref(f->url);
+	if (f->url != NULL) {
+		nsurl_unref(f->url);
+	}
 	if (f->referer != NULL) {
 		nsurl_unref(f->referer);
 	}

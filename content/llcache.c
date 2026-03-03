@@ -1072,7 +1072,8 @@ static nserror llcache_object_destroy(llcache_object *object)
 		}
 	}
 
-	nsurl_unref(object->url);
+	if (object->url != NULL)
+		nsurl_unref(object->url);
 
 	if (object->fetch.fetch != NULL) {
 		fetch_abort(object->fetch.fetch);
@@ -1596,13 +1597,15 @@ llcache_process_metadata(llcache_object *object)
 		NSLOG(llcache, INFO, "Got metadata for %s instead of %s",
 		      nsurl_access(metadataurl), nsurl_access(object->url));
 
-		nsurl_unref(metadataurl);
+		if (metadataurl != NULL)
+			nsurl_unref(metadataurl);
 
 		guit->llcache->release(object->url, BACKING_STORE_META);
 
 		return NSERROR_BAD_URL;
 	}
-	nsurl_unref(metadataurl);
+	if (metadataurl != NULL)
+		nsurl_unref(metadataurl);
 
 
 	/* metadata line 2 is the object's length */
@@ -2124,7 +2127,8 @@ llcache_object_retrieve(nsurl *url,
 		/* Create new object */
 		error = llcache_object_new(defragmented_url, &obj);
 		if (error != NSERROR_OK) {
-			nsurl_unref(defragmented_url);
+			if (defragmented_url != NULL)
+				nsurl_unref(defragmented_url);
 			return error;
 		}
 
@@ -2133,7 +2137,8 @@ llcache_object_retrieve(nsurl *url,
 				redirect_count, hsts_in_use);
 		if (error != NSERROR_OK) {
 			llcache_object_destroy(obj);
-			nsurl_unref(defragmented_url);
+			if (defragmented_url != NULL)
+				nsurl_unref(defragmented_url);
 			return error;
 		}
 
@@ -2144,7 +2149,8 @@ llcache_object_retrieve(nsurl *url,
 				flags, referer, post, redirect_count,
 				hsts_in_use, &obj);
 		if (error != NSERROR_OK) {
-			nsurl_unref(defragmented_url);
+			if (defragmented_url != NULL)
+				nsurl_unref(defragmented_url);
 			return error;
 		}
 
@@ -2155,7 +2161,8 @@ llcache_object_retrieve(nsurl *url,
 
 	*result = obj;
 
-	nsurl_unref(defragmented_url);
+	if (defragmented_url != NULL)
+		nsurl_unref(defragmented_url);
 
 	return NSERROR_OK;
 }
@@ -4050,14 +4057,16 @@ llcache_handle_retrieve(nsurl *url,
 
 	/* Can we fetch this URL at all? */
 	if (fetch_can_fetch(hsts_url) == false) {
-		nsurl_unref(hsts_url);
+		if (hsts_url != NULL)
+			nsurl_unref(hsts_url);
 		return NSERROR_NO_FETCH_HANDLER;
 	}
 
 	/* Create a new object user */
 	error = llcache_object_user_new(cb, pw, &user);
 	if (error != NSERROR_OK) {
-		nsurl_unref(hsts_url);
+		if (hsts_url != NULL)
+			nsurl_unref(hsts_url);
 		return error;
 	}
 
@@ -4067,7 +4076,8 @@ llcache_handle_retrieve(nsurl *url,
 			hsts_in_use, &object);
 	if (error != NSERROR_OK) {
 		llcache_object_user_destroy(user);
-		nsurl_unref(hsts_url);
+		if (hsts_url != NULL)
+			nsurl_unref(hsts_url);
 		return error;
 	}
 
@@ -4079,7 +4089,8 @@ llcache_handle_retrieve(nsurl *url,
 	/* Users exist which are now not caught up! */
 	llcache_users_not_caught_up();
 
-	nsurl_unref(hsts_url);
+	if (hsts_url != NULL)
+		nsurl_unref(hsts_url);
 
 	return NSERROR_OK;
 }
