@@ -1072,13 +1072,13 @@ static TCase *urldb_cookie_case_create(void)
 
 
 /**
- * Test urldb_add_url asserting on NULL.
+ * Test urldb_add_url handles NULL.
  */
-START_TEST(urldb_api_add_url_assert_test)
+START_TEST(urldb_api_add_url_null_test)
 {
 	bool res;
 	res = urldb_add_url(NULL);
-	ck_assert(res == true);
+	ck_assert(res == false);
 }
 END_TEST
 
@@ -1142,9 +1142,7 @@ static TCase *urldb_api_case_create(void)
 	TCase *tc;
 	tc = tcase_create("API_checks");
 
-	tcase_add_test_raise_signal(tc,
-				    urldb_api_add_url_assert_test,
-				    6);
+	tcase_add_test(tc, urldb_api_add_url_null_test);
 
 	tcase_add_test(tc, urldb_api_url_find_test);
 

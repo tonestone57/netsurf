@@ -27,6 +27,8 @@
 #include "utils/nsurl.h"
 #include "utils/utils.h"
 
+static int corestrings_init_count = 0;
+
 /* define corestrings */
 #define CORESTRING_LWC_VALUE(NAME,VALUE) lwc_string *corestring_lwc_##NAME
 #define CORESTRING_DOM_VALUE(NAME,VALUE) dom_string *corestring_dom_##NAME
@@ -39,10 +41,20 @@
 /* exported interface documented in utils/corestrings.h */
 nserror corestrings_fini(void)
 {
+	if (corestrings_init_count == 0) {
+		return NSERROR_OK;
+	}
+
+	if (--corestrings_init_count > 0) {
+		return NSERROR_OK;
+	}
+
 #define CORESTRING_LWC_VALUE(NAME,VALUE)				\
 	do {								\
-		lwc_string_unref(corestring_lwc_##NAME);		\
-		corestring_lwc_##NAME = NULL;				\
+		if (corestring_lwc_##NAME != NULL) {			\
+			lwc_string_unref(corestring_lwc_##NAME);	\
+			corestring_lwc_##NAME = NULL;			\
+		}							\
 	} while (0)
 
 #define CORESTRING_DOM_VALUE(NAME,VALUE)				\
@@ -76,6 +88,12 @@ nserror corestrings_fini(void)
 nserror corestrings_init(void)
 {
 	lwc_error lerror;
+
+	if (corestrings_init_count > 0) {
+		corestrings_init_count++;
+		return NSERROR_OK;
+	}
+
 	nserror error;
 	dom_exception exc;
 
@@ -120,9 +138,12 @@ nserror corestrings_init(void)
 #undef CORESTRING_DOM_VALUE
 #undef CORESTRING_NSURL
 
+	corestrings_init_count = 1;
+
 	return NSERROR_OK;
 
 error:
+	corestrings_init_count = 1;
 	corestrings_fini();
 
 	return error;
