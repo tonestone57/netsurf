@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <nsutils/base64.h>
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "content/handlers/javascript/quickjs/qjsky.h"
 #include "content/handlers/javascript/quickjs/qjs_utils.h"
@@ -9,6 +10,8 @@
 #include "utils/ring.h"
 #include "netsurf/misc.h"
 #include "desktop/gui_internal.h"
+#include "desktop/browser_private.h"
+#include "desktop/scrollbar.h"
 
 /* Timer tracking */
 typedef struct qjsky_timer_s {
@@ -663,6 +666,175 @@ static JSValue qjsky_window_prompt(JSContext *ctx, JSValueConst this_val, int ar
 	return JS_NULL;
 }
 
+static JSValue qjsky_window_atob(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_EXCEPTION;
+	const char *str = JS_ToCString(ctx, argv[0]);
+	if (!str) return JS_EXCEPTION;
+
+	uint8_t *out;
+	size_t out_len;
+	nsuerror res = nsu_base64_decode_alloc((const uint8_t *)str, strlen(str), &out, &out_len);
+	JS_FreeCString(ctx, str);
+
+	if (res != NSUERROR_OK) {
+		return JS_ThrowTypeError(ctx, "Invalid base64 string");
+	}
+
+	JSValue ret = JS_NewStringLen(ctx, (const char *)out, out_len);
+	free(out);
+	return ret;
+}
+
+static JSValue qjsky_window_btoa(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_EXCEPTION;
+	const char *str = JS_ToCString(ctx, argv[0]);
+	if (!str) return JS_EXCEPTION;
+
+	uint8_t *out;
+	size_t out_len;
+	/* Base64 encoding can't fail for memory reasons usually, but nsu_base64_encode_alloc returns error if it does */
+	/* We need a version that does NOT wrap lines if it's following the spec strictly, but NetSurf's nsu_base64_encode seems standard */
+	nsuerror res = nsu_base64_encode_alloc((const uint8_t *)str, strlen(str), &out, &out_len);
+	JS_FreeCString(ctx, str);
+
+	if (res != NSUERROR_OK) {
+		return JS_ThrowInternalError(ctx, "Base64 encoding failed");
+	}
+
+	JSValue ret = JS_NewStringLen(ctx, (const char *)out, out_len);
+	free(out);
+	return ret;
+}
+
+static JSValue qjsky_window_requestAnimationFrame(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_EXCEPTION;
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue setTimeout = JS_GetPropertyStr(ctx, global, "setTimeout");
+	JSValue date_ctor = JS_GetPropertyStr(ctx, global, "Date");
+	JSValue now_fn = JS_GetPropertyStr(ctx, date_ctor, "now");
+	JSValue timestamp = JS_Call(ctx, now_fn, date_ctor, 0, NULL);
+
+	JSValue args[3];
+	args[0] = JS_DupValue(ctx, argv[0]);
+	args[1] = JS_NewInt32(ctx, 16);
+	args[2] = timestamp;
+
+	JSValue handle = JS_Call(ctx, setTimeout, global, 3, args);
+
+	JS_FreeValue(ctx, args[0]);
+	JS_FreeValue(ctx, args[1]);
+	JS_FreeValue(ctx, args[2]);
+	JS_FreeValue(ctx, now_fn);
+	JS_FreeValue(ctx, date_ctor);
+	JS_FreeValue(ctx, setTimeout);
+	JS_FreeValue(ctx, global);
+
+	return handle;
+}
+
+static JSValue qjsky_window_cancelAnimationFrame(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_UNDEFINED;
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue clearTimeout = JS_GetPropertyStr(ctx, global, "clearTimeout");
+
+	JSValue ret = JS_Call(ctx, clearTimeout, global, 1, argv);
+	JS_FreeValue(ctx, ret);
+
+	JS_FreeValue(ctx, clearTimeout);
+	JS_FreeValue(ctx, global);
+
+	return JS_UNDEFINED;
+}
+
+static JSValue qjsky_window_get_scrollX(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	int sx = 0;
+	if (thread && thread->win_priv) {
+		struct browser_window *bw = thread->win_priv;
+		if (bw->scroll_x) sx = scrollbar_get_offset(bw->scroll_x);
+	}
+	return JS_NewInt32(ctx, sx);
+}
+
+static JSValue qjsky_window_get_scrollY(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	int sy = 0;
+	if (thread && thread->win_priv) {
+		struct browser_window *bw = thread->win_priv;
+		if (bw->scroll_y) sy = scrollbar_get_offset(bw->scroll_y);
+	}
+	return JS_NewInt32(ctx, sy);
+}
+
+static JSValue qjsky_window_get_innerWidth(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	int w = 0;
+	if (thread && thread->win_priv) {
+		w = ((struct browser_window *)thread->win_priv)->width;
+	}
+	return JS_NewInt32(ctx, w);
+}
+
+static JSValue qjsky_window_get_innerHeight(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	int h = 0;
+	if (thread && thread->win_priv) {
+		h = ((struct browser_window *)thread->win_priv)->height;
+	}
+	return JS_NewInt32(ctx, h);
+}
+
+static JSValue qjsky_window_get_devicePixelRatio(JSContext *ctx, JSValueConst this_val)
+{
+	return JS_NewFloat64(ctx, 1.0);
+}
+
+static JSValue qjsky_window_get_length(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	int count = 0;
+	if (thread && thread->win_priv) {
+		struct browser_window *bw = thread->win_priv;
+		count = bw->iframe_count;
+		if (bw->browser_window_type == BROWSER_WINDOW_FRAMESET) {
+			count += bw->rows * bw->cols;
+		}
+	}
+	return JS_NewInt32(ctx, count);
+}
+
+static JSValue qjsky_window_get_top(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	if (thread && thread->win_priv) {
+		struct browser_window *top = browser_window_get_root(thread->win_priv);
+		if (top == thread->win_priv) {
+			return JS_GetGlobalObject(ctx);
+		}
+	}
+	return JS_NULL;
+}
+
+static JSValue qjsky_window_get_parent(JSContext *ctx, JSValueConst this_val)
+{
+	struct jsthread *thread = JS_GetContextOpaque(ctx);
+	if (thread && thread->win_priv) {
+		struct browser_window *bw = thread->win_priv;
+		if (bw->parent == NULL || bw->parent == bw) {
+			return JS_GetGlobalObject(ctx);
+		}
+	}
+	return JS_NULL;
+}
+
 /* Event Support */
 
 static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
@@ -1065,5 +1237,46 @@ void qjsky_init_window(JSContext *ctx)
 	JS_SetPropertyStr(ctx, global, "alert", JS_NewCFunction(ctx, qjsky_window_alert, "alert", 1));
 	JS_SetPropertyStr(ctx, global, "confirm", JS_NewCFunction(ctx, qjsky_window_confirm, "confirm", 1));
 	JS_SetPropertyStr(ctx, global, "prompt", JS_NewCFunction(ctx, qjsky_window_prompt, "prompt", 2));
+	JS_SetPropertyStr(ctx, global, "atob", JS_NewCFunction(ctx, qjsky_window_atob, "atob", 1));
+	JS_SetPropertyStr(ctx, global, "btoa", JS_NewCFunction(ctx, qjsky_window_btoa, "btoa", 1));
+	JS_SetPropertyStr(ctx, global, "requestAnimationFrame", JS_NewCFunction(ctx, qjsky_window_requestAnimationFrame, "requestAnimationFrame", 1));
+	JS_SetPropertyStr(ctx, global, "cancelAnimationFrame", JS_NewCFunction(ctx, qjsky_window_cancelAnimationFrame, "cancelAnimationFrame", 1));
+
+	JS_SetPropertyStr(ctx, global, "self", JS_DupValue(ctx, global));
+	JS_SetPropertyStr(ctx, global, "frames", JS_DupValue(ctx, global));
+	JS_SetPropertyStr(ctx, global, "opener", JS_NULL);
+
+	/* Window properties */
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "scrollX"),
+				JS_NewCFunction(ctx, qjsky_window_get_scrollX, "get_scrollX", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "scrollY"),
+				JS_NewCFunction(ctx, qjsky_window_get_scrollY, "get_scrollY", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "pageXOffset"),
+				JS_NewCFunction(ctx, qjsky_window_get_scrollX, "get_scrollX", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "pageYOffset"),
+				JS_NewCFunction(ctx, qjsky_window_get_scrollY, "get_scrollY", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "innerWidth"),
+				JS_NewCFunction(ctx, qjsky_window_get_innerWidth, "get_innerWidth", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "innerHeight"),
+				JS_NewCFunction(ctx, qjsky_window_get_innerHeight, "get_innerHeight", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "devicePixelRatio"),
+				JS_NewCFunction(ctx, qjsky_window_get_devicePixelRatio, "get_devicePixelRatio", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "length"),
+				JS_NewCFunction(ctx, qjsky_window_get_length, "get_length", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "top"),
+				JS_NewCFunction(ctx, qjsky_window_get_top, "get_top", 0),
+				JS_UNDEFINED, 0);
+	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "parent"),
+				JS_NewCFunction(ctx, qjsky_window_get_parent, "get_parent", 0),
+				JS_UNDEFINED, 0);
+
 	JS_FreeValue(ctx, global);
 }
