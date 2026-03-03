@@ -152,7 +152,10 @@ static int layout__get_box_baseline(struct box *box)
 	for (c = box->children; c; c = c->next) {
 		if (layout__box_is_absolute(c))
 			continue;
-		return c->y + c->border[TOP].width + c->padding[TOP] +
+		/* c->y is distance from box border-top to c padding-top.
+		 * Subtract box->padding[TOP] and add c->padding[TOP] to get
+		 * distance from box content-top to c content-top. */
+		return (c->y - box->padding[TOP]) + c->padding[TOP] +
 				layout__get_box_baseline(c);
 	}
 
@@ -276,6 +279,43 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		struct box *first, struct box *last, int used_height)
 {
 	struct box *d;
+	int line_baseline = used_height * 3 / 4;
+	int max_ascent = -1;
+
+	/* Pre-pass to find the line's baseline from baseline-aligned elements */
+	for (d = first; d != last; d = d->next) {
+		const css_computed_style *style = d->style ? d->style :
+				first->parent->parent->style;
+		css_fixed value = 0;
+		css_unit unit = CSS_UNIT_PX;
+		int element_ascent;
+
+		if (layout__box_is_absolute(d))
+			continue;
+
+		if (css_computed_vertical_align(style, &value, &unit) !=
+				CSS_VERTICAL_ALIGN_BASELINE)
+			continue;
+
+		if (d->type == BOX_TEXT || d->type == BOX_BR ||
+				d->type == BOX_INLINE_END ||
+				(d->type == BOX_INLINE && !layout__box_is_replace(d))) {
+			element_ascent = layout__get_box_baseline(d);
+		} else if (d->type == BOX_INLINE ||
+				d->type == BOX_INLINE_BLOCK ||
+				d->type == BOX_INLINE_FLEX) {
+			element_ascent = d->margin[TOP] + d->border[TOP].width +
+					d->padding[TOP] + layout__get_box_baseline(d);
+		} else {
+			continue;
+		}
+
+		if (max_ascent < element_ascent)
+			max_ascent = element_ascent;
+	}
+
+	if (max_ascent != -1)
+		line_baseline = max_ascent;
 
 	for (d = first; d != last; d = d->next) {
 		css_fixed value = 0;
@@ -309,22 +349,20 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 
 		int outer_h = h + margin_top + margin_bottom;
 		int baseline_shift;
+		int element_ascent;
 
-		if (d->type != BOX_TEXT && d->type != BOX_BR &&
-				d->type != BOX_INLINE_END &&
-				layout__box_is_replace(d)) {
-			/* Baseline of replaced element is the bottom of its
-			 * margin box. We align this with the baseline of the
-			 * line, which we estimate at 3/4 of the line height.
-			 */
-			baseline_shift = used_height * 3 / 4 - outer_h;
+		/* We align the element's baseline with the baseline of the line.
+		 * If no baseline-aligned elements are present, we estimate it at
+		 * 3/4 of the line height. */
+		if ((d->type == BOX_INLINE && !layout__box_is_replace(d)) ||
+				d->type == BOX_BR || d->type == BOX_TEXT ||
+				d->type == BOX_INLINE_END) {
+			element_ascent = layout__get_box_baseline(d);
 		} else {
-			/* Baseline of non-replaced element is assumed to be
-			 * at 3/4 of its height. We align this with the
-			 * baseline of the line.
-			 */
-			baseline_shift = (used_height - d->height) * 3 / 4;
+			element_ascent = d->margin[TOP] + d->border[TOP].width +
+					d->padding[TOP] + layout__get_box_baseline(d);
 		}
+		baseline_shift = line_baseline - element_ascent;
 
 		switch (css_computed_vertical_align(style, &value, &unit)) {
 		case CSS_VERTICAL_ALIGN_SUPER:
@@ -2013,6 +2051,33 @@ static void layout_move_children(struct box *box, int x, int y)
 
 
 /* Documented in layout_internal.h */
+
+/**
+ * Shift a table cell content down and redistribute height.
+ *
+ * \param  c      cell box
+ * \param  shift  amount to shift down
+ */
+static void layout_table_shift_cell(struct box *c, int shift)
+{
+	if (shift <= 0)
+		return;
+
+	c->padding[TOP] += shift;
+
+	/* Safely redistribute spare height from padding-bottom and stretched
+	 * height. descendant_y1 contains unextended bottom padding. */
+	if (c->padding[BOTTOM] - c->descendant_y1 >= shift) {
+		c->padding[BOTTOM] -= shift;
+	} else {
+		int diff = shift - (c->padding[BOTTOM] - c->descendant_y1);
+		c->padding[BOTTOM] = c->descendant_y1;
+		c->height -= diff;
+	}
+
+	layout_move_children(c, 0, shift);
+}
+
 bool layout_table(
 		struct box *table,
 		int available_width,
@@ -2640,38 +2705,16 @@ bool layout_table(
 							int shift = row_ascent - (cell_ascent +
 									c->padding[TOP] +
 									c->border[TOP].width);
-
-							if (shift > 0) {
-								c->padding[TOP] += shift;
-
-								/* Safely redistribute spare height from
-								 * padding-bottom and stretched height */
-								if (c->padding[BOTTOM] -
-										c->descendant_y1 >= shift) {
-									c->padding[BOTTOM] -= shift;
-								} else {
-									int diff = shift - (c->padding[BOTTOM] -
-											c->descendant_y1);
-									c->padding[BOTTOM] = c->descendant_y1;
-									c->height -= diff;
-								}
-								layout_move_children(c, 0, shift);
-							}
+							layout_table_shift_cell(c, shift);
 						}
 						break;
 					case CSS_VERTICAL_ALIGN_TOP:
 						break;
 					case CSS_VERTICAL_ALIGN_MIDDLE:
-						c->padding[TOP] += spare_height / 2;
-						c->padding[BOTTOM] -= spare_height / 2;
-						layout_move_children(c, 0,
-								spare_height / 2);
+						layout_table_shift_cell(c, spare_height / 2);
 						break;
 					case CSS_VERTICAL_ALIGN_BOTTOM:
-						c->padding[TOP] += spare_height;
-						c->padding[BOTTOM] -= spare_height;
-						layout_move_children(c, 0,
-								spare_height);
+						layout_table_shift_cell(c, spare_height);
 						break;
 					case CSS_VERTICAL_ALIGN_INHERIT:
 						assert(0);
