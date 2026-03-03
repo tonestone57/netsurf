@@ -324,12 +324,6 @@ void browser_window_update_extent(struct browser_window *bw);
 nserror browser_window_invalidate_rect(struct browser_window *bw, struct rect *rect);
 
 
-/**
- * Change the status bar of a browser window.
- *
- * \param  bw	 browser window
- * \param  text  new status text (copied)
- */
 
 
 /**
