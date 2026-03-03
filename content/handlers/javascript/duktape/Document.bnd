@@ -22,6 +22,22 @@ prologue Document()
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 
+static int dukky_document_push_characterSet(duk_context *ctx, node_private_t *priv)
+{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
+}
+
 static int dukky_document_push_url(duk_context *ctx, node_private_t *priv)
 {
 	dom_exception err;
@@ -230,30 +246,17 @@ method Document::createAttribute()
 
 getter Document::characterSet()
 %{
-	struct html_content *htmlc;
-	dom_exception err;
-
-	err = dom_node_get_user_data(priv->parent.node,
-				     corestring_dom___ns_key_html_content_data,
-				     &htmlc);
-	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
-		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
-		return 1;
-	}
-	duk_push_string(ctx, "UTF-8");
-	return 1;
+	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
 %}
 
 getter Document::charset()
 %{
-	/* Alias for characterSet */
-	return Document_characterSet_getter(ctx);
+	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
 %}
 
 getter Document::inputEncoding()
 %{
-	/* Alias for characterSet */
-	return Document_characterSet_getter(ctx);
+	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
 %}
 
 getter Document::contentType()
