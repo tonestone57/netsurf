@@ -48,17 +48,18 @@ The IDL uses some slightly different terms than other object orientated
 JavaScript implementation
 -------------------------
 
-NetSurf consumes the Duktape JS engine in order to run the JS code which
-is used within the browser.  Duktape is exceedingly well documented and
-its API docs at https://duktape.org/api.html are incredibly useful.
+NetSurf supports both the Duktape and QuickJS engines for running JavaScript.
+Duktape is the traditional engine, well-documented at https://duktape.org/api.html.
+QuickJS is a modern, faster alternative that supports more recent ECMAScript
+specifications and native Promises.
 
-It'll be worthwhile learning about how duktape stacks work in order to
-work on bindings in NetSurf
+Selection of the engine is controlled via the `NETSURF_USE_DUKTAPE` and
+`NETSURF_USE_QUICKJS` makefile options.
 
 Dukky
 -----
 
-Wrappering around and layering between duktape and the browser is a
+Wrappering around and layering between the JS engines and the browser is a
 set of functionality we call `dukky`.  This defines a variety of
 conventions and capabilities which are common to almost all bindings.
 The header `dukky.h` provides the interface to these functions.
@@ -112,16 +113,6 @@ of the WebIDL operations on an interface.
 The binding implementations are in the form of C code fragments
 directly pasted into the generated code with generated setup code
 surrounding it.
-
-### Performance Note: Live Collections
-
-In the Duktape binding, several DOM methods that are specified to
-return "live" collections (such as `children` and
-`getElementsByClassName`) instead return static snapshots (arrays) for
-performance reasons. This minimizes the overhead of crossing the
-JavaScript-to-C boundary during repeated access, though it means the
-returned collections do not automatically update when the DOM is
-modified.
 
 ### Simple attribute example
 

@@ -19,6 +19,7 @@ typedef struct qjsky_xhr_s {
 	int status;
 	char *status_text;
 	char *response_text;
+	size_t response_len;
 	nsurl *url;
 	char *method;
 	struct fetch *fetch;
@@ -83,12 +84,12 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 		break;
 	case FETCH_DATA:
 		{
-			size_t old_len = xhr->response_text ? strlen(xhr->response_text) : 0;
-			char *new_text = realloc(xhr->response_text, old_len + msg->data.header_or_data.len + 1);
+			char *new_text = realloc(xhr->response_text, xhr->response_len + msg->data.header_or_data.len + 1);
 			if (new_text) {
 				xhr->response_text = new_text;
-				memcpy(xhr->response_text + old_len, msg->data.header_or_data.buf, msg->data.header_or_data.len);
-				xhr->response_text[old_len + msg->data.header_or_data.len] = '\0';
+				memcpy(xhr->response_text + xhr->response_len, msg->data.header_or_data.buf, msg->data.header_or_data.len);
+				xhr->response_len += msg->data.header_or_data.len;
+				xhr->response_text[xhr->response_len] = '\0';
 			}
 
 			if (xhr->ready_state < 3) {
@@ -249,7 +250,7 @@ static JSValue qjsky_xhr_get_responseText(JSContext *ctx, JSValueConst this_val)
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	qjsky_xhr_t *xhr = JS_GetOpaque2(ctx, this_val, heap->xhr_class_id);
 	if (!xhr) return JS_EXCEPTION;
-	return JS_NewString(ctx, xhr->response_text ? xhr->response_text : "");
+	return JS_NewStringLen(ctx, xhr->response_text ? xhr->response_text : "", xhr->response_len);
 }
 
 static JSValue qjsky_xhr_get_onreadystatechange(JSContext *ctx, JSValueConst this_val)

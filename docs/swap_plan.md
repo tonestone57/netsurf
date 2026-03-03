@@ -24,9 +24,10 @@ A new backend has been prototyped for the `nsgenbind` tool.
     - [COMPLETED] Fixed UTF-8 string encoding across all binding layers.
 - Layer: `qjsky.c` handles:
     - [COMPLETED] Robust DOM node memoization (using BigUint64 for pointer safety).
+    - [COMPLETED] Refined reference counting and JSAtom management.
     - String conversion between `JSValue` and `dom_string`.
     - Native `console` routing to `NSLOG`.
-- Web APIs: `xhr.c` provides constructor and prototype framework for `XMLHttpRequest`.
+- [COMPLETED] Web APIs: `xhr.c` provides asynchronous `XMLHttpRequest` bridged to NetSurf fetch API.
 
 ## 4. Build System (Integrated)
 - `NETSURF_USE_QUICKJS` option added for engine selection.
@@ -42,7 +43,7 @@ A new backend has been prototyped for the `nsgenbind` tool.
 
 ### Phase 2: Core Browser API (Glue Layer Completion)
 5.  **[COMPLETED] Event Listeners**: Implement `addEventListener` and `removeEventListener` in `qjsky.c`.
-6.  **Event Construction**: Port the `Event` class hierarchy (UIEvent, MouseEvent) to the new engine.
+6.  **[COMPLETED] Event Construction**: Port the `Event` class hierarchy (UIEvent, MouseEvent) to the new engine.
  7.  **[COMPLETED] Timer Refinement**: Implement `clearTimeout`/`clearInterval` and robust timer tracking.
  8.  **[COMPLETED] Location API**: Port the `Location` object and navigation hooks to QuickJS.
 
