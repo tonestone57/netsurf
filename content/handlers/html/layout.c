@@ -127,6 +127,39 @@ find_sides(struct box *fl,
 	   struct box **right);
 
 /**
+ * Calculate the baseline of a box relative to its content top.
+ *
+ * \param  box  box to find baseline of
+ * \return  distance from top of content box to baseline
+ */
+static int layout__get_box_baseline(struct box *box)
+{
+	struct box *c;
+
+	if (box->type == BOX_TEXT || box->type == BOX_BR) {
+		return box->height * 3 / 4;
+	}
+
+	if (layout__box_is_replace(box)) {
+		return box->height + box->padding[BOTTOM] +
+				box->border[BOTTOM].width + box->margin[BOTTOM];
+	}
+
+	if (box->type == BOX_TABLE_ROW) {
+		return box->descendant_y0;
+	}
+
+	for (c = box->children; c; c = c->next) {
+		if (layout__box_is_absolute(c))
+			continue;
+		return c->y + c->border[TOP].width + c->padding[TOP] +
+				layout__get_box_baseline(c);
+	}
+
+	return box->height;
+}
+
+/**
  * Apply vertical margin if necessary.
  *
  * \param  box             box to apply margin to
@@ -2351,6 +2384,8 @@ bool layout_table(
 		int row_group_height = 0;
 		for (row = row_group->children; row; row = row->next) {
 			int row_height = 0;
+			int row_ascent = 0;
+			int row_descent = 0;
 
 			htype = css_computed_height(row->style, &value, &unit);
 			if (htype == CSS_HEIGHT_SET && unit != CSS_UNIT_PCT) {
@@ -2385,6 +2420,26 @@ bool layout_table(
 				 * until after vertical alignment is complete */
 				c->descendant_y0 = c->height;
 				c->descendant_y1 = c->padding[BOTTOM];
+
+				int cell_ascent = layout__get_box_baseline(c);
+				c->descendant_x0 = cell_ascent;
+
+				enum css_vertical_align_e va = css_computed_vertical_align(
+						c->style, &value, &unit);
+				if (va == CSS_VERTICAL_ALIGN_BASELINE) {
+					if (row_ascent < cell_ascent +
+							c->padding[TOP] +
+							c->border[TOP].width)
+						row_ascent = cell_ascent +
+								c->padding[TOP] +
+								c->border[TOP].width;
+					if (row_descent < (c->height - cell_ascent) +
+							c->padding[BOTTOM] +
+							c->border[BOTTOM].width)
+						row_descent = (c->height - cell_ascent) +
+								c->padding[BOTTOM] +
+								c->border[BOTTOM].width;
+				}
 
 				htype = css_computed_height(c->style,
 						&value, &unit);
@@ -2438,6 +2493,10 @@ bool layout_table(
 						c->height -
 						c->border[BOTTOM].width;
 			}
+			if (row_height < row_ascent + row_descent)
+				row_height = row_ascent + row_descent;
+			row->descendant_y0 = row_ascent;
+
 			for (i = 0; i != columns; i++)
 				if (row_span[i] != 0)
 					row_span[i]--;
@@ -2573,9 +2632,33 @@ bool layout_table(
 					case CSS_VERTICAL_ALIGN_TEXT_TOP:
 					case CSS_VERTICAL_ALIGN_TEXT_BOTTOM:
 					case CSS_VERTICAL_ALIGN_SET:
+						break;
 					case CSS_VERTICAL_ALIGN_BASELINE:
-						/* todo: baseline alignment, for now
-						 * just use ALIGN_TOP */
+						{
+							int row_ascent = row->descendant_y0;
+							int cell_ascent = c->descendant_x0;
+							int shift = row_ascent - (cell_ascent +
+									c->padding[TOP] +
+									c->border[TOP].width);
+
+							if (shift > 0) {
+								c->padding[TOP] += shift;
+
+								/* Safely redistribute spare height from
+								 * padding-bottom and stretched height */
+								if (c->padding[BOTTOM] -
+										c->descendant_y1 >= shift) {
+									c->padding[BOTTOM] -= shift;
+								} else {
+									int diff = shift - (c->padding[BOTTOM] -
+											c->descendant_y1);
+									c->padding[BOTTOM] = c->descendant_y1;
+									c->height -= diff;
+								}
+								layout_move_children(c, 0, shift);
+							}
+						}
+						break;
 					case CSS_VERTICAL_ALIGN_TOP:
 						break;
 					case CSS_VERTICAL_ALIGN_MIDDLE:
