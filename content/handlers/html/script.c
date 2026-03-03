@@ -46,7 +46,7 @@
 typedef bool (script_handler_t)(struct jsthread *jsthread, const uint8_t *data, size_t size, const char *name);
 
 
-static script_handler_t *select_script_handler(content_type ctype)
+static script_handler_t *script__select_handler(content_type ctype)
 {
 	if (ctype == CONTENT_JS) {
 		return js_exec;
@@ -84,7 +84,7 @@ nserror html_script_exec(html_content *c, bool allow_defer)
 				continue;
 
 			/* ensure script handler for content type */
-			script_handler = select_script_handler(
+			script_handler = script__select_handler(
 					content_get_type(s->data.handle));
 			if (script_handler == NULL)
 				continue; /* unsupported type */
@@ -120,7 +120,7 @@ nserror html_script_exec(html_content *c, bool allow_defer)
 
 /* create new html script entry */
 static struct html_script *
-html_process_new_script(html_content *c,
+script__process_new(html_content *c,
 			dom_string *mimetype,
 			enum html_script_type type)
 {
@@ -156,7 +156,7 @@ html_process_new_script(html_content *c,
  * Callback for asyncronous scripts
  */
 static nserror
-convert_script_async_cb(hlcache_handle *script,
+script__convert_async_cb(hlcache_handle *script,
 			  const hlcache_event *event,
 			  void *pw)
 {
@@ -224,7 +224,7 @@ convert_script_async_cb(hlcache_handle *script,
  * Callback for defer scripts
  */
 static nserror
-convert_script_defer_cb(hlcache_handle *script,
+script__convert_defer_cb(hlcache_handle *script,
 			  const hlcache_event *event,
 			  void *pw)
 {
@@ -280,7 +280,7 @@ convert_script_defer_cb(hlcache_handle *script,
  * Callback for syncronous scripts
  */
 static nserror
-convert_script_sync_cb(hlcache_handle *script,
+script__convert_sync_cb(hlcache_handle *script,
 			  const hlcache_event *event,
 			  void *pw)
 {
@@ -317,7 +317,7 @@ convert_script_sync_cb(hlcache_handle *script,
 		s->already_started = true;
 
 		/* attempt to execute script */
-		script_handler = select_script_handler(content_get_type(s->data.handle));
+		script_handler = script__select_handler(content_get_type(s->data.handle));
 		if (script_handler != NULL && parent->jsthread != NULL) {
 			/* script has a handler */
 			const uint8_t *data;
@@ -378,7 +378,7 @@ convert_script_sync_cb(hlcache_handle *script,
  * process a script with a src tag
  */
 static dom_hubbub_error
-exec_src_script(html_content *c,
+script__exec_src(html_content *c,
 		dom_node *node,
 		dom_string *mimetype,
 		dom_string *src)
@@ -436,7 +436,7 @@ exec_src_script(html_content *c,
 	if (async) {
 		/* asyncronous script */
 		script_type = HTML_SCRIPT_ASYNC;
-		script_cb = convert_script_async_cb;
+		script_cb = script__convert_async_cb;
 
 	} else {
 		exc = dom_element_has_attribute(node,
@@ -448,15 +448,15 @@ exec_src_script(html_content *c,
 		if (defer) {
 			/* defered script */
 			script_type = HTML_SCRIPT_DEFER;
-			script_cb = convert_script_defer_cb;
+			script_cb = script__convert_defer_cb;
 		} else {
 			/* syncronous script */
 			script_type = HTML_SCRIPT_SYNC;
-			script_cb = convert_script_sync_cb;
+			script_cb = script__convert_sync_cb;
 		}
 	}
 
-	nscript = html_process_new_script(c, mimetype, script_type);
+	nscript = script__process_new(c, mimetype, script_type);
 	if (nscript == NULL) {
 		nsurl_unref(joined);
 		content_broadcast_error(&c->base, NSERROR_NOMEM, NULL);
@@ -512,7 +512,7 @@ exec_src_script(html_content *c,
 }
 
 static dom_hubbub_error
-exec_inline_script(html_content *c, dom_node *node, dom_string *mimetype)
+script__exec_inline(html_content *c, dom_node *node, dom_string *mimetype)
 {
 	dom_string *script;
 	dom_exception exc; /* returned by libdom functions */
@@ -526,7 +526,7 @@ exec_inline_script(html_content *c, dom_node *node, dom_string *mimetype)
 		return DOM_HUBBUB_OK; /* no contents, skip */
 	}
 
-	nscript = html_process_new_script(c, mimetype, HTML_SCRIPT_INLINE);
+	nscript = script__process_new(c, mimetype, HTML_SCRIPT_INLINE);
 	if (nscript == NULL) {
 		dom_string_unref(script);
 
@@ -544,7 +544,7 @@ exec_inline_script(html_content *c, dom_node *node, dom_string *mimetype)
 		return DOM_HUBBUB_DOM;
 	}
 
-	script_handler = select_script_handler(content_factory_type_from_mime_type(lwcmimetype));
+	script_handler = script__select_handler(content_factory_type_from_mime_type(lwcmimetype));
 	lwc_string_unref(lwcmimetype);
 
 	if (script_handler != NULL) {
@@ -596,9 +596,9 @@ html_process_script(void *ctx, dom_node *node)
 
 	exc = dom_element_get_attribute(node, corestring_dom_src, &src);
 	if (exc != DOM_NO_ERR || src == NULL) {
-		err = exec_inline_script(c, node, mimetype);
+		err = script__exec_inline(c, node, mimetype);
 	} else {
-		err = exec_src_script(c, node, mimetype, src);
+		err = script__exec_src(c, node, mimetype, src);
 		dom_string_unref(src);
 	}
 

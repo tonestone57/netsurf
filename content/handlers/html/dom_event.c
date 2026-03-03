@@ -53,7 +53,7 @@
  * \param node The DOM node being inserted
  * \return NSERROR_OK on success else appropriate error code
  */
-static bool html_process_inserted_base(html_content *htmlc, dom_node *node)
+static bool dom_event__process_inserted_base(html_content *htmlc, dom_node *node)
 {
 	dom_exception exc; /* returned by libdom functions */
 	dom_string *atr_string;
@@ -116,7 +116,7 @@ static bool html_process_inserted_base(html_content *htmlc, dom_node *node)
  * \param node The DOM node being inserted
  * \return NSERROR_OK on success else appropriate error code
  */
-static bool html_process_inserted_img(html_content *htmlc, dom_node *node)
+static bool dom_event__process_inserted_img(html_content *htmlc, dom_node *node)
 {
 	dom_string *src;
 	nsurl *url;
@@ -158,7 +158,7 @@ static bool html_process_inserted_img(html_content *htmlc, dom_node *node)
  * \param n The DOM node being inserted
  * \return NSERROR_OK on success else appropriate error code
  */
-static bool html_process_inserted_link(html_content *c, dom_node *node)
+static bool dom_event__process_inserted_link(html_content *c, dom_node *node)
 {
 	struct content_rfc5988_link link; /* the link added to the content */
 	dom_exception exc; /* returned by libdom functions */
@@ -251,7 +251,7 @@ static bool html_process_inserted_link(html_content *c, dom_node *node)
 
 /* handler for a SCRIPT which has been added to a tree */
 static void
-dom_SCRIPT_showed_up(html_content *htmlc, dom_html_script_element *script)
+dom_event__script_showed_up(html_content *htmlc, dom_html_script_element *script)
 {
 	dom_exception exc;
 	dom_html_script_element_flags flags;
@@ -309,7 +309,7 @@ dom_SCRIPT_showed_up(html_content *htmlc, dom_html_script_element *script)
  * \param n The DOM node being inserted
  * \return NSERROR_OK on success else appropriate error code
  */
-static nserror html_process_inserted_meta(html_content *c, dom_node *n)
+static nserror dom_event__process_inserted_meta(html_content *c, dom_node *n)
 {
 	union content_msg_data msg_data;
 	const char *url, *end, *refresh = NULL;
@@ -517,7 +517,7 @@ static nserror html_process_inserted_meta(html_content *c, dom_node *n)
  * \param node The DOM node being inserted
  * \return NSERROR_OK on success else appropriate error code
  */
-static nserror html_process_inserted_title(html_content *htmlc, dom_node *node)
+static nserror dom_event__process_inserted_title(html_content *htmlc, dom_node *node)
 {
 	if (htmlc->title == NULL) {
 		/* only the first title is considered */
@@ -528,7 +528,7 @@ static nserror html_process_inserted_title(html_content *htmlc, dom_node *node)
 
 
 /** process title node */
-static bool html_process_title(html_content *c, dom_node *node)
+static bool dom_event__process_title(html_content *c, dom_node *node)
 {
 	dom_exception exc; /* returned by libdom functions */
 	dom_string *title;
@@ -559,7 +559,7 @@ static bool html_process_title(html_content *c, dom_node *node)
  * Deal with input elements being modified by resyncing their gadget
  * if they have one.
  */
-static void html_texty_element_update(html_content *htmlc, dom_node *node)
+static void dom_event__texty_element_update(html_content *htmlc, dom_node *node)
 {
 	struct box *box = box_for_node(node);
 	if (box == NULL) {
@@ -578,7 +578,7 @@ static void html_texty_element_update(html_content *htmlc, dom_node *node)
  * callback for DOMNodeInserted end type
  */
 static void
-dom_default_action_DOMNodeInserted_cb(struct dom_event *evt, void *pw)
+dom_event__default_action_node_inserted_cb(struct dom_event *evt, void *pw)
 {
 	dom_event_target *node;
 	dom_node_type type;
@@ -603,19 +603,19 @@ dom_default_action_DOMNodeInserted_cb(struct dom_event *evt, void *pw)
 
 		switch (tag_type) {
 		case DOM_HTML_ELEMENT_TYPE_BASE:
-			html_process_inserted_base(htmlc, (dom_node *)node);
+			dom_event__process_inserted_base(htmlc, (dom_node *)node);
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_IMG:
-			html_process_inserted_img(htmlc, (dom_node *)node);
+			dom_event__process_inserted_img(htmlc, (dom_node *)node);
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_LINK:
-			html_process_inserted_link(htmlc, (dom_node *)node);
+			dom_event__process_inserted_link(htmlc, (dom_node *)node);
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_META:
-			html_process_inserted_meta(htmlc, (dom_node *)node);
+			dom_event__process_inserted_meta(htmlc, (dom_node *)node);
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_STYLE:
@@ -625,12 +625,12 @@ dom_default_action_DOMNodeInserted_cb(struct dom_event *evt, void *pw)
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_SCRIPT:
-			dom_SCRIPT_showed_up(htmlc,
+			dom_event__script_showed_up(htmlc,
 					     (dom_html_script_element *)node);
 			break;
 
 		case DOM_HTML_ELEMENT_TYPE_TITLE:
-			html_process_inserted_title(htmlc, (dom_node *)node);
+			dom_event__process_inserted_title(htmlc, (dom_node *)node);
 			break;
 
 		default:
@@ -665,7 +665,7 @@ dom_default_action_DOMNodeInserted_cb(struct dom_event *evt, void *pw)
  * callback for DOMNodeInsertedIntoDocument end type
  */
 static void
-dom_default_action_DOMNodeInsertedIntoDocument_cb(struct dom_event *evt,
+dom_event__default_action_node_inserted_into_doc_cb(struct dom_event *evt,
 						  void *pw)
 {
 	html_content *htmlc = pw;
@@ -687,7 +687,7 @@ dom_default_action_DOMNodeInsertedIntoDocument_cb(struct dom_event *evt,
 
 			switch (tag_type) {
 			case DOM_HTML_ELEMENT_TYPE_SCRIPT:
-				dom_SCRIPT_showed_up(htmlc, (dom_html_script_element *) node);
+				dom_event__script_showed_up(htmlc, (dom_html_script_element *) node);
 				fallthrough;
 			default:
 				break;
@@ -702,7 +702,7 @@ dom_default_action_DOMNodeInsertedIntoDocument_cb(struct dom_event *evt,
  * callback for DOMSubtreeModified end type
  */
 static void
-dom_default_action_DOMSubtreeModified_cb(struct dom_event *evt, void *pw)
+dom_event__default_action_subtree_modified_cb(struct dom_event *evt, void *pw)
 {
 	dom_event_target *node;
 	dom_node_type type;
@@ -713,7 +713,7 @@ dom_default_action_DOMSubtreeModified_cb(struct dom_event *evt, void *pw)
 	if ((exc == DOM_NO_ERR) && (node != NULL)) {
 		if (htmlc->title == (dom_node *)node) {
 			/* Node is our title node */
-			html_process_title(htmlc, (dom_node *)node);
+			dom_event__process_title(htmlc, (dom_node *)node);
 			dom_node_unref(node);
 			return;
 		}
@@ -737,7 +737,7 @@ dom_default_action_DOMSubtreeModified_cb(struct dom_event *evt, void *pw)
 				break;
 			case DOM_HTML_ELEMENT_TYPE_TEXTAREA:
 			case DOM_HTML_ELEMENT_TYPE_INPUT:
-				html_texty_element_update(htmlc, (dom_node *)node);
+				dom_event__texty_element_update(htmlc, (dom_node *)node);
 				fallthrough;
 			default:
 				break;
@@ -752,7 +752,7 @@ dom_default_action_DOMSubtreeModified_cb(struct dom_event *evt, void *pw)
  * callback for default action finished
  */
 static void
-dom_default_action_finished_cb(struct dom_event *evt, void *pw)
+dom_event__default_action_finished_cb(struct dom_event *evt, void *pw)
 {
 	html_content *htmlc = pw;
 
@@ -772,14 +772,14 @@ html_dom_event_fetcher(dom_string *type,
 
 	if (phase == DOM_DEFAULT_ACTION_END) {
 		if (dom_string_isequal(type, corestring_dom_DOMNodeInserted)) {
-			return dom_default_action_DOMNodeInserted_cb;
+			return dom_event__default_action_node_inserted_cb;
 		} else if (dom_string_isequal(type, corestring_dom_DOMNodeInsertedIntoDocument)) {
-			return dom_default_action_DOMNodeInsertedIntoDocument_cb;
+			return dom_event__default_action_node_inserted_into_doc_cb;
 		} else if (dom_string_isequal(type, corestring_dom_DOMSubtreeModified)) {
-			return dom_default_action_DOMSubtreeModified_cb;
+			return dom_event__default_action_subtree_modified_cb;
 		}
 	} else if (phase == DOM_DEFAULT_ACTION_FINISHED) {
-		return dom_default_action_finished_cb;
+		return dom_event__default_action_finished_cb;
 	}
 	return NULL;
 }

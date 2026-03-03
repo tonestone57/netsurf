@@ -55,7 +55,7 @@ static plot_style_t plot_style_fillbdr_dlight = {
 
 
 static inline nserror
-plot_clipped_rectangle(const struct redraw_context *ctx,
+redraw_border__plot_clipped_rectangle(const struct redraw_context *ctx,
 		       const plot_style_t *style,
 		       const struct rect *clip,
 		       struct rect *rect)
@@ -90,7 +90,7 @@ plot_clipped_rectangle(const struct redraw_context *ctx,
  * \return NSERROR_OK if successful otherwise appropriate error code
  */
 static nserror
-html_redraw_border_plot(const int side,
+redraw_border__plot(const int side,
 			const int *p,
 			colour c,
 			enum css_border_style_e style,
@@ -157,7 +157,7 @@ html_redraw_border_plot(const int side,
 					rect.y1 = p[3];
 				}
 			}
-			res = plot_clipped_rectangle(ctx,
+			res = redraw_border__plot_clipped_rectangle(ctx,
 						     &plot_style_fillbdr,
 						     clip,
 						     &rect);
@@ -220,7 +220,7 @@ html_redraw_border_plot(const int side,
 				rect.x1 = (p[0] + p[2]) / 2;
 				rect.y1 = (p[1] + p[3]) / 2;
 			}
-			res = plot_clipped_rectangle(ctx,
+			res = redraw_border__plot_clipped_rectangle(ctx,
 						     plot_style_bdr_in,
 						     clip,
 						     &rect);
@@ -240,7 +240,7 @@ html_redraw_border_plot(const int side,
 				rect.x1 = p[2];
 				rect.y1 = p[3];
 			}
-			res = plot_clipped_rectangle(ctx,
+			res = redraw_border__plot_clipped_rectangle(ctx,
 						     plot_style_bdr_out,
 						     clip,
 						     &rect);
@@ -257,7 +257,7 @@ html_redraw_border_plot(const int side,
 				rect.x1 = ((side == TOP) && (p[4] - p[6] != 0)) ?
 					rect.x1 + p[4] - p[6] : rect.x1;
 
-				res = plot_clipped_rectangle(ctx,
+				res = redraw_border__plot_clipped_rectangle(ctx,
 							     plot_style_bdr_in,
 							     clip,
 							     &rect);
@@ -268,7 +268,7 @@ html_redraw_border_plot(const int side,
 				rect.y1 = p[3];
 				rect.y1 = ((side == LEFT) && (p[1] - p[3] != 0)) ?
 					rect.y1 + p[1] - p[3] : rect.y1;
-				res = plot_clipped_rectangle(ctx,
+				res = redraw_border__plot_clipped_rectangle(ctx,
 							     plot_style_bdr_out,
 							     clip,
 							     &rect);
@@ -345,7 +345,7 @@ html_redraw_border_plot(const int side,
 				rect.x1 = (p[0] + p[2]) / 2;
 				rect.y1 = (p[1] + p[3]) / 2;
 			}
-			res = plot_clipped_rectangle(ctx,
+			res = redraw_border__plot_clipped_rectangle(ctx,
 						     plot_style_bdr_in,
 						     clip,
 						     &rect);
@@ -365,7 +365,7 @@ html_redraw_border_plot(const int side,
 				rect.x1 = p[2];
 				rect.y1 = p[3];
 			}
-			res = plot_clipped_rectangle(ctx,
+			res = redraw_border__plot_clipped_rectangle(ctx,
 						     plot_style_bdr_out,
 						     clip,
 						     &rect);
@@ -381,7 +381,7 @@ html_redraw_border_plot(const int side,
 				rect.y1 = p[7];
 				rect.x1 = ((side == TOP) && (p[4] - p[6] != 0)) ?
 					rect.x1 + p[4] - p[6] : rect.x1;
-				res = plot_clipped_rectangle(ctx,
+				res = redraw_border__plot_clipped_rectangle(ctx,
 							     plot_style_bdr_in,
 							     clip,
 							     &rect);
@@ -392,7 +392,7 @@ html_redraw_border_plot(const int side,
 				rect.y1 = p[3];
 				rect.y1 = ((side == LEFT) && (p[1] - p[3] != 0)) ?
 					rect.y1 + p[1] - p[3] : rect.y1;
-				res = plot_clipped_rectangle(ctx,
+				res = redraw_border__plot_clipped_rectangle(ctx,
 							     plot_style_bdr_out,
 							     clip,
 							     &rect);
@@ -441,7 +441,7 @@ html_redraw_border_plot(const int side,
  * \return true if successful, false otherwise
  */
 bool
-html_redraw_borders(struct box *box,
+redraw__borders(struct box *box,
 		    int x_parent,
 		    int y_parent,
 		    int p_width,
@@ -530,7 +530,7 @@ html_redraw_borders(struct box *box,
 
 			col = nscss_color_to_ns(box->border[side].c);
 
-			res = html_redraw_border_plot(side,
+			res = redraw_border__plot(side,
 						      z,
 						      col,
 						      box->border[side].style,
@@ -571,7 +571,7 @@ html_redraw_borders(struct box *box,
 
 			col = nscss_color_to_ns(box->border[side].c);
 
-			res = html_redraw_border_plot(side,
+			res = redraw_border__plot(side,
 						      z,
 						      col,
 						      box->border[side].style,
@@ -619,7 +619,7 @@ html_redraw_borders(struct box *box,
 
 			col = nscss_color_to_ns(box->border[side].c);
 
-			res = html_redraw_border_plot(side,
+			res = redraw_border__plot(side,
 						      z,
 						      col,
 						      box->border[side].style,
@@ -667,7 +667,7 @@ html_redraw_borders(struct box *box,
 
 			col = nscss_color_to_ns(box->border[side].c);
 
-			res = html_redraw_border_plot(side,
+			res = redraw_border__plot(side,
 						      z,
 						      col,
 						      box->border[side].style,
@@ -704,7 +704,7 @@ html_redraw_borders(struct box *box,
  * \return true if successful, false otherwise
  */
 bool
-html_redraw_inline_borders(struct box *box,
+redraw__inline_borders(struct box *box,
 			   struct rect b,
 			   const struct rect *clip,
 			   float scale,
@@ -778,7 +778,7 @@ html_redraw_inline_borders(struct box *box,
 			square_end_2 = true;
 		}
 
-		res = html_redraw_border_plot(LEFT,
+		res = redraw_border__plot(LEFT,
 					      z,
 					      col,
 					      box->border[LEFT].style,
@@ -822,7 +822,7 @@ html_redraw_inline_borders(struct box *box,
 			square_end_2 = true;
 		}
 
-		res = html_redraw_border_plot(RIGHT,
+		res = redraw_border__plot(RIGHT,
 					      z,
 					      col,
 					      box->border[RIGHT].style,
@@ -867,7 +867,7 @@ html_redraw_inline_borders(struct box *box,
 			square_end_2 = true;
 		}
 
-		res = html_redraw_border_plot(TOP,
+		res = redraw_border__plot(TOP,
 					      z,
 					      col,
 					      box->border[TOP].style,
@@ -912,7 +912,7 @@ html_redraw_inline_borders(struct box *box,
 			square_end_2 = true;
 		}
 
-		res = html_redraw_border_plot(BOTTOM,
+		res = redraw_border__plot(BOTTOM,
 					      z,
 					      col,
 					      box->border[BOTTOM].style,

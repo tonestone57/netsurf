@@ -35,7 +35,7 @@
  * \return Plot font family
  */
 static plot_font_generic_family_t
-plot_font_generic_family(enum css_font_family_e css)
+font__plot_generic_family(enum css_font_family_e css)
 {
 	plot_font_generic_family_t plot;
 
@@ -67,7 +67,7 @@ plot_font_generic_family(enum css_font_family_e css)
  * \param css  CSS font weight
  * \return Plot weight
  */
-static int plot_font_weight(enum css_font_weight_e css)
+static int font__plot_weight(enum css_font_weight_e css)
 {
 	int weight;
 
@@ -114,7 +114,7 @@ static int plot_font_weight(enum css_font_weight_e css)
  * \param variant  CSS font variant
  * \return Computed plot flags
  */
-static plot_font_flags_t plot_font_flags(enum css_font_style_e style,
+static plot_font_flags_t font__plot_flags(enum css_font_style_e style,
 		enum css_font_variant_e variant)
 {
 	plot_font_flags_t flags = FONTF_NONE;
@@ -142,7 +142,7 @@ void font_plot_style_from_css(
 	css_unit unit = CSS_UNIT_PX;
 	css_color col;
 
-	fstyle->family = plot_font_generic_family(
+	fstyle->family = font__plot_generic_family(
 			css_computed_font_family(css, &families));
 	fstyle->families = families;
 
@@ -155,8 +155,8 @@ void font_plot_style_from_css(
 	if (fstyle->size < (nsoption_int(font_min_size) * PLOT_STYLE_SCALE) / 10)
 		fstyle->size = (nsoption_int(font_min_size) * PLOT_STYLE_SCALE) / 10;
 
-	fstyle->weight = plot_font_weight(css_computed_font_weight(css));
-	fstyle->flags = plot_font_flags(css_computed_font_style(css),
+	fstyle->weight = font__plot_weight(css_computed_font_weight(css));
+	fstyle->flags = font__plot_flags(css_computed_font_style(css),
 			css_computed_font_variant(css));
 
 	css_computed_color(css, &col);

@@ -46,7 +46,7 @@
  * \param b The box being destroyed.
  * \return 0 to allow talloc to continue destroying the tree.
  */
-static int box_talloc_destructor(struct box *b)
+static int box_manipulate__talloc_destructor(struct box *b)
 {
 	struct html_scrollbar_data *data;
 
@@ -104,7 +104,7 @@ box_create(css_select_results *styles,
 		return 0;
 	}
 
-	talloc_set_destructor(box, box_talloc_destructor);
+	talloc_set_destructor(box, box_manipulate__talloc_destructor);
 
 	box->type = BOX_INLINE;
 	box->flags = 0;

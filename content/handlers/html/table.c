@@ -59,7 +59,7 @@ struct border {
  * \return True if \a b is more eyecatching than \a a
  */
 static bool
-table_border_is_more_eyecatching(const css_unit_ctx *unit_len_ctx,
+table__border_is_more_eyecatching(const css_unit_ctx *unit_len_ctx,
 				 const struct border *a,
 				 box_type a_src,
 				 const struct border *b,
@@ -170,7 +170,7 @@ table_border_is_more_eyecatching(const css_unit_ctx *unit_len_ctx,
  * \post \a a_src will be updated also
  */
 static void
-table_cell_top_process_table(const css_unit_ctx *unit_len_ctx,
+table__cell_top_process_table(const css_unit_ctx *unit_len_ctx,
 			     struct box *table,
 			     struct border *a,
 			     box_type *a_src)
@@ -187,7 +187,7 @@ table_cell_top_process_table(const css_unit_ctx *unit_len_ctx,
 	b.unit = CSS_UNIT_PX;
 	b_src = BOX_TABLE;
 
-	if (table_border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
+	if (table__border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
 		*a = b;
 		*a_src = b_src;
 	}
@@ -208,7 +208,7 @@ table_cell_top_process_table(const css_unit_ctx *unit_len_ctx,
  * \post \a a_src will be updated also
  */
 static bool
-table_cell_top_process_row(const css_unit_ctx *unit_len_ctx,
+table__cell_top_process_row(const css_unit_ctx *unit_len_ctx,
 			   struct box *cell,
 			   struct box *row,
 			   struct border *a,
@@ -226,7 +226,7 @@ table_cell_top_process_row(const css_unit_ctx *unit_len_ctx,
 	b.unit = CSS_UNIT_PX;
 	b_src = BOX_TABLE_ROW;
 
-	if (table_border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
+	if (table__border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
 		*a = b;
 		*a_src = b_src;
 	}
@@ -241,7 +241,7 @@ table_cell_top_process_row(const css_unit_ctx *unit_len_ctx,
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     a, *a_src, &b, b_src)) {
 			*a = b;
 			*a_src = b_src;
@@ -282,7 +282,7 @@ table_cell_top_process_row(const css_unit_ctx *unit_len_ctx,
 				b.unit = CSS_UNIT_PX;
 				b_src = BOX_TABLE_CELL;
 
-				if (table_border_is_more_eyecatching(unit_len_ctx,
+				if (table__border_is_more_eyecatching(unit_len_ctx,
 								     a,
 								     *a_src,
 								     &b,
@@ -319,7 +319,7 @@ table_cell_top_process_row(const css_unit_ctx *unit_len_ctx,
  * \post \a a_src will be updated also
  */
 static bool
-table_cell_top_process_group(const css_unit_ctx *unit_len_ctx,
+table__cell_top_process_group(const css_unit_ctx *unit_len_ctx,
 			     struct box *cell,
 			     struct box *group,
 			     struct border *a,
@@ -337,7 +337,7 @@ table_cell_top_process_group(const css_unit_ctx *unit_len_ctx,
 	b.unit = CSS_UNIT_PX;
 	b_src = BOX_TABLE_ROW_GROUP;
 
-	if (table_border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
+	if (table__border_is_more_eyecatching(unit_len_ctx, a, *a_src, &b, b_src)) {
 		*a = b;
 		*a_src = b_src;
 	}
@@ -346,7 +346,7 @@ table_cell_top_process_group(const css_unit_ctx *unit_len_ctx,
 		/* Process rows in group, starting with last */
 		struct box *row = group->last;
 
-		while (table_cell_top_process_row(unit_len_ctx, cell, row,
+		while (table__cell_top_process_row(unit_len_ctx, cell, row,
 						  a, a_src) == false) {
 			if (row->prev == NULL) {
 				return false;
@@ -364,7 +364,7 @@ table_cell_top_process_group(const css_unit_ctx *unit_len_ctx,
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW_GROUP;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     a, *a_src, &b, b_src)) {
 			*a = b;
 			*a_src = b_src;
@@ -384,7 +384,7 @@ table_cell_top_process_group(const css_unit_ctx *unit_len_ctx,
  * \param cell     Table cell to consider
  */
 static void
-table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
+table__used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
 {
 	struct border a, b;
 	box_type a_src, b_src;
@@ -434,7 +434,7 @@ table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_CELL;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -459,7 +459,7 @@ table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 			b.unit = CSS_UNIT_PX;
 			b_src = BOX_TABLE_ROW;
 
-			if (table_border_is_more_eyecatching(unit_len_ctx,
+			if (table__border_is_more_eyecatching(unit_len_ctx,
 							     &a, a_src, &b, b_src)) {
 				a = b;
 				a_src = b_src;
@@ -479,7 +479,7 @@ table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW_GROUP;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -494,7 +494,7 @@ table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -516,7 +516,7 @@ table_used_left_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
  * \param cell     Table cell to consider
  */
 static void
-table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
+table__used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
 {
 	struct border a, b;
 	box_type a_src, b_src;
@@ -541,14 +541,14 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
 	b.unit = CSS_UNIT_PX;
 	b_src = BOX_TABLE_ROW;
 
-	if (table_border_is_more_eyecatching(unit_len_ctx, &a, a_src, &b, b_src)) {
+	if (table__border_is_more_eyecatching(unit_len_ctx, &a, a_src, &b, b_src)) {
 		a = b;
 		a_src = b_src;
 	}
 
 	if (row->prev != NULL) {
 		/* Consider row(s) above */
-		while (table_cell_top_process_row(unit_len_ctx, cell, row->prev,
+		while (table__cell_top_process_row(unit_len_ctx, cell, row->prev,
 						  &a, &a_src) == false) {
 			if (row->prev->prev == NULL) {
 				/* Consider row group */
@@ -574,7 +574,7 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW_GROUP;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -582,16 +582,16 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
 
 		if (group->prev == NULL) {
 			/* Top border of table */
-			table_cell_top_process_table(unit_len_ctx,
+			table__cell_top_process_table(unit_len_ctx,
 						     group->parent, &a, &a_src);
 		} else {
 			/* Process previous group(s) */
-			while (table_cell_top_process_group(unit_len_ctx,
+			while (table__cell_top_process_group(unit_len_ctx,
 							    cell, group->prev,
 							    &a, &a_src) == false) {
 				if (group->prev->prev == NULL) {
 					/* Top border of table */
-					table_cell_top_process_table(unit_len_ctx,
+					table__cell_top_process_table(unit_len_ctx,
 								     group->parent,
 								     &a, &a_src);
 					break;
@@ -616,7 +616,7 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
  * \param cell     Table cell to consider
  */
 static void
-table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
+table__used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cell)
 {
 	struct border a, b;
 	box_type a_src, b_src;
@@ -659,7 +659,7 @@ table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *c
 			b.unit = CSS_UNIT_PX;
 			b_src = BOX_TABLE_ROW;
 
-			if (table_border_is_more_eyecatching(unit_len_ctx,
+			if (table__border_is_more_eyecatching(unit_len_ctx,
 							     &a, a_src,
 							     &b, b_src)) {
 				a = b;
@@ -681,7 +681,7 @@ table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *c
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW_GROUP;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -697,7 +697,7 @@ table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *c
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src,
 						     &b, b_src)) {
 			a = b;
@@ -720,7 +720,7 @@ table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *c
  * \param cell     Table cell to consider
  */
 static void
-table_used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
+table__used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
 				  struct box *cell)
 {
 	struct border a, b;
@@ -762,7 +762,7 @@ table_used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -778,7 +778,7 @@ table_used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE_ROW_GROUP;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 			a_src = b_src;
@@ -794,7 +794,7 @@ table_used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
 		b.unit = CSS_UNIT_PX;
 		b_src = BOX_TABLE;
 
-		if (table_border_is_more_eyecatching(unit_len_ctx,
+		if (table__border_is_more_eyecatching(unit_len_ctx,
 						     &a, a_src, &b, b_src)) {
 			a = b;
 		}
@@ -1041,20 +1041,20 @@ void table_used_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 					width, unit));
 	} else {
 		/* Left border */
-		table_used_left_border_for_cell(unit_len_ctx, cell);
+		table__used_left_border_for_cell(unit_len_ctx, cell);
 
 		/* Top border */
-		table_used_top_border_for_cell(unit_len_ctx, cell);
+		table__used_top_border_for_cell(unit_len_ctx, cell);
 
 		/* Right border */
-		table_used_right_border_for_cell(unit_len_ctx, cell);
+		table__used_right_border_for_cell(unit_len_ctx, cell);
 
 		/* Bottom border */
-		table_used_bottom_border_for_cell(unit_len_ctx, cell);
+		table__used_bottom_border_for_cell(unit_len_ctx, cell);
 	}
 
 	/* Finally, ensure that any borders configured as
-	 * hidden or none have zero width. (c.f. layout_find_dimensions) */
+	 * hidden or none have zero width. (c.f. layout__find_dimensions) */
 	for (side = 0; side != 4; side++) {
 		if (cell->border[side].style == CSS_BORDER_STYLE_HIDDEN ||
 		    cell->border[side].style ==

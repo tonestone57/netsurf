@@ -37,7 +37,7 @@
  * This function carries out layout of a block and its children, as described
  * in CSS 2.1 9.4.1.
  */
-bool layout_block_context(
+bool layout__block_context(
 		struct box *block,
 		int viewport_height,
 		html_content *content);
@@ -50,7 +50,7 @@ bool layout_block_context(
  * \param  content          memory pool for any new boxes
  * \return  true on success, false on memory exhaustion
  */
-bool layout_table(
+bool layout__table(
 		struct box *table,
 		int available_width,
 		html_content *content);
@@ -63,7 +63,7 @@ bool layout_table(
  * \param[in] content          memory pool for any new boxes
  * \return  true on success, false on memory exhaustion
  */
-bool layout_flex(
+bool layout__flex(
 		struct box *flex,
 		int available_width,
 		html_content *content);
@@ -78,7 +78,7 @@ bool layout_flex(
  * \param  style            style giving width, height, margins, paddings,
  *                          and borders
  */
-void layout_find_dimensions_internal(
+void layout__find_dimensions_internal(
 		const css_unit_ctx *unit_len_ctx,
 		int available_width,
 		int viewport_height,
@@ -243,6 +243,56 @@ static inline int layout__delta_outer_width(const struct box *b)
 	       layout__non_auto_margin(b, RIGHT);
 }
 
+/**
+ * Get the width of the border box (width + padding + border).
+ *
+ * \param[in] b  Box to get border-box width of.
+ * \return the width in pixels.
+ */
+static inline int layout__box_border_width(const struct box *b)
+{
+	return b->width + b->padding[LEFT] + b->padding[RIGHT] +
+	       b->border[LEFT].width + b->border[RIGHT].width;
+}
+
+/**
+ * Get the height of the border box (height + padding + border).
+ *
+ * \param[in] b  Box to get border-box height of.
+ * \return the height in pixels.
+ */
+static inline int layout__box_border_height(const struct box *b)
+{
+	return b->height + b->padding[TOP] + b->padding[BOTTOM] +
+	       b->border[TOP].width + b->border[BOTTOM].width;
+}
+
+/**
+ * Get the width of the margin box (width + padding + border + margin).
+ *
+ * \param[in] b  Box to get margin-box width of.
+ * \return the width in pixels.
+ */
+static inline int layout__box_outer_width(const struct box *b)
+{
+	return layout__box_border_width(b) +
+	       layout__non_auto_margin(b, LEFT) +
+	       layout__non_auto_margin(b, RIGHT);
+}
+
+/**
+ * Get the height of the margin box (height + padding + border + margin).
+ *
+ * \param[in] b  Box to get margin-box height of.
+ * \return the height in pixels.
+ */
+static inline int layout__box_outer_height(const struct box *b)
+{
+	return layout__box_border_height(b) +
+	       layout__non_auto_margin(b, TOP) +
+	       layout__non_auto_margin(b, BOTTOM);
+}
+
 static inline int layout__delta_outer_main(
 		const struct box *flex,
 		const struct box *b)
@@ -341,7 +391,7 @@ static inline enum css_align_self_e layout__box_align_self(
  * \param fixed    increased by sum of fixed margin, border, and padding
  * \param frac     increased by sum of fractional margin and padding
  */
-static inline void calculate_mbp_width(
+static inline void layout__calculate_mbp_width(
 		const css_unit_ctx *unit_len_ctx,
 		const css_computed_style *style,
 		unsigned int side,
@@ -411,7 +461,7 @@ static inline void calculate_mbp_width(
  *				updated to new value after consideration of
  *				gadget properties.
  */
-static inline void layout_handle_box_sizing(
+static inline void layout__handle_box_sizing(
 		const css_unit_ctx *unit_len_ctx,
 		const struct box *box,
 		const css_computed_style *style,
@@ -431,10 +481,10 @@ static inline void layout_handle_box_sizing(
 		int fixed = 0;
 		float frac = 0;
 
-		calculate_mbp_width(unit_len_ctx, style,
+		layout__calculate_mbp_width(unit_len_ctx, style,
 				setwidth ? LEFT : TOP,
 				false, true, true, &fixed, &frac);
-		calculate_mbp_width(unit_len_ctx, style,
+		layout__calculate_mbp_width(unit_len_ctx, style,
 				setwidth ? RIGHT : BOTTOM,
 				false, true, true, &fixed, &frac);
 		orig -= frac * available_width + fixed;
@@ -461,7 +511,7 @@ static inline void layout_handle_box_sizing(
  * \param  padding          filled with paddings, may be NULL
  * \param  border           filled with border widths, may be NULL
  */
-static inline void layout_find_dimensions(
+static inline void layout__find_dimensions(
 		const css_unit_ctx *unit_len_ctx,
 		int available_width,
 		int viewport_height,
@@ -493,7 +543,7 @@ static inline void layout_find_dimensions(
 	    box->cached_root_style != unit_len_ctx->root_style ||
 	    box->cached_available_width != available_width ||
 	    box->cached_viewport_height != viewport_height) {
-		layout_find_dimensions_internal(unit_len_ctx, available_width,
+		layout__find_dimensions_internal(unit_len_ctx, available_width,
 				viewport_height, box, style);
 	}
 

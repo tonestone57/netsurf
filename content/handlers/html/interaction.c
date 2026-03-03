@@ -67,7 +67,7 @@
  * \param imagemap  whether an imagemap applies to the box
  */
 
-static browser_pointer_shape get_pointer_shape(struct box *box, bool imagemap)
+static browser_pointer_shape interaction__get_pointer_shape(struct box *box, bool imagemap)
 {
 	browser_pointer_shape pointer;
 	css_computed_style *style;
@@ -165,7 +165,7 @@ static browser_pointer_shape get_pointer_shape(struct box *box, bool imagemap)
  * \param y	y ordinate
  */
 
-static void html_box_drag_start(struct box *box, int x, int y)
+static void interaction__box_drag_start(struct box *box, int x, int y)
 {
 	int box_x, box_y;
 	int scroll_mouse_x, scroll_mouse_y;
@@ -200,7 +200,7 @@ static void html_box_drag_start(struct box *box, int x, int y)
  * \param y	 coordinate of mouse
  * \param dir    Direction of drag
  */
-static size_t html_selection_drag_end(struct html_content *html,
+static size_t interaction__selection_drag_end(struct html_content *html,
 		browser_mouse_state mouse, int x, int y, int dir)
 {
 	int pixel_offset;
@@ -239,7 +239,7 @@ static size_t html_selection_drag_end(struct html_content *html,
  * \param dst The destination DOM node.
  */
 static void
-html__image_coords_dom_user_data_handler(dom_node_operation operation,
+interaction__image_coords_dom_user_data_handler(dom_node_operation operation,
 					 dom_string *key,
 					 void *_data,
 					 struct dom_node *src,
@@ -260,7 +260,7 @@ html__image_coords_dom_user_data_handler(dom_node_operation operation,
 			if (dom_node_set_user_data(dst,
 				 corestring_dom___ns_key_image_coords_node_data,
 				 newcoords,
-				 html__image_coords_dom_user_data_handler,
+				 interaction__image_coords_dom_user_data_handler,
 				 &oldcoords) == DOM_NO_ERR) {
 				free(oldcoords);
 			}
@@ -292,7 +292,7 @@ html__image_coords_dom_user_data_handler(dom_node_operation operation,
  * \param  y	   coordinate of mouse
  */
 static void
-html_overflow_scroll_drag_end(struct scrollbar *scrollbar,
+interaction__overflow_scroll_drag_end(struct scrollbar *scrollbar,
 			      browser_mouse_state mouse,
 			      int x, int y)
 {
@@ -326,7 +326,7 @@ html_overflow_scroll_drag_end(struct scrollbar *scrollbar,
  *
  */
 static nserror
-mouse_action_select_menu(html_content *html,
+interaction__mouse_action_select_menu(html_content *html,
 			 struct browser_window *bw,
 			 browser_mouse_state mouse,
 			 int x, int y)
@@ -388,7 +388,7 @@ mouse_action_select_menu(html_content *html,
  *
  */
 static nserror
-mouse_action_drag_selection(html_content *html,
+interaction__mouse_action_drag_selection(html_content *html,
 			    struct browser_window *bw,
 			    browser_mouse_state mouse,
 			    int x, int y)
@@ -407,7 +407,7 @@ mouse_action_drag_selection(html_content *html,
 			dir = 1;
 		}
 
-		idx = html_selection_drag_end(html, mouse, x, y, dir);
+		idx = interaction__selection_drag_end(html, mouse, x, y, dir);
 
 		if (idx != 0) {
 			selection_track(html->sel, mouse, idx);
@@ -445,7 +445,7 @@ mouse_action_drag_selection(html_content *html,
  *
  */
 static nserror
-mouse_action_drag_scrollbar(html_content *html,
+interaction__mouse_action_drag_scrollbar(html_content *html,
 			    struct browser_window *bw,
 			    browser_mouse_state mouse,
 			    int x, int y)
@@ -463,7 +463,7 @@ mouse_action_drag_scrollbar(html_content *html,
 
 	if (!mouse) {
 		/* drag end: scrollbar */
-		html_overflow_scroll_drag_end(scr, mouse, x, y);
+		interaction__overflow_scroll_drag_end(scr, mouse, x, y);
 	}
 
 	data = scrollbar_get_data(scr);
@@ -511,7 +511,7 @@ mouse_action_drag_scrollbar(html_content *html,
  * handle mouse actions while dragging in a text area
  */
 static nserror
-mouse_action_drag_textarea(html_content *html,
+interaction__mouse_action_drag_textarea(html_content *html,
 			    struct browser_window *bw,
 			    browser_mouse_state mouse,
 			    int x, int y)
@@ -544,7 +544,7 @@ mouse_action_drag_textarea(html_content *html,
  * handle mouse actions while dragging in a content
  */
 static nserror
-mouse_action_drag_content(html_content *html,
+interaction__mouse_action_drag_content(html_content *html,
 			  struct browser_window *bw,
 			  browser_mouse_state mouse,
 			  int x, int y)
@@ -673,7 +673,7 @@ struct mouse_action_state {
  * text_box_x - text_box
  */
 static nserror
-get_mouse_action_node(html_content *html,
+interaction__get_mouse_action_node(html_content *html,
 		      int x, int y,
 		      struct mouse_action_state *man)
 {
@@ -753,7 +753,7 @@ get_mouse_action_node(html_content *html,
 			man->title = box->title;
 		}
 
-		man->result.pointer = get_pointer_shape(box, false);
+		man->result.pointer = interaction__get_pointer_shape(box, false);
 
 		if ((box->scroll_x != NULL) ||
 		    (box->scroll_y != NULL)) {
@@ -826,7 +826,7 @@ get_mouse_action_node(html_content *html,
  * process mouse activity on a form gadget
  */
 static nserror
-gadget_mouse_action(html_content *html,
+interaction__gadget_mouse_action(html_content *html,
 		    browser_mouse_state mouse,
 		    int x, int y,
 		    struct mouse_action_state *mas)
@@ -898,7 +898,7 @@ gadget_mouse_action(html_content *html,
 				mas->gadget.control->node,
 				corestring_dom___ns_key_image_coords_node_data,
 				coords,
-				html__image_coords_dom_user_data_handler,
+				interaction__image_coords_dom_user_data_handler,
 				&oldcoords) != DOM_NO_ERR) {
 				return NSERROR_OK;
 			}
@@ -915,7 +915,7 @@ gadget_mouse_action(html_content *html,
 				 messages_get("FormSubmit"),
 				 mas->gadget.control->form->action);
 			mas->result.status = status_buffer;
-			mas->result.pointer = get_pointer_shape(mas->gadget.box,
+			mas->result.pointer = interaction__get_pointer_shape(mas->gadget.box,
 								false);
 			if (mouse & (BROWSER_MOUSE_CLICK_1 |
 				     BROWSER_MOUSE_CLICK_2)) {
@@ -952,7 +952,7 @@ gadget_mouse_action(html_content *html,
 						  y - mas->gadget.box_y);
 
 		if (ta_status & TEXTAREA_MOUSE_EDITOR) {
-			mas->result.pointer = get_pointer_shape(mas->gadget.box, false);
+			mas->result.pointer = interaction__get_pointer_shape(mas->gadget.box, false);
 		} else {
 			mas->result.pointer = BROWSER_POINTER_DEFAULT;
 			mas->result.status = scrollbar_mouse_status_to_message(ta_status >> 3);
@@ -991,7 +991,7 @@ gadget_mouse_action(html_content *html,
  * process mouse activity on an iframe
  */
 static nserror
-iframe_mouse_action(struct browser_window *bw,
+interaction__iframe_mouse_action(struct browser_window *bw,
 		    browser_mouse_state mouse,
 		    int x, int y,
 		    struct mouse_action_state *mas)
@@ -1025,7 +1025,7 @@ iframe_mouse_action(struct browser_window *bw,
  * process mouse activity on an html object
  */
 static nserror
-html_object_mouse_action(html_content *html,
+interaction__object_mouse_action(html_content *html,
 			 struct browser_window *bw,
 			 browser_mouse_state mouse,
 			 int x, int y,
@@ -1070,7 +1070,7 @@ html_object_mouse_action(html_content *html,
  * \param urm The url to check.
  * \return true if the url is a javascript scheme else false
  */
-static bool is_javascript_navigate_url(nsurl *url)
+static bool interaction__is_javascript_navigate_url(nsurl *url)
 {
 	bool is_js = false;
 	lwc_string *scheme;
@@ -1090,7 +1090,7 @@ static bool is_javascript_navigate_url(nsurl *url)
  * process mouse activity on a link
  */
 static nserror
-link_mouse_action(html_content *html,
+interaction__link_mouse_action(html_content *html,
 		  struct browser_window *bw,
 		  browser_mouse_state mouse,
 		  int x, int y,
@@ -1132,7 +1132,7 @@ link_mouse_action(html_content *html,
 
 	mas->result.status = status_buffer;
 
-	mas->result.pointer = get_pointer_shape(mas->link.box,
+	mas->result.pointer = interaction__get_pointer_shape(mas->link.box,
 						mas->link.is_imagemap);
 
 	if (mouse & BROWSER_MOUSE_CLICK_1 &&
@@ -1155,7 +1155,7 @@ link_mouse_action(html_content *html,
 				  &msg_data);
 
 	} else if (mouse & (BROWSER_MOUSE_CLICK_1 | BROWSER_MOUSE_CLICK_2)) {
-		if (is_javascript_navigate_url(mas->link.url)) {
+		if (interaction__is_javascript_navigate_url(mas->link.url)) {
 			mas->result.action = ACTION_JS;
 		} else {
 			mas->result.action = ACTION_NAVIGATE;
@@ -1167,7 +1167,7 @@ link_mouse_action(html_content *html,
 
 
 static nserror
-default_mouse_action_focus(html_content *html, browser_mouse_state mouse)
+interaction__default_mouse_action_focus(html_content *html, browser_mouse_state mouse)
 {
 	if (mouse && mouse < BROWSER_MOUSE_MOD_1) {
 		/* ensure key presses still act on the browser window */
@@ -1184,7 +1184,7 @@ default_mouse_action_focus(html_content *html, browser_mouse_state mouse)
  * process mouse activity if it is not anything else
  */
 static nserror
-default_mouse_action(html_content *html,
+interaction__default_mouse_action(html_content *html,
 		  struct browser_window *bw,
 		  browser_mouse_state mouse,
 		  int x, int y,
@@ -1197,7 +1197,7 @@ default_mouse_action(html_content *html,
 		if (mouse & (BROWSER_MOUSE_DRAG_1 | BROWSER_MOUSE_DRAG_2)) {
 			mas->result.status = messages_get("FrameDrag");
 		}
-		return default_mouse_action_focus(html, mouse);
+		return interaction__default_mouse_action_focus(html, mouse);
 	}
 
 	/* clicking in the main page removes the selection from any text areas.
@@ -1264,7 +1264,7 @@ default_mouse_action(html_content *html,
 						   sel_owner, true);
 			}
 
-			return default_mouse_action_focus(html, mouse);
+			return interaction__default_mouse_action_focus(html, mouse);
 		}
 
 	} else if (mouse & BROWSER_MOUSE_PRESS_1) {
@@ -1294,7 +1294,7 @@ default_mouse_action(html_content *html,
 			if (mas->drag_candidate == NULL) {
 				browser_window_page_drag_start(bw, x, y);
 			} else {
-				html_box_drag_start(mas->drag_candidate, x, y);
+				interaction__box_drag_start(mas->drag_candidate, x, y);
 			}
 			mas->result.pointer = BROWSER_POINTER_MOVE;
 		}
@@ -1308,14 +1308,14 @@ default_mouse_action(html_content *html,
 			if (mas->drag_candidate == NULL) {
 				browser_window_page_drag_start(bw, x, y);
 			} else {
-				html_box_drag_start(mas->drag_candidate, x, y);
+				interaction__box_drag_start(mas->drag_candidate, x, y);
 			}
 			mas->result.pointer = BROWSER_POINTER_MOVE;
 		}
 	}
 
 
-	return default_mouse_action_focus(html, mouse);
+	return interaction__default_mouse_action_focus(html, mouse);
 }
 
 
@@ -1323,7 +1323,7 @@ default_mouse_action(html_content *html,
  * handle non dragging mouse actions
  */
 static nserror
-mouse_action_drag_none(html_content *html,
+interaction__mouse_action_drag_none(html_content *html,
 		       struct browser_window *bw,
 		       browser_mouse_state mouse,
 		       int x, int y)
@@ -1340,7 +1340,7 @@ mouse_action_drag_none(html_content *html,
 	 */
 	static struct mouse_action_state mas;
 
-	res = get_mouse_action_node(html, x, y, &mas);
+	res = interaction__get_mouse_action_node(html, x, y, &mas);
 	if (res != NSERROR_OK) {
 		return res;
 	}
@@ -1358,7 +1358,7 @@ mouse_action_drag_none(html_content *html,
 		mas.result.pointer = BROWSER_POINTER_DEFAULT;
 
 	} else if (mas.gadget.control) {
-		res = gadget_mouse_action(html, mouse, x, y, &mas);
+		res = interaction__gadget_mouse_action(html, mouse, x, y, &mas);
 
 	} else if ((mas.object != NULL) && (mouse & BROWSER_MOUSE_MOD_2)) {
 
@@ -1376,16 +1376,16 @@ mouse_action_drag_none(html_content *html,
 		/* \todo should have a drag-saving object msg */
 
 	} else if (mas.iframe != NULL) {
-		res = iframe_mouse_action(bw, mouse, x, y, &mas);
+		res = interaction__iframe_mouse_action(bw, mouse, x, y, &mas);
 
 	} else if (mas.html_object.box != NULL) {
-		res = html_object_mouse_action(html, bw, mouse, x, y, &mas);
+		res = interaction__object_mouse_action(html, bw, mouse, x, y, &mas);
 
 	} else if (mas.link.url != NULL) {
-		res = link_mouse_action(html, bw, mouse, x, y, &mas);
+		res = interaction__link_mouse_action(html, bw, mouse, x, y, &mas);
 
 	} else {
-		res = default_mouse_action(html, bw, mouse, x, y, &mas);
+		res = interaction__default_mouse_action(html, bw, mouse, x, y, &mas);
 
 	}
 	if (res != NSERROR_OK) {
@@ -1482,31 +1482,31 @@ html_mouse_action(struct content *c,
 
 	/* handle open select menu */
 	if (html->visible_select_menu != NULL) {
-		return mouse_action_select_menu(html, bw, mouse, x, y);
+		return interaction__mouse_action_select_menu(html, bw, mouse, x, y);
 	}
 
 	/* handle content drag */
 	switch (html->drag_type) {
 	case HTML_DRAG_SELECTION:
-		res = mouse_action_drag_selection(html, bw, mouse, x, y);
+		res = interaction__mouse_action_drag_selection(html, bw, mouse, x, y);
 		break;
 
 	case HTML_DRAG_SCROLLBAR:
-		res = mouse_action_drag_scrollbar(html, bw, mouse, x, y);
+		res = interaction__mouse_action_drag_scrollbar(html, bw, mouse, x, y);
 		break;
 
 	case HTML_DRAG_TEXTAREA_SELECTION:
 	case HTML_DRAG_TEXTAREA_SCROLLBAR:
-		res = mouse_action_drag_textarea(html, bw, mouse, x, y);
+		res = interaction__mouse_action_drag_textarea(html, bw, mouse, x, y);
 		break;
 
 	case HTML_DRAG_CONTENT_SELECTION:
 	case HTML_DRAG_CONTENT_SCROLL:
-		res = mouse_action_drag_content(html, bw, mouse, x, y);
+		res = interaction__mouse_action_drag_content(html, bw, mouse, x, y);
 		break;
 
 	case HTML_DRAG_NONE:
-		res = mouse_action_drag_none(html, bw, mouse, x, y);
+		res = interaction__mouse_action_drag_none(html, bw, mouse, x, y);
 		break;
 
 	default:

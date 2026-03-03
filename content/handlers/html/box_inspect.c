@@ -72,7 +72,7 @@ enum box_walk_dir {
  * This is a helper function for box_at_point().
  */
 static bool
-box_contains_point(const css_unit_ctx *unit_len_ctx,
+box_inspect__contains_point(const css_unit_ctx *unit_len_ctx,
 		   const struct box *box,
 		   int x,
 		   int y,
@@ -198,7 +198,7 @@ box_contains_point(const css_unit_ctx *unit_len_ctx,
  * If no box can be found in given direction, NULL is returned.
  */
 static inline struct box *
-box_move_xy(struct box *b, enum box_walk_dir dir, int *x, int *y)
+box_inspect__move_xy(struct box *b, enum box_walk_dir dir, int *x, int *y)
 {
 	struct box *rb = NULL;
 
@@ -280,7 +280,7 @@ box_move_xy(struct box *b, enum box_walk_dir dir, int *x, int *y)
  * children, floating boxes are skipped.
  */
 static inline struct box *
-box_next_xy(struct box *b, int *x, int *y, bool skip_children)
+box_inspect__next_xy(struct box *b, int *x, int *y, bool skip_children)
 {
 	struct box *n;
 	int tx, ty;
@@ -293,7 +293,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
 	}
 
 	tx = *x; ty = *y;
-	n = box_move_xy(b, BOX_WALK_FLOAT_CHILDREN, &tx, &ty);
+	n = box_inspect__move_xy(b, BOX_WALK_FLOAT_CHILDREN, &tx, &ty);
 	if (n) {
 		/* Next node is float child */
 		*x = tx;
@@ -303,7 +303,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
  done_float_children:
 
 	tx = *x; ty = *y;
-	n = box_move_xy(b, BOX_WALK_CHILDREN, &tx, &ty);
+	n = box_inspect__move_xy(b, BOX_WALK_CHILDREN, &tx, &ty);
 	if (n) {
 		/* Next node is child */
 		*x = tx;
@@ -313,7 +313,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
 
  skip_children:
 	tx = *x; ty = *y;
-	n = box_move_xy(b, BOX_WALK_NEXT_FLOAT_SIBLING, &tx, &ty);
+	n = box_inspect__move_xy(b, BOX_WALK_NEXT_FLOAT_SIBLING, &tx, &ty);
 	if (n) {
 		/* Go to next float sibling */
 		*x = tx;
@@ -326,14 +326,14 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
 		 * or siblings, or ansestors with siblings.  Change to
 		 * float container and move past handling its float children.
 		 */
-		b = box_move_xy(b, BOX_WALK_FLOAT_CONTAINER, x, y);
+		b = box_inspect__move_xy(b, BOX_WALK_FLOAT_CONTAINER, x, y);
 		goto done_float_children;
 	}
 
 	/* Go to next sibling, or nearest ancestor with next sibling. */
 	while (b) {
 		while (!b->next && b->parent) {
-			b = box_move_xy(b, BOX_WALK_PARENT, x, y);
+			b = box_inspect__move_xy(b, BOX_WALK_PARENT, x, y);
 			if (box_is_float(b)) {
 				/* Go on to next float, if there is one */
 				goto skip_children;
@@ -345,7 +345,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
 		}
 
 		tx = *x; ty = *y;
-		n = box_move_xy(b, BOX_WALK_NEXT_SIBLING, &tx, &ty);
+		n = box_inspect__move_xy(b, BOX_WALK_NEXT_SIBLING, &tx, &ty);
 		if (n) {
 			/* Go to non-float (ancestor) sibling */
 			*x = tx;
@@ -353,7 +353,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
 			return n;
 
 		} else if (b->parent) {
-			b = box_move_xy(b, BOX_WALK_PARENT, x, y);
+			b = box_inspect__move_xy(b, BOX_WALK_PARENT, x, y);
 			if (box_is_float(b)) {
 				/* Go on to next float, if there is one */
 				goto skip_children;
@@ -393,7 +393,7 @@ box_next_xy(struct box *b, int *x, int *y, bool skip_children)
  * \return true if mouse point is inside box
  */
 static bool
-box_nearer_text_box(struct box *box,
+box_inspect__nearer_text_box(struct box *box,
 		    int bx, int by,
 		    int x, int y,
 		    int dir,
@@ -469,7 +469,7 @@ box_nearer_text_box(struct box *box,
  * \return true if mouse point is inside text_box
  */
 static bool
-box_nearest_text_box(struct box *box,
+box_inspect__nearest_text_box(struct box *box,
 		     int bx, int by,
 		     int fx, int fy,
 		     int x, int y,
@@ -518,13 +518,13 @@ box_nearest_text_box(struct box *box,
 			c_fy = fy;
 		}
 		if (in_box && child->text && !child->object) {
-			if (box_nearer_text_box(child,
+			if (box_inspect__nearer_text_box(child,
 						c_bx, c_by, x, y, dir, nearest,
 						tx, ty, nr_xd, nr_yd))
 				return true;
 		} else {
 			if (child->list_marker) {
-				if (box_nearer_text_box(
+				if (box_inspect__nearer_text_box(
 						child->list_marker,
 						c_bx + child->list_marker->x,
 						c_by + child->list_marker->y,
@@ -532,7 +532,7 @@ box_nearest_text_box(struct box *box,
 						tx, ty, nr_xd, nr_yd))
 					return true;
 			}
-			if (box_nearest_text_box(child, c_bx, c_by,
+			if (box_inspect__nearest_text_box(child, c_bx, c_by,
 						 c_fx, c_fy,
 						 x, y, dir, nearest, tx, ty,
 						 nr_xd, nr_yd))
@@ -591,8 +591,8 @@ box_at_point(const css_unit_ctx *unit_len_ctx,
 	assert(box);
 
 	skip_children = false;
-	while ((box = box_next_xy(box, box_x, box_y, skip_children))) {
-		if (box_contains_point(unit_len_ctx, box, x - *box_x, y - *box_y,
+	while ((box = box_inspect__next_xy(box, box_x, box_y, skip_children))) {
+		if (box_inspect__contains_point(unit_len_ctx, box, x - *box_x, y - *box_y,
 				       &physically)) {
 			*box_x -= scrollbar_get_offset(box->scroll_x);
 			*box_y -= scrollbar_get_offset(box->scroll_y);
@@ -868,7 +868,7 @@ box_pick_text_box(struct html_content *html,
 	fx = bx;
 	fy = by;
 
-	if (!box_nearest_text_box(box, bx, by, fx, fy, x, y,
+	if (!box_inspect__nearest_text_box(box, bx, by, fx, fy, x, y,
 				  dir, &text_box, &tx, &ty, &nr_xd, &nr_yd)) {
 		if (text_box && text_box->text && !text_box->object) {
 			int w = (text_box->padding[LEFT] +

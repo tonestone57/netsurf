@@ -63,7 +63,7 @@ static const content_type image_types = CONTENT_IMAGE;
  * \param n node to check
  * \return true if node is root else false.
  */
-static inline bool box_is_root(dom_node *n)
+static inline bool box_special__is_root(dom_node *n)
 {
 	dom_node *parent;
 	dom_node_type type;
@@ -95,7 +95,7 @@ static inline bool box_is_root(dom_node *n)
  * \param o  The object params being destroyed.
  * \return 0 to allow talloc to continue destroying the tree.
  */
-static int box_object_talloc_destructor(struct object_params *o)
+static int box_special__object_talloc_destructor(struct object_params *o)
 {
 	if (o->codebase != NULL)
 		nsurl_unref(o->codebase);
@@ -116,7 +116,7 @@ static int box_object_talloc_destructor(struct object_params *o)
  * \return array of struct box_multi_length, or 0 on memory exhaustion
  */
 static struct frame_dimension *
-box_parse_multi_lengths(const dom_string *ds, unsigned int *count)
+box_special__parse_multi_lengths(const dom_string *ds, unsigned int *count)
 {
 	char *end;
 	unsigned int i, n;
@@ -172,7 +172,7 @@ box_parse_multi_lengths(const dom_string *ds, unsigned int *count)
  * \param f  The frame params being destroyed.
  * \return 0 to allow talloc to continue destroying the tree.
  */
-static int box_frames_talloc_destructor(struct content_html_frames *f)
+static int box_special__frames_talloc_destructor(struct content_html_frames *f)
 {
 	if (f->url != NULL) {
 		nsurl_unref(f->url);
@@ -187,7 +187,7 @@ static int box_frames_talloc_destructor(struct content_html_frames *f)
  * create a frameset box tree
  */
 static bool
-box_create_frameset(struct content_html_frames *f,
+box_special__create_frameset(struct content_html_frames *f,
 		    dom_node *n,
 		    html_content *content)
 {
@@ -205,7 +205,7 @@ box_create_frameset(struct content_html_frames *f,
 	/* parse rows and columns */
 	err = dom_element_get_attribute(n, corestring_dom_rows, &s);
 	if (err == DOM_NO_ERR && s != NULL) {
-		row_height = box_parse_multi_lengths(s, &rows);
+		row_height = box_special__parse_multi_lengths(s, &rows);
 		dom_string_unref(s);
 		if (row_height == NULL)
 			return false;
@@ -219,7 +219,7 @@ box_create_frameset(struct content_html_frames *f,
 
 	err = dom_element_get_attribute(n, corestring_dom_cols, &s);
 	if (err == DOM_NO_ERR && s != NULL) {
-		col_width = box_parse_multi_lengths(s, &cols);
+		col_width = box_special__parse_multi_lengths(s, &cols);
 		dom_string_unref(s);
 		if (col_width == NULL) {
 			free(row_height);
@@ -272,7 +272,7 @@ box_create_frameset(struct content_html_frames *f,
 	f->children = talloc_array(content->bctx, struct content_html_frames,
 								(rows * cols));
 
-	talloc_set_destructor(f->children, box_frames_talloc_destructor);
+	talloc_set_destructor(f->children, box_special__frames_talloc_destructor);
 
 	for (row = 0; row < rows; row++) {
 		for (col = 0; col < cols; col++) {
@@ -363,7 +363,7 @@ box_create_frameset(struct content_html_frames *f,
 					corestring_lwc_frameset)) {
 				dom_string_unref(s);
 				frame->border = 0;
-				if (box_create_frameset(frame, c,
+				if (box_special__create_frameset(frame, c,
 						content) == false) {
 					dom_node_unref(c);
 					return false;
@@ -386,7 +386,7 @@ box_create_frameset(struct content_html_frames *f,
 			url = NULL;
 			err = dom_element_get_attribute(c, corestring_dom_src, &s);
 			if (err == DOM_NO_ERR && s != NULL) {
-				box_extract_link(content, s, content->base_url,
+				box_construct__extract_link(content, s, content->base_url,
 						 &url);
 				dom_string_unref(s);
 			}
@@ -489,7 +489,7 @@ box_create_frameset(struct content_html_frames *f,
  * \param f The iframe params being destroyed.
  * \return 0 to allow talloc to continue destroying the tree.
  */
-static int box_iframes_talloc_destructor(struct content_html_iframe *f)
+static int box_special__iframes_talloc_destructor(struct content_html_iframe *f)
 {
 	if (f->url != NULL) {
 		nsurl_unref(f->url);
@@ -513,7 +513,7 @@ static int box_iframes_talloc_destructor(struct content_html_iframe *f)
  * attribute was not found, *value will be unchanged.
  */
 static bool
-box_get_attribute(dom_node *n,
+box_special__get_attribute(dom_node *n,
 		  const char *attribute,
 		  void *context,
 		  char **value)
@@ -557,7 +557,7 @@ box_get_attribute(dom_node *n,
  * can be handled by the layout code.
  */
 static bool
-box_input_text(html_content *html, struct box *box, struct dom_node *node)
+box_special__input_text(html_content *html, struct box *box, struct dom_node *node)
 {
 	struct box *inline_container, *inline_box;
 	uint8_t display = css_computed_display_static(box->style);
@@ -592,13 +592,13 @@ box_input_text(html_content *html, struct box *box, struct dom_node *node)
 
 
 /**
- * Add an option to a form select control (helper function for box_select()).
+ * Add an option to a form select control (helper function for box_special__select()).
  *
  * \param  control  select containing the &lt;option&gt;
  * \param  n	    xml element node for &lt;option&gt;
  * \return  true on success, false on memory exhaustion
  */
-static bool box_select_add_option(struct form_control *control, dom_node *n)
+static bool box_special__select_add_option(struct form_control *control, dom_node *n)
 {
 	char *value = NULL;
 	char *text = NULL;
@@ -680,7 +680,7 @@ no_memory:
  * special element handler for Anchor [12.2].
  */
 static bool
-box_a(dom_node *n,
+box_special__a(dom_node *n,
       html_content *content,
       struct box *box,
       bool *convert_children)
@@ -692,7 +692,7 @@ box_a(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_href, &s);
 	if (err == DOM_NO_ERR && s != NULL) {
-		ok = box_extract_link(content, s, content->base_url, &url);
+		ok = box_construct__extract_link(content, s, content->base_url, &url);
 		dom_string_unref(s);
 		if (!ok)
 			return false;
@@ -758,7 +758,7 @@ box_a(dom_node *n,
  * Document body special element handler [7.5.1].
  */
 static bool
-box_body(dom_node *n,
+box_special__body(dom_node *n,
 	 html_content *content,
 	 struct box *box,
 	 bool *convert_children)
@@ -780,7 +780,7 @@ box_body(dom_node *n,
  * special element handler for forced line break [9.3.2].
  */
 static bool
-box_br(dom_node *n,
+box_special__br(dom_node *n,
        html_content *content,
        struct box *box,
        bool *convert_children)
@@ -794,14 +794,14 @@ box_br(dom_node *n,
  * special element handler for Push button [17.5].
  */
 static bool
-box_button(dom_node *n,
+box_special__button(dom_node *n,
 	   html_content *content,
 	   struct box *box,
 	   bool *convert_children)
 {
 	struct form_control *gadget;
 
-	gadget = html_forms_get_control_for_node(content->forms, n);
+	gadget = forms__get_control_for_node(content->forms, n);
 	if (!gadget)
 		return false;
 
@@ -822,7 +822,7 @@ box_button(dom_node *n,
  * Canvas element
  */
 static bool
-box_canvas(dom_node *n,
+box_special__canvas(dom_node *n,
 	     html_content *content,
 	     struct box *box,
 	     bool *convert_children)
@@ -834,7 +834,7 @@ box_canvas(dom_node *n,
 	*convert_children = false;
 
 	if (box->style && ns_computed_display(box->style,
-			box_is_root(n)) == CSS_DISPLAY_NONE)
+			box_special__is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
 	/* This is replaced content */
@@ -849,7 +849,7 @@ box_canvas(dom_node *n,
  * see http://wp.netscape.com/assist/net_sites/new_html3_prop.html )
  */
 static bool
-box_embed(dom_node *n,
+box_special__embed(dom_node *n,
 	  html_content *content,
 	  struct box *box,
 	  bool *convert_children)
@@ -863,14 +863,14 @@ box_embed(dom_node *n,
 	dom_exception err;
 
 	if (box->style && ns_computed_display(box->style,
-			box_is_root(n)) == CSS_DISPLAY_NONE)
+			box_special__is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
 	params = talloc(content->bctx, struct object_params);
 	if (params == NULL)
 		return false;
 
-	talloc_set_destructor(params, box_object_talloc_destructor);
+	talloc_set_destructor(params, box_special__object_talloc_destructor);
 
 	params->data = NULL;
 	params->type = NULL;
@@ -883,7 +883,7 @@ box_embed(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &src);
 	if (err != DOM_NO_ERR || src == NULL)
 		return true;
-	if (box_extract_link(content, src, content->base_url,
+	if (box_construct__extract_link(content, src, content->base_url,
 			     &params->data) == false) {
 		dom_string_unref(src);
 		return false;
@@ -983,7 +983,7 @@ box_embed(dom_node *n,
  * Window subdivision [16.2.1].
  */
 static bool
-box_frameset(dom_node *n,
+box_special__frameset(dom_node *n,
 	     html_content *content,
 	     struct box *box,
 	     bool *convert_children)
@@ -1006,7 +1006,7 @@ box_frameset(dom_node *n,
 		return false;
 	}
 
-	ok = box_create_frameset(content->frameset, n, content);
+	ok = box_special__create_frameset(content->frameset, n, content);
 	if (ok) {
 		box->type = BOX_NONE;
 	}
@@ -1022,7 +1022,7 @@ box_frameset(dom_node *n,
  * Inline subwindow [16.5].
  */
 static bool
-box_iframe(dom_node *n,
+box_special__iframe(dom_node *n,
 	   html_content *content,
 	   struct box *box,
 	   bool *convert_children)
@@ -1034,7 +1034,7 @@ box_iframe(dom_node *n,
 	int i;
 
 	if (box->style && ns_computed_display(box->style,
-			box_is_root(n)) == CSS_DISPLAY_NONE)
+			box_special__is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
 	if (box->style &&
@@ -1049,7 +1049,7 @@ box_iframe(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &s);
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
-	if (box_extract_link(content, s, content->base_url, &url) == false) {
+	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1070,7 +1070,7 @@ box_iframe(dom_node *n,
 		return false;
 	}
 
-	talloc_set_destructor(iframe, box_iframes_talloc_destructor);
+	talloc_set_destructor(iframe, box_special__iframes_talloc_destructor);
 
 	iframe->box = box;
 	iframe->margin_width = 0;
@@ -1147,7 +1147,7 @@ box_iframe(dom_node *n,
  * Embedded image [13.2].
  */
 static bool
-box_image(dom_node *n,
+box_special__image(dom_node *n,
 	  html_content *content,
 	  struct box *box,
 	  bool *convert_children)
@@ -1163,7 +1163,7 @@ box_image(dom_node *n,
 	css_unit hunit = CSS_UNIT_PX;
 
 	if (box->style && ns_computed_display(box->style,
-			box_is_root(n)) == CSS_DISPLAY_NONE)
+			box_special__is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
 	/* handle alt text */
@@ -1185,7 +1185,7 @@ box_image(dom_node *n,
 	}
 
 	/* imagemap associated with this image */
-	if (!box_get_attribute(n, "usemap", content->bctx, &box->usemap))
+	if (!box_special__get_attribute(n, "usemap", content->bctx, &box->usemap))
 		return false;
 	if (box->usemap && box->usemap[0] == '#')
 		box->usemap++;
@@ -1195,7 +1195,7 @@ box_image(dom_node *n,
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
 
-	if (box_extract_link(content, s, content->base_url, &url) == false) {
+	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1230,7 +1230,7 @@ box_image(dom_node *n,
  * Form control [17.4].
  */
 static bool
-box_input(dom_node *n,
+box_special__input(dom_node *n,
 	  html_content *content,
 	  struct box *box,
 	  bool *convert_children)
@@ -1241,7 +1241,7 @@ box_input(dom_node *n,
 	nsurl *url;
 	nserror error;
 
-	gadget = html_forms_get_control_for_node(content->forms, n);
+	gadget = forms__get_control_for_node(content->forms, n);
 	if (gadget == NULL) {
 		return false;
 	}
@@ -1255,7 +1255,7 @@ box_input(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_type, &type);
 	if ((err != DOM_NO_ERR) || (type == NULL)) {
 		/* no type so "text" is assumed */
-		if (box_input_text(content, box, n) == false) {
+		if (box_special__input_text(content, box, n) == false) {
 			return false;
 		}
 		*convert_children = false;
@@ -1263,7 +1263,7 @@ box_input(dom_node *n,
 	}
 
 	if (dom_string_caseless_lwc_isequal(type, corestring_lwc_password)) {
-		if (box_input_text(content, box, n) == false)
+		if (box_special__input_text(content, box, n) == false)
 			goto no_memory;
 
 	} else if (dom_string_caseless_lwc_isequal(type, corestring_lwc_file)) {
@@ -1287,7 +1287,7 @@ box_input(dom_node *n,
 				corestring_lwc_button)) {
 		struct box *inline_container, *inline_box;
 
-		if (box_button(n, content, box, 0) == false)
+		if (box_special__button(n, content, box, 0) == false)
 			goto no_memory;
 
 		inline_container = box_create(NULL, 0, false, 0, 0, 0, 0,
@@ -1331,7 +1331,7 @@ box_input(dom_node *n,
 		gadget->type = GADGET_IMAGE;
 
 		if (box->style && ns_computed_display(box->style,
-				box_is_root(n)) != CSS_DISPLAY_NONE &&
+				box_special__is_root(n)) != CSS_DISPLAY_NONE &&
 				nsoption_bool(foreground_images) == true) {
 			dom_string *s;
 
@@ -1362,7 +1362,7 @@ box_input(dom_node *n,
 		}
 	} else {
 		/* unhandled type the default is "text" */
-		if (box_input_text(content, box, n) == false)
+		if (box_special__input_text(content, box, n) == false)
 			goto no_memory;
 	}
 
@@ -1383,7 +1383,7 @@ no_memory:
  * Noscript element
  */
 static bool
-box_noscript(dom_node *n,
+box_special__noscript(dom_node *n,
 	     html_content *content,
 	     struct box *box,
 	     bool *convert_children)
@@ -1401,7 +1401,7 @@ box_noscript(dom_node *n,
  * Generic embedded object [13.3].
  */
 static bool
-box_object(dom_node *n,
+box_special__object(dom_node *n,
 	   html_content *content,
 	   struct box *box,
 	   bool *convert_children)
@@ -1413,10 +1413,10 @@ box_object(dom_node *n,
 	dom_exception err;
 
 	if (box->style && ns_computed_display(box->style,
-			box_is_root(n)) == CSS_DISPLAY_NONE)
+			box_special__is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
-	if (box_get_attribute(n, "usemap", content->bctx, &box->usemap) ==
+	if (box_special__get_attribute(n, "usemap", content->bctx, &box->usemap) ==
 			false)
 		return false;
 	if (box->usemap && box->usemap[0] == '#')
@@ -1426,7 +1426,7 @@ box_object(dom_node *n,
 	if (params == NULL)
 		return false;
 
-	talloc_set_destructor(params, box_object_talloc_destructor);
+	talloc_set_destructor(params, box_special__object_talloc_destructor);
 
 	params->data = NULL;
 	params->type = NULL;
@@ -1439,7 +1439,7 @@ box_object(dom_node *n,
 	 * (codebase is the base for the other two) */
 	err = dom_element_get_attribute(n, corestring_dom_codebase, &codebase);
 	if (err == DOM_NO_ERR && codebase != NULL) {
-		if (box_extract_link(content, codebase,	content->base_url,
+		if (box_construct__extract_link(content, codebase,	content->base_url,
 				&params->codebase) == false) {
 			dom_string_unref(codebase);
 			return false;
@@ -1451,7 +1451,7 @@ box_object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_classid, &classid);
 	if (err == DOM_NO_ERR && classid != NULL) {
-		if (box_extract_link(content, classid,
+		if (box_construct__extract_link(content, classid,
 				params->codebase, &params->classid) == false) {
 			dom_string_unref(classid);
 			return false;
@@ -1461,7 +1461,7 @@ box_object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_data, &data);
 	if (err == DOM_NO_ERR && data != NULL) {
-		if (box_extract_link(content, data,
+		if (box_construct__extract_link(content, data,
 				params->codebase, &params->data) == false) {
 			dom_string_unref(data);
 			return false;
@@ -1483,10 +1483,10 @@ box_object(dom_node *n,
 		return true;
 
 	/* codetype and type are MIME types */
-	if (box_get_attribute(n, "codetype", params,
+	if (box_special__get_attribute(n, "codetype", params,
 			&params->codetype) == false)
 		return false;
-	if (box_get_attribute(n, "type", params, &params->type) == false)
+	if (box_special__get_attribute(n, "type", params, &params->type) == false)
 		return false;
 
 	/* classid && !data => classid is used (consult codetype)
@@ -1578,25 +1578,25 @@ box_object(dom_node *n,
 			param->valuetype = NULL;
 			param->next = NULL;
 
-			if (box_get_attribute(c, "name", param,
+			if (box_special__get_attribute(c, "name", param,
 					&param->name) == false) {
 				dom_node_unref(c);
 				return false;
 			}
 
-			if (box_get_attribute(c, "value", param,
+			if (box_special__get_attribute(c, "value", param,
 					&param->value) == false) {
 				dom_node_unref(c);
 				return false;
 			}
 
-			if (box_get_attribute(c, "type", param,
+			if (box_special__get_attribute(c, "type", param,
 					&param->type) == false) {
 				dom_node_unref(c);
 				return false;
 			}
 
-			if (box_get_attribute(c, "valuetype", param,
+			if (box_special__get_attribute(c, "valuetype", param,
 					&param->valuetype) == false) {
 				dom_node_unref(c);
 				return false;
@@ -1644,7 +1644,7 @@ box_object(dom_node *n,
  * Preformatted text [9.3.4].
  */
 static bool
-box_pre(dom_node *n,
+box_special__pre(dom_node *n,
 	html_content *content,
 	struct box *box,
 	bool *convert_children)
@@ -1658,7 +1658,7 @@ box_pre(dom_node *n,
  * Option selector [17.6].
  */
 static bool
-box_select(dom_node *n,
+box_special__select(dom_node *n,
 	   html_content *content,
 	   struct box *box,
 	   bool *convert_children)
@@ -1670,7 +1670,7 @@ box_select(dom_node *n,
 	dom_node *next, *next2;
 	dom_exception err;
 
-	gadget = html_forms_get_control_for_node(content->forms, n);
+	gadget = forms__get_control_for_node(content->forms, n);
 	if (gadget == NULL)
 		return false;
 
@@ -1695,7 +1695,7 @@ box_select(dom_node *n,
 				corestring_lwc_option)) {
 			dom_string_unref(name);
 
-			if (box_select_add_option(gadget, c) == false) {
+			if (box_special__select_add_option(gadget, c) == false) {
 				dom_node_unref(c);
 				form_free_control(gadget);
 				return false;
@@ -1726,7 +1726,7 @@ box_select(dom_node *n,
 						corestring_lwc_option)) {
 					dom_string_unref(c2_name);
 
-					if (box_select_add_option(gadget,
+					if (box_special__select_add_option(gadget,
 							c2) == false) {
 						dom_node_unref(c2);
 						dom_node_unref(c);
@@ -1821,13 +1821,13 @@ no_memory:
 /**
  * Multi-line text field [17.7].
  */
-static bool box_textarea(dom_node *n,
+static bool box_special__textarea(dom_node *n,
 			html_content *content,
 			struct box *box,
 			bool *convert_children)
 {
 	/* Get the form_control for the DOM node */
-	box->gadget = html_forms_get_control_for_node(content->forms, n);
+	box->gadget = forms__get_control_for_node(content->forms, n);
 	if (box->gadget == NULL)
 		return false;
 
@@ -1835,7 +1835,7 @@ static bool box_textarea(dom_node *n,
 	box->gadget->html = content;
 	box->gadget->box = box;
 
-	if (!box_input_text(content, box, n))
+	if (!box_special__input_text(content, box, n))
 		return false;
 
 	*convert_children = false;
@@ -1866,63 +1866,63 @@ convert_special_elements(dom_node *node,
 
 	switch (tag_type) {
 	case DOM_HTML_ELEMENT_TYPE_A:
-		res =  box_a(node, content, box, convert_children);
+		res =  box_special__a(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_BODY:
-		res = box_body(node, content, box, convert_children);
+		res = box_special__body(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_BR:
-		res = box_br(node, content, box, convert_children);
+		res = box_special__br(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_BUTTON:
-		res = box_button(node, content, box, convert_children);
+		res = box_special__button(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_CANVAS:
-		res = box_canvas(node, content, box, convert_children);
+		res = box_special__canvas(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_EMBED:
-		res = box_embed(node, content, box, convert_children);
+		res = box_special__embed(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_FRAMESET:
-		res = box_frameset(node, content, box, convert_children);
+		res = box_special__frameset(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_IFRAME:
-		res = box_iframe(node, content, box, convert_children);
+		res = box_special__iframe(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_IMG:
-		res = box_image(node, content, box, convert_children);
+		res = box_special__image(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_INPUT:
-		res = box_input(node, content, box, convert_children);
+		res = box_special__input(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_NOSCRIPT:
-		res = box_noscript(node, content, box, convert_children);
+		res = box_special__noscript(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_OBJECT:
-		res = box_object(node, content, box, convert_children);
+		res = box_special__object(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_PRE:
-		res = box_pre(node, content, box, convert_children);
+		res = box_special__pre(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_SELECT:
-		res = box_select(node, content, box, convert_children);
+		res = box_special__select(node, content, box, convert_children);
 		break;
 
 	case DOM_HTML_ELEMENT_TYPE_TEXTAREA:
-		res = box_textarea(node, content, box, convert_children);
+		res = box_special__textarea(node, content, box, convert_children);
 		break;
 
 	default:

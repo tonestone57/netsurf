@@ -73,7 +73,7 @@ bool html_redraw_debug = false;
  * \param box  Box to consider
  * \return True if box has a background, false otherwise.
  */
-static bool html_redraw_box_has_background(struct box *box)
+static bool redraw__box_has_background(struct box *box)
 {
 	if (box->background != NULL)
 		return true;
@@ -96,7 +96,7 @@ static bool html_redraw_box_has_background(struct box *box)
  * \param box  Box to find background box for
  * \return Pointer to background box, or NULL if there is none
  */
-static struct box *html_redraw_find_bg_box(struct box *box)
+static struct box *redraw__find_bg_box(struct box *box)
 {
 	/* Thanks to backwards compatibility, CSS defines the following:
 	 *
@@ -110,22 +110,22 @@ static struct box *html_redraw_find_bg_box(struct box *box)
 	 */
 	if (box->parent == NULL) {
 		/* Root box */
-		if (html_redraw_box_has_background(box))
+		if (redraw__box_has_background(box))
 			return box;
 
 		/* No background on root box: consider body box, if any */
 		if (box->children != NULL) {
-			if (html_redraw_box_has_background(box->children))
+			if (redraw__box_has_background(box->children))
 				return box->children;
 		}
 	} else if (box->parent != NULL && box->parent->parent == NULL) {
 		/* Body box: only render background if root has its own */
-		if (html_redraw_box_has_background(box) &&
-				html_redraw_box_has_background(box->parent))
+		if (redraw__box_has_background(box) &&
+				redraw__box_has_background(box->parent))
 			return box;
 	} else {
 		/* Any other box */
-		if (html_redraw_box_has_background(box))
+		if (redraw__box_has_background(box))
 			return box;
 	}
 
@@ -155,7 +155,7 @@ static struct box *html_redraw_find_bg_box(struct box *box)
  */
 
 static bool
-text_redraw(const char *utf8_text,
+redraw__text(const char *utf8_text,
 	    size_t utf8_len,
 	    size_t offset,
 	    int space,
@@ -364,7 +364,7 @@ text_redraw(const char *utf8_text,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_checkbox(int x, int y, int width, int height,
+static bool redraw__checkbox(int x, int y, int width, int height,
 		bool selected, const struct redraw_context *ctx)
 {
 	double z;
@@ -463,7 +463,7 @@ static bool html_redraw_checkbox(int x, int y, int width, int height,
  * \param  ctx	     current redraw context
  * \return true if successful, false otherwise
  */
-static bool html_redraw_radio(int x, int y, int width, int height,
+static bool redraw__radio(int x, int y, int width, int height,
 		bool selected, const struct redraw_context *ctx)
 {
 	nserror res;
@@ -533,7 +533,7 @@ static bool html_redraw_radio(int x, int y, int width, int height,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_file(int x, int y, int width, int height,
+static bool redraw__file(int x, int y, int width, int height,
 		struct box *box, float scale, colour background_colour,
 		const css_unit_ctx *unit_len_ctx,
 		const struct redraw_context *ctx)
@@ -592,7 +592,7 @@ static bool html_redraw_file(int x, int y, int width, int height,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_background(int x, int y, struct box *box, float scale,
+static bool redraw__background(int x, int y, struct box *box, float scale,
 		const struct rect *clip, colour *background_colour,
 		struct box *background,
 		const css_unit_ctx *unit_len_ctx,
@@ -821,7 +821,7 @@ static bool html_redraw_background(int x, int y, struct box *box, float scale,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_inline_background(int x, int y, struct box *box,
+static bool redraw__inline_background(int x, int y, struct box *box,
 		float scale, const struct rect *clip, struct rect b,
 		bool first, bool last, colour *background_colour,
 		const css_unit_ctx *unit_len_ctx,
@@ -973,7 +973,7 @@ static bool html_redraw_inline_background(int x, int y, struct box *box,
  */
 
 static bool
-html_redraw_text_decoration_inline(struct box *box,
+redraw__text_decoration_inline(struct box *box,
 				   int x, int y,
 				   float scale,
 				   colour colour,
@@ -1021,7 +1021,7 @@ html_redraw_text_decoration_inline(struct box *box,
  */
 
 static bool
-html_redraw_text_decoration_block(struct box *box,
+redraw__text_decoration_block(struct box *box,
 				  int x, int y,
 				  float scale,
 				  colour colour,
@@ -1048,7 +1048,7 @@ html_redraw_text_decoration_block(struct box *box,
 				return false;
 			}
 		} else if ((c->type == BOX_INLINE_CONTAINER) || (c->type == BOX_BLOCK)) {
-			if (!html_redraw_text_decoration_block(c,
+			if (!redraw__text_decoration_block(c,
 					x + c->x, y + c->y,
 					scale, colour, ratio, ctx))
 				return false;
@@ -1070,7 +1070,7 @@ html_redraw_text_decoration_block(struct box *box,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_text_decoration(struct box *box,
+static bool redraw__text_decoration(struct box *box,
 		int x_parent, int y_parent, float scale,
 		colour background_colour, const struct redraw_context *ctx)
 {
@@ -1095,7 +1095,7 @@ static bool html_redraw_text_decoration(struct box *box,
 		for (i = 0; i != NOF_ELEMENTS(decoration); i++)
 			if (css_computed_text_decoration(box->style) &
 					decoration[i])
-				if (!html_redraw_text_decoration_inline(box,
+				if (!redraw__text_decoration_inline(box,
 						x_parent, y_parent, scale,
 						fgcol, line_ratio[i], ctx))
 					return false;
@@ -1103,7 +1103,7 @@ static bool html_redraw_text_decoration(struct box *box,
 		for (i = 0; i != NOF_ELEMENTS(decoration); i++)
 			if (css_computed_text_decoration(box->style) &
 					decoration[i])
-				if (!html_redraw_text_decoration_block(box,
+				if (!redraw__text_decoration_block(box,
 						x_parent + box->x,
 						y_parent + box->y,
 						scale,
@@ -1130,7 +1130,7 @@ static bool html_redraw_text_decoration(struct box *box,
  * \return true iff successful and redraw should proceed
  */
 
-static bool html_redraw_text_box(const html_content *html, struct box *box,
+static bool redraw__text_box(const html_content *html, struct box *box,
 		int x, int y, const struct rect *clip, float scale,
 		colour current_background_color,
 		const struct redraw_context *ctx)
@@ -1141,7 +1141,7 @@ static bool html_redraw_text_box(const html_content *html, struct box *box,
 	font_plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
 	fstyle.background = current_background_color;
 
-	if (!text_redraw(box->text,
+	if (!redraw__text(box->text,
 			 box->length,
 			 box->byte_offset,
 			 box->space,
@@ -1159,7 +1159,7 @@ static bool html_redraw_text_box(const html_content *html, struct box *box,
 	return true;
 }
 
-bool html_redraw_box(const html_content *html, struct box *box,
+bool redraw__box(const html_content *html, struct box *box,
 		int x_parent, int y_parent,
 		const struct rect *clip, float scale,
 		colour current_background_color,
@@ -1179,7 +1179,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
  * \return true if successful, false otherwise
  */
 
-static bool html_redraw_box_children(const html_content *html, struct box *box,
+static bool redraw__box_children(const html_content *html, struct box *box,
 		int x_parent, int y_parent,
 		const struct rect *clip, float scale,
 		colour current_background_color,
@@ -1190,7 +1190,7 @@ static bool html_redraw_box_children(const html_content *html, struct box *box,
 	for (c = box->children; c; c = c->next) {
 
 		if (c->type != BOX_FLOAT_LEFT && c->type != BOX_FLOAT_RIGHT)
-			if (!html_redraw_box(html, c,
+			if (!redraw__box(html, c,
 					x_parent + box->x -
 					scrollbar_get_offset(box->scroll_x),
 					y_parent + box->y -
@@ -1200,7 +1200,7 @@ static bool html_redraw_box_children(const html_content *html, struct box *box,
 				return false;
 	}
 	for (c = box->float_children; c; c = c->next_float)
-		if (!html_redraw_box(html, c,
+		if (!redraw__box(html, c,
 				x_parent + box->x -
 				scrollbar_get_offset(box->scroll_x),
 				y_parent + box->y -
@@ -1228,7 +1228,7 @@ static bool html_redraw_box_children(const html_content *html, struct box *box,
  * x, y, clip_[xy][01] are in target coordinates.
  */
 
-bool html_redraw_box(const html_content *html, struct box *box,
+bool redraw__box(const html_content *html, struct box *box,
 		int x_parent, int y_parent,
 		const struct rect *clip, const float scale,
 		colour current_background_color,
@@ -1391,7 +1391,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 		if ((ctx->plot->group_start) &&
 		    (ctx->plot->group_start(ctx, "hidden box") != NSERROR_OK))
 			return false;
-		if (!html_redraw_box_children(html, box, x_parent, y_parent,
+		if (!redraw__box_children(html, box, x_parent, y_parent,
 				&r, scale, current_background_color, ctx))
 			return false;
 		return ((!ctx->plot->group_end) || (ctx->plot->group_end(ctx) == NSERROR_OK));
@@ -1467,7 +1467,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 	/* background colour and image for block level content and replaced
 	 * inlines */
 
-	bg_box = html_redraw_find_bg_box(box);
+	bg_box = redraw__find_bg_box(box);
 
 	/* bg_box == NULL implies that this box should not have
 	* its background rendered. Otherwise filter out linebreaks,
@@ -1513,7 +1513,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 		/* valid clipping rectangles only */
 		if ((p.x0 < p.x1) && (p.y0 < p.y1)) {
 			/* plot background */
-			if (!html_redraw_background(x, y, box, scale, &p,
+			if (!redraw__background(x, y, box, scale, &p,
 					&current_background_color, bg_box,
 					&html->unit_len_ctx, ctx))
 				return false;
@@ -1534,7 +1534,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 	       box->gadget->type == GADGET_TEXTBOX ||
 	       box->gadget->type == GADGET_PASSWORD))) &&
 	    (border_top || border_right || border_bottom || border_left)) {
-		if (!html_redraw_borders(box, x_parent, y_parent,
+		if (!redraw__borders(box, x_parent, y_parent,
 				padding_width, padding_height, &r,
 				scale, ctx))
 			return false;
@@ -1542,7 +1542,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 
 	/* backgrounds and borders for non-replaced inlines */
 	if (box->style && box->type == BOX_INLINE && box->inline_end &&
-			(html_redraw_box_has_background(box) ||
+			(redraw__box_has_background(box) ||
 			border_top || border_right ||
 			border_bottom || border_left)) {
 		/* inline backgrounds and borders span other boxes and may
@@ -1591,7 +1591,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 			if ((ib->flags & NEW_LINE) && ib != box) {
 				/* inline element has wrapped, plot background
 				 * and borders */
-				if (!html_redraw_inline_background(
+				if (!redraw__inline_background(
 						x, y, box, scale, &p, b,
 						first, false,
 						&current_background_color,
@@ -1600,7 +1600,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 				/* restore previous graphics window */
 				if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 					return false;
-				if (!html_redraw_inline_borders(box, b, &r,
+				if (!redraw__inline_borders(box, b, &r,
 						scale, first, false, ctx))
 					return false;
 				/* reset coords */
@@ -1626,14 +1626,14 @@ bool html_redraw_box(const html_content *html, struct box *box,
 		}
 		/* plot background and borders for last rectangle of
 		 * the inline */
-		if (!html_redraw_inline_background(x, ib_y, box, scale, &p, b,
+		if (!redraw__inline_background(x, ib_y, box, scale, &p, b,
 				first, true, &current_background_color,
 				&html->unit_len_ctx, ctx))
 			return false;
 		/* restore previous graphics window */
 		if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 			return false;
-		if (!html_redraw_inline_borders(box, b, &r, scale, first, true,
+		if (!redraw__inline_borders(box, b, &r, scale, first, true,
 				ctx))
 			return false;
 
@@ -1741,7 +1741,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 	if ((box->type != BOX_TEXT) &&
 	    box->style &&
 	    css_computed_text_decoration(box->style) !=	CSS_TEXT_DECORATION_NONE) {
-		if (!html_redraw_text_decoration(box, x_parent, y_parent,
+		if (!redraw__text_decoration(box, x_parent, y_parent,
 				scale, current_background_color, ctx))
 			return false;
 	}
@@ -1831,17 +1831,17 @@ bool html_redraw_box(const html_content *html, struct box *box,
 				y + padding_top, &r, ctx);
 
 	} else if (box->gadget && box->gadget->type == GADGET_CHECKBOX) {
-		if (!html_redraw_checkbox(x + padding_left, y + padding_top,
+		if (!redraw__checkbox(x + padding_left, y + padding_top,
 				width, height, box->gadget->selected, ctx))
 			return false;
 
 	} else if (box->gadget && box->gadget->type == GADGET_RADIO) {
-		if (!html_redraw_radio(x + padding_left, y + padding_top,
+		if (!redraw__radio(x + padding_left, y + padding_top,
 				width, height, box->gadget->selected, ctx))
 			return false;
 
 	} else if (box->gadget && box->gadget->type == GADGET_FILE) {
-		if (!html_redraw_file(x + padding_left, y + padding_top,
+		if (!redraw__file(x + padding_left, y + padding_top,
 				width, height, box, scale,
 				current_background_color, &html->unit_len_ctx, ctx))
 			return false;
@@ -1854,12 +1854,12 @@ bool html_redraw_box(const html_content *html, struct box *box,
 				current_background_color, scale, &r, ctx);
 
 	} else if (box->text) {
-		if (!html_redraw_text_box(html, box, x, y, &r, scale,
+		if (!redraw__text_box(html, box, x, y, &r, scale,
 				current_background_color, ctx))
 			return false;
 
 	} else {
-		if (!html_redraw_box_children(html, box, x_parent, y_parent, &r,
+		if (!redraw__box_children(html, box, x_parent, y_parent, &r,
 				scale, current_background_color, ctx))
 			return false;
 	}
@@ -1871,7 +1871,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 
 	/* list marker */
 	if (box->list_marker) {
-		if (!html_redraw_box(html, box->list_marker,
+		if (!redraw__box(html, box->list_marker,
 				x_parent + box->x -
 				scrollbar_get_offset(box->scroll_x),
 				y_parent + box->y -
@@ -1941,7 +1941,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
  * x, y, clip_[xy][01] are in target coordinates.
  */
 
-bool html_redraw(struct content *c, struct content_redraw_data *data,
+bool redraw__document(struct content *c, struct content_redraw_data *data,
 		const struct rect *clip, const struct redraw_context *ctx)
 {
 	html_content *html = (html_content *) c;
@@ -1979,7 +1979,7 @@ bool html_redraw(struct content *c, struct content_redraw_data *data,
 
 		result &= (ctx->plot->rectangle(ctx, &pstyle_fill_bg, clip) == NSERROR_OK);
 
-		result &= html_redraw_box(html, box, data->x, data->y, clip,
+		result &= redraw__box(html, box, data->x, data->y, clip,
 				data->scale, pstyle_fill_bg.fill_colour, ctx);
 	}
 

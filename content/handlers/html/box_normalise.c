@@ -80,7 +80,7 @@ struct columns {
  * \return  true on success, false on memory exhaustion
  */
 static bool
-calculate_table_row(struct columns *col_info,
+box_normalise__table_row_index(struct columns *col_info,
 		    unsigned int col_span,
 		    unsigned int row_span,
 		    unsigned int *start_column,
@@ -126,7 +126,7 @@ calculate_table_row(struct columns *col_info,
 
 	/* This cell may span multiple columns. If it also wants to span
 	 * multiple rows, temporarily assume it spans 1 row only. This will
-	 * be fixed up in box_normalise_table_spans() */
+	 * be fixed up in box_normalise__table_spans() */
 	for (i = cell_start_col; i < cell_end_col; i++) {
 		col_info->spans[i].row_span = (row_span == 0) ? 1 : row_span;
 		col_info->spans[i].auto_row = (row_span == 0);
@@ -143,7 +143,7 @@ calculate_table_row(struct columns *col_info,
 
 
 static bool
-box_normalise_table_row(struct box *row,
+box_normalise__table_row(struct box *row,
 			const struct box *root,
 			struct columns *col_info,
 			html_content * c)
@@ -251,7 +251,7 @@ box_normalise_table_row(struct box *row,
 			assert(0);
 		}
 
-		if (calculate_table_row(col_info, cell->columns, cell->rows,
+		if (box_normalise__table_row_index(col_info, cell->columns, cell->rows,
 				&cell->start_column, cell) == false)
 			return false;
 	}
@@ -282,7 +282,7 @@ box_normalise_table_row(struct box *row,
 
 
 static bool
-box_normalise_table_row_group(struct box *row_group,
+box_normalise__table_row_group(struct box *row_group,
 			      const struct box *root,
 			      struct columns *col_info,
 			      html_content * c)
@@ -317,7 +317,7 @@ box_normalise_table_row_group(struct box *row_group,
 		case BOX_TABLE_ROW:
 			/* ok */
 			group_row_count++;
-			if (box_normalise_table_row(child, root, col_info,
+			if (box_normalise__table_row(child, root, col_info,
 					c) == false)
 				return false;
 			break;
@@ -380,7 +380,7 @@ box_normalise_table_row_group(struct box *row_group,
 			row->parent = row_group;
 
 			group_row_count++;
-			if (box_normalise_table_row(row, root, col_info,
+			if (box_normalise__table_row(row, root, col_info,
 					c) == false)
 				return false;
 			break;
@@ -458,7 +458,7 @@ box_normalise_table_row_group(struct box *row_group,
  * \return True on success, false on memory exhaustion.
  */
 static bool
-box_normalise_table_spans(struct box *table,
+box_normalise__table_spans(struct box *table,
 			  const struct box *root,
 			  struct span_info *spans,
 			  html_content *c)
@@ -621,7 +621,7 @@ box_normalise_table_spans(struct box *table,
 
 
 static bool
-box_normalise_table(struct box *table, const struct box *root, html_content * c)
+box_normalise__table(struct box *table, const struct box *root, html_content * c)
 {
 	struct box *child;
 	struct box *next_child;
@@ -655,7 +655,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 		switch (child->type) {
 		case BOX_TABLE_ROW_GROUP:
 			/* ok */
-			if (box_normalise_table_row_group(child, root,
+			if (box_normalise__table_row_group(child, root,
 					&col_info, c) == false) {
 				free(col_info.spans);
 				return false;
@@ -723,7 +723,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 				table->last = row_group;
 			row_group->parent = table;
 
-			if (box_normalise_table_row_group(row_group, root,
+			if (box_normalise__table_row_group(row_group, root,
 					&col_info, c) == false) {
 				free(col_info.spans);
 				return false;
@@ -808,7 +808,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 		table->rows = 1;
 	}
 
-	if (box_normalise_table_spans(table, root, col_info.spans, c) == false) {
+	if (box_normalise__table_spans(table, root, col_info.spans, c) == false) {
 		free(col_info.spans);
 		return false;
 	}
@@ -822,7 +822,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 	return true;
 }
 
-static bool box_normalise_flex(
+static bool box_normalise__flex(
 		struct box *flex_container,
 		const struct box *root,
 		html_content *c)
@@ -857,7 +857,7 @@ static bool box_normalise_flex(
 		switch (child->type) {
 		case BOX_FLEX:
 			/* ok */
-			if (box_normalise_flex(child, root, c) == false)
+			if (box_normalise__flex(child, root, c) == false)
 				return false;
 			break;
 		case BOX_BLOCK:
@@ -919,7 +919,7 @@ static bool box_normalise_flex(
 			break;
 
 		case BOX_TABLE:
-			if (box_normalise_table(child, root, c) == false)
+			if (box_normalise__table(child, root, c) == false)
 				return false;
 			break;
 		case BOX_INLINE:
@@ -986,7 +986,7 @@ static bool box_normalise_flex(
 				flex_container->last = implied_flex_item;
 			implied_flex_item->parent = flex_container;
 
-			if (box_normalise_table(implied_flex_item,
+			if (box_normalise__table(implied_flex_item,
 					root, c) == false)
 				return false;
 			break;
@@ -999,7 +999,7 @@ static bool box_normalise_flex(
 }
 
 static bool
-box_normalise_inline_container(struct box *cont,
+box_normalise__inline_container(struct box *cont,
 			       const struct box *root,
 			       html_content * c)
 {
@@ -1029,7 +1029,7 @@ box_normalise_inline_container(struct box *cont,
 			break;
 		case BOX_INLINE_FLEX:
 			/* ok */
-			if (box_normalise_flex(child, root, c) == false)
+			if (box_normalise__flex(child, root, c) == false)
 				return false;
 			break;
 		case BOX_FLOAT_LEFT:
@@ -1044,12 +1044,12 @@ box_normalise_inline_container(struct box *cont,
 					return false;
 				break;
 			case BOX_TABLE:
-				if (box_normalise_table(child->children, root,
+				if (box_normalise__table(child->children, root,
 						c) == false)
 					return false;
 				break;
 			case BOX_FLEX:
-				if (box_normalise_flex(child->children, root,
+				if (box_normalise__flex(child->children, root,
 						c) == false)
 					return false;
 				break;
@@ -1123,7 +1123,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 		switch (child->type) {
 		case BOX_FLEX:
 			/* ok */
-			if (box_normalise_flex(child, root, c) == false)
+			if (box_normalise__flex(child, root, c) == false)
 				return false;
 			break;
 		case BOX_BLOCK:
@@ -1132,11 +1132,11 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 				return false;
 			break;
 		case BOX_INLINE_CONTAINER:
-			if (box_normalise_inline_container(child, root, c) == false)
+			if (box_normalise__inline_container(child, root, c) == false)
 				return false;
 			break;
 		case BOX_TABLE:
-			if (box_normalise_table(child, root, c) == false)
+			if (box_normalise__table(child, root, c) == false)
 				return false;
 			break;
 		case BOX_INLINE:
@@ -1201,7 +1201,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 				block->last = table;
 			table->parent = block;
 
-			if (box_normalise_table(table, root, c) == false)
+			if (box_normalise__table(table, root, c) == false)
 				return false;
 			break;
 		default:

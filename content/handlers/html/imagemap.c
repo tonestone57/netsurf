@@ -86,7 +86,7 @@ struct imagemap {
  * \param c The containing content
  * \return true on success, false otherwise
  */
-static bool imagemap_create(html_content *c)
+static bool imagemap__create(html_content *c)
 {
 	assert(c != NULL);
 
@@ -106,7 +106,7 @@ static bool imagemap_create(html_content *c)
  * \param key The key to hash.
  * \return The hashed value.
  */
-static unsigned int imagemap_hash(const char *key)
+static unsigned int imagemap__hash(const char *key)
 {
 	unsigned int z = 0;
 
@@ -128,7 +128,7 @@ static unsigned int imagemap_hash(const char *key)
  * \return true on succes, false otherwise
  */
 static bool
-imagemap_add(html_content *c, dom_string *key, struct mapentry *list)
+imagemap__add(html_content *c, dom_string *key, struct mapentry *list)
 {
 	struct imagemap *map;
 	unsigned int slot;
@@ -137,7 +137,7 @@ imagemap_add(html_content *c, dom_string *key, struct mapentry *list)
 	assert(key != NULL);
 	assert(list != NULL);
 
-	if (imagemap_create(c) == false)
+	if (imagemap__create(c) == false)
 		return false;
 
 	map = calloc(1, sizeof(*map));
@@ -153,7 +153,7 @@ imagemap_add(html_content *c, dom_string *key, struct mapentry *list)
 
 	map->list = list;
 
-	slot = imagemap_hash(map->key);
+	slot = imagemap__hash(map->key);
 
 	map->next = c->imagemaps[slot];
 	c->imagemaps[slot] = map;
@@ -166,7 +166,7 @@ imagemap_add(html_content *c, dom_string *key, struct mapentry *list)
  *
  * \param list Pointer to head of list
  */
-static void imagemap_freelist(struct mapentry *list)
+static void imagemap__freelist(struct mapentry *list)
 {
 	struct mapentry *entry, *prev;
 
@@ -213,7 +213,7 @@ void imagemap_destroy(html_content *c)
 		map = c->imagemaps[i];
 		while (map != NULL) {
 			next = map->next;
-			imagemap_freelist(map->list);
+			imagemap__freelist(map->list);
 			free(map->key);
 			free(map);
 			map = next;
@@ -300,7 +300,7 @@ void imagemap_dump(html_content *c)
  * \return false on memory exhaustion, true otherwise
  */
 static bool
-imagemap_addtolist(const struct html_content *c,
+imagemap__addtolist(const struct html_content *c,
 		   dom_node *n,
 		   nsurl *base_url,
 		   struct mapentry **entry,
@@ -368,7 +368,7 @@ imagemap_addtolist(const struct html_content *c,
 	else
 		goto bad_out;
 
-	if (box_extract_link(c, href, base_url, &new_map->url) == false)
+	if (box_construct__extract_link(c, href, base_url, &new_map->url) == false)
 		goto bad_out;
 
 	if (new_map->url == NULL) {
@@ -534,7 +534,7 @@ ok_out:
  * \return false on memory exhaustion, true otherwise
  */
 static bool
-imagemap_extract_map_entries(dom_node *node, html_content *c,
+imagemap__extract_map_entries(dom_node *node, html_content *c,
 			     struct mapentry **entry, dom_string *tname)
 {
 	dom_nodelist *nlist;
@@ -561,7 +561,7 @@ imagemap_extract_map_entries(dom_node *node, html_content *c,
 			dom_nodelist_unref(nlist);
 			return false;
 		}
-		if (imagemap_addtolist(c, subnode, c->base_url,
+		if (imagemap__addtolist(c, subnode, c->base_url,
 				       entry, tname) == false) {
 			dom_node_unref(subnode);
 			dom_nodelist_unref(nlist);
@@ -583,13 +583,13 @@ imagemap_extract_map_entries(dom_node *node, html_content *c,
  * \param entry List of map entries
  * \return false on memory exhaustion, true otherwise
  */
-static bool imagemap_extract_map(dom_node *node, html_content *c,
+static bool imagemap__extract_map(dom_node *node, html_content *c,
 		struct mapentry **entry)
 {
-	if (imagemap_extract_map_entries(node, c, entry,
+	if (imagemap__extract_map_entries(node, c, entry,
 			corestring_dom_area) == false)
 		return false;
-	return imagemap_extract_map_entries(node, c, entry,
+	return imagemap__extract_map_entries(node, c, entry,
 			corestring_dom_a);
 }
 
@@ -651,9 +651,9 @@ imagemap_extract(html_content *c)
 
 		if (name != NULL) {
 			struct mapentry *entry = NULL;
-			if (imagemap_extract_map(node, c, &entry) == false) {
+			if (imagemap__extract_map(node, c, &entry) == false) {
 				if (entry != NULL) {
-					imagemap_freelist(entry);
+					imagemap__freelist(entry);
 				}
 
 				dom_string_unref(name);
@@ -662,14 +662,14 @@ imagemap_extract(html_content *c)
 				goto out_nlist;
 			}
 
-			/* imagemap_extract_map may not extract anything,
+			/* imagemap__extract_map may not extract anything,
 			 * so entry can still be NULL here. This isn't an
 			 * error as it just means that we've encountered
 			 * an incorrectly defined <map>...</map> block
 			 */
 			if ((entry != NULL) &&
-			    (imagemap_add(c, name, entry) == false)) {
-				imagemap_freelist(entry);
+			    (imagemap__add(c, name, entry) == false)) {
+				imagemap__freelist(entry);
 
 				dom_string_unref(name);
 				dom_node_unref(node);
@@ -703,7 +703,7 @@ out_nlist:
  * \return 1 if point is in polygon, 0 if outside. 0 or 1 if on boundary
  */
 static int
-imagemap_point_in_poly(int num, float *xpt, float *ypt, unsigned long x,
+imagemap__point_in_poly(int num, float *xpt, float *ypt, unsigned long x,
 		unsigned long y, unsigned long click_x,	unsigned long click_y)
 {
 	int i, j, c = 0;
@@ -752,7 +752,7 @@ nsurl *imagemap_get(struct html_content *c, const char *key,
 	if (c->imagemaps == NULL)
 		return NULL;
 
-	slot = imagemap_hash(key);
+	slot = imagemap__hash(key);
 
 	for (map = c->imagemaps[slot]; map != NULL; map = map->next) {
 		if (map->key != NULL && strcasecmp(map->key, key) == 0)
@@ -792,7 +792,7 @@ nsurl *imagemap_get(struct html_content *c, const char *key,
 			}
 			break;
 		case IMAGEMAP_POLY:
-			if (imagemap_point_in_poly(entry->bounds.poly.num,
+			if (imagemap__point_in_poly(entry->bounds.poly.num,
 					entry->bounds.poly.xcoords,
 					entry->bounds.poly.ycoords, x, y,
 					click_x, click_y)) {

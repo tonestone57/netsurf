@@ -34,7 +34,7 @@
  * process form element from dom
  */
 static struct form *
-parse_form_element(const char *docenc, dom_node *node)
+forms__parse_form_element(const char *docenc, dom_node *node)
 {
 	dom_string *ds_action = NULL;
 	dom_string *ds_charset = NULL;
@@ -123,7 +123,7 @@ out:
 }
 
 /* documented in html_internal.h */
-struct form *html_forms_get_forms(const char *docenc, dom_html_document *doc)
+struct form *forms__get_forms(const char *docenc, dom_html_document *doc)
 {
 	dom_html_collection *forms;
 	struct form *ret = NULL, *newf;
@@ -147,7 +147,7 @@ struct form *html_forms_get_forms(const char *docenc, dom_html_document *doc)
 		if (dom_html_collection_item(forms, n, &node) != DOM_NO_ERR) {
 			goto out;
 		}
-		newf = parse_form_element(docenc, node);
+		newf = forms__parse_form_element(docenc, node);
 		dom_node_unref(node);
 		if (newf == NULL) {
 			goto err;
@@ -173,7 +173,7 @@ out:
 }
 
 static struct form *
-find_form(struct form *forms, dom_html_form_element *form)
+forms__find_form(struct form *forms, dom_html_form_element *form)
 {
 	while (forms != NULL) {
 		if (forms->node == form)
@@ -185,7 +185,7 @@ find_form(struct form *forms, dom_html_form_element *form)
 }
 
 static struct form_control *
-parse_button_element(struct form *forms, dom_html_button_element *button)
+forms__parse_button_element(struct form *forms, dom_html_button_element *button)
 {
 	struct form_control *control = NULL;
 	dom_exception err;
@@ -251,7 +251,7 @@ parse_button_element(struct form *forms, dom_html_button_element *button)
 	}
 
 	if (form != NULL && control != NULL)
-		form_add_control(find_form(forms, form), control);
+		form_add_control(forms__find_form(forms, form), control);
 
 out:
 	if (form != NULL)
@@ -267,7 +267,7 @@ out:
 }
 
 static struct form_control *
-parse_input_element(struct form *forms, dom_html_input_element *input)
+forms__parse_input_element(struct form *forms, dom_html_input_element *input)
 {
 	struct form_control *control = NULL;
 	dom_html_form_element *form = NULL;
@@ -408,7 +408,7 @@ parse_input_element(struct form *forms, dom_html_input_element *input)
 	}
 
 	if (form != NULL && control != NULL)
-		form_add_control(find_form(forms, form), control);
+		form_add_control(forms__find_form(forms, form), control);
 
 out:
 	if (form != NULL)
@@ -427,7 +427,7 @@ out:
 }
 
 static struct form_control *
-parse_textarea_element(struct form *forms, dom_html_text_area_element *ta)
+forms__parse_textarea_element(struct form *forms, dom_html_text_area_element *ta)
 {
 	struct form_control *control = NULL;
 	dom_html_form_element *form = NULL;
@@ -457,7 +457,7 @@ parse_textarea_element(struct form *forms, dom_html_text_area_element *ta)
 	}
 
 	if (form != NULL && control != NULL)
-		form_add_control(find_form(forms, form), control);
+		form_add_control(forms__find_form(forms, form), control);
 
 out:
 	if (form != NULL)
@@ -473,7 +473,7 @@ out:
 }
 
 static struct form_control *
-parse_select_element(struct form *forms, dom_html_select_element *select)
+forms__parse_select_element(struct form *forms, dom_html_select_element *select)
 {
 	struct form_control *control = NULL;
 	dom_html_form_element *form = NULL;
@@ -506,7 +506,7 @@ parse_select_element(struct form *forms, dom_html_select_element *select)
 			&(control->data.select.multiple));
 
 	if (form != NULL && control != NULL)
-		form_add_control(find_form(forms, form), control);
+		form_add_control(forms__find_form(forms, form), control);
 
 out:
 	if (form != NULL)
@@ -523,7 +523,7 @@ out:
 
 
 static struct form_control *
-invent_fake_gadget(dom_node *node)
+forms__invent_fake_gadget(dom_node *node)
 {
 	struct form_control *ctl = form_new_control(node, GADGET_HIDDEN);
 	if (ctl != NULL) {
@@ -542,7 +542,7 @@ invent_fake_gadget(dom_node *node)
 
 /* documented in html_internal.h */
 struct form_control *
-html_forms_get_control_for_node(struct form *forms, dom_node *node)
+forms__get_control_for_node(struct form *forms, dom_node *node)
 {
 	struct form *f;
 	struct form_control *ctl = NULL;
@@ -564,26 +564,26 @@ html_forms_get_control_for_node(struct form *forms, dom_node *node)
 		/* Step three, attempt to work out what gadget to make */
 		if (dom_string_caseless_lwc_isequal(ds_name,
 				corestring_lwc_button)) {
-			ctl = parse_button_element(forms,
+			ctl = forms__parse_button_element(forms,
 					(dom_html_button_element *) node);
 		} else if (dom_string_caseless_lwc_isequal(ds_name,
 				corestring_lwc_input)) {
-			ctl = parse_input_element(forms,
+			ctl = forms__parse_input_element(forms,
 					(dom_html_input_element *) node);
 		} else if (dom_string_caseless_lwc_isequal(ds_name,
 				corestring_lwc_textarea)) {
-			ctl = parse_textarea_element(forms,
+			ctl = forms__parse_textarea_element(forms,
 					(dom_html_text_area_element *) node);
 		} else if (dom_string_caseless_lwc_isequal(ds_name,
 				corestring_lwc_select)) {
-			ctl = parse_select_element(forms,
+			ctl = forms__parse_select_element(forms,
 					(dom_html_select_element *) node);
 		}
 	}
 
 	/* If all else fails, fake gadget time */
 	if (ctl == NULL)
-		ctl = invent_fake_gadget(node);
+		ctl = forms__invent_fake_gadget(node);
 
 	if (ds_name != NULL)
 		dom_string_unref(ds_name);

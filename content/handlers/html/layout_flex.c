@@ -127,7 +127,7 @@ struct flex_ctx {
  *
  * \param[in] ctx  Flex layout context
  */
-static void layout_flex_ctx__destroy(struct flex_ctx *ctx)
+static void layout_flex__ctx_destroy(struct flex_ctx *ctx)
 {
 	if (ctx != NULL) {
 		free(ctx->item.data);
@@ -143,7 +143,7 @@ static void layout_flex_ctx__destroy(struct flex_ctx *ctx)
  * \param[in] flex     Box to create layout context for
  * \return flex layout context or NULL on error
  */
-static struct flex_ctx *layout_flex_ctx__create(
+static struct flex_ctx *layout_flex__ctx_create(
 		html_content *content,
 		const struct box *flex)
 {
@@ -158,14 +158,14 @@ static struct flex_ctx *layout_flex_ctx__create(
 	ctx->item.count = box_count_children(flex);
 	ctx->item.data = calloc(ctx->item.count, sizeof(*ctx->item.data));
 	if (ctx->item.data == NULL) {
-		layout_flex_ctx__destroy(ctx);
+		layout_flex__ctx_destroy(ctx);
 		return NULL;
 	}
 
 	ctx->line.alloc = 1;
 	ctx->line.data = calloc(ctx->line.alloc, sizeof(*ctx->line.data));
 	if (ctx->line.data == NULL) {
-		layout_flex_ctx__destroy(ctx);
+		layout_flex__ctx_destroy(ctx);
 		return NULL;
 	}
 
@@ -222,7 +222,7 @@ static enum box_side layout_flex__main_end_side(
  * \param[in] available_width  Available width for item in pixels
  * \return true on success false on failure
  */
-static bool layout_flex_item(
+static bool layout_flex__item(
 		const struct flex_ctx *ctx,
 		const struct flex_item_data *item,
 		int available_width)
@@ -232,16 +232,16 @@ static bool layout_flex_item(
 
 	switch (b->type) {
 	case BOX_BLOCK:
-		success = layout_block_context(b, -1, ctx->content);
+		success = layout__block_context(b, -1, ctx->content);
 		break;
 	case BOX_TABLE:
 		b->float_container = b->parent;
-		success = layout_table(b, available_width, ctx->content);
+		success = layout__table(b, available_width, ctx->content);
 		b->float_container = NULL;
 		break;
 	case BOX_FLEX:
 		b->float_container = b->parent;
-		success = layout_flex(b, available_width, ctx->content);
+		success = layout__flex(b, available_width, ctx->content);
 		b->float_container = NULL;
 		break;
 	default:
@@ -303,7 +303,7 @@ static inline bool layout_flex__base_and_main_sizes(
 			b->width -= layout__delta_outer_width(b);
 		}
 
-		if (!layout_flex_item(ctx, item, b->width)) {
+		if (!layout_flex__item(ctx, item, b->width)) {
 			return false;
 		}
 	}
@@ -384,7 +384,7 @@ static int layout_flex__item_compare(const void *a, const void *b)
 	return 0;
 }
 
-static void layout_flex_ctx__populate_item_data(
+static void layout_flex__ctx_populate_item_data(
 		struct flex_ctx *ctx,
 		const struct box *flex,
 		int available_width)
@@ -401,7 +401,7 @@ static void layout_flex_ctx__populate_item_data(
 		}
 
 		b->float_container = b->parent;
-		layout_find_dimensions(ctx->unit_len_ctx, available_width, -1,
+		layout__find_dimensions(ctx->unit_len_ctx, available_width, -1,
 				b, b->style, &b->width, &b->height,
 				horizontal ? &item->max_main : &item->max_cross,
 				horizontal ? &item->min_main : &item->min_cross,
@@ -433,7 +433,7 @@ static void layout_flex_ctx__populate_item_data(
  * \param[in] ctx  Flex layout context
  * \return true on success false on out of memory
  */
-static bool layout_flex_ctx__ensure_line(struct flex_ctx *ctx)
+static bool layout_flex__ctx_ensure_line(struct flex_ctx *ctx)
 {
 	struct flex_line_data *temp;
 	size_t line_alloc = ctx->line.alloc * 2;
@@ -470,7 +470,7 @@ static struct flex_line_data *layout_flex__build_line(struct flex_ctx *ctx,
 	struct flex_line_data *line;
 	int used_main = 0;
 
-	if (!layout_flex_ctx__ensure_line(ctx)) {
+	if (!layout_flex__ctx_ensure_line(ctx)) {
 		return NULL;
 	}
 
@@ -940,7 +940,7 @@ static bool layout_flex__place_line_items_main(
 		int delta_main = layout__delta_outer_main(ctx->flex, b);
 		*layout__box_size_main_ptr(ctx->horizontal, b) = item->target_main_size - delta_main;
 
-		if (!layout_flex_item(ctx, item, b->width)) {
+		if (!layout_flex__item(ctx, item, b->width)) {
 			return false;
 		}
 
@@ -1076,7 +1076,7 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 				if (*box_size_cross != size) {
 					*box_size_cross = size;
 					/* Relayout children for stretch. */
-					if (!layout_flex_item(ctx, item, b->width)) {
+					if (!layout_flex__item(ctx, item, b->width)) {
 						return;
 					}
 				}
@@ -1205,14 +1205,14 @@ static void layout_flex__place_lines(struct flex_ctx *ctx)
  * \param[in] content          memory pool for any new boxes
  * \return  true on success, false on memory exhaustion
  */
-bool layout_flex(struct box *flex, int available_width,
+bool layout__flex(struct box *flex, int available_width,
 		html_content *content)
 {
 	int max_height, min_height;
 	struct flex_ctx *ctx;
 	bool success = false;
 
-	ctx = layout_flex_ctx__create(content, flex);
+	ctx = layout_flex__ctx_create(content, flex);
 	if (ctx == NULL) {
 		return false;
 	}
@@ -1221,7 +1221,7 @@ bool layout_flex(struct box *flex, int available_width,
 			flex, ctx->horizontal ? "horizontal" : "vertical",
 			available_width, flex->width);
 
-	layout_find_dimensions(
+	layout__find_dimensions(
 			ctx->unit_len_ctx, available_width, -1,
 			flex, flex->style, NULL, &flex->height,
 			NULL, NULL, &max_height, &min_height,
@@ -1242,7 +1242,7 @@ bool layout_flex(struct box *flex, int available_width,
 	NSLOG(flex, DEEPDEBUG, "box %p: available_cross: %i",
 			flex, ctx->available_cross);
 
-	layout_flex_ctx__populate_item_data(ctx, flex, available_width);
+	layout_flex__ctx_populate_item_data(ctx, flex, available_width);
 
 	/* Reorder box tree to match visual order (affects painting order) */
 	if (ctx->item.count > 0) {
@@ -1288,7 +1288,7 @@ bool layout_flex(struct box *flex, int available_width,
 	success = true;
 
 cleanup:
-	layout_flex_ctx__destroy(ctx);
+	layout_flex__ctx_destroy(ctx);
 
 	NSLOG(flex, DEEPDEBUG, "box %p: %s: w: %i, h: %i", flex,
 			success ? "success" : "failure",

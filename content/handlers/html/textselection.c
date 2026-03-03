@@ -57,7 +57,7 @@ struct rdw_info {
  * \return true iff the range encloses at least part of the box
  */
 static bool
-selected_part(struct box *box,
+textselection__selected_part(struct box *box,
 	      unsigned start_idx,
 	      unsigned end_idx,
 	      unsigned *start_offset,
@@ -111,7 +111,7 @@ selected_part(struct box *box,
  * \return NSERROR_OK on success else error code
  */
 static nserror
-coords_from_range(struct box *box,
+textselection__coords_from_range(struct box *box,
 		  unsigned start_idx,
 		  unsigned end_idx,
 		  struct rdw_info *rdwi,
@@ -134,7 +134,7 @@ coords_from_range(struct box *box,
 	if (box->list_marker) {
 		/* do the marker box before continuing with the rest of the
 		 * list element */
-		res = coords_from_range(box->list_marker,
+		res = textselection__coords_from_range(box->list_marker,
 					start_idx,
 					end_idx,
 					rdwi,
@@ -159,7 +159,7 @@ coords_from_range(struct box *box,
 		unsigned start_off;
 		unsigned end_off;
 
-		if (selected_part(box, start_idx, end_idx, &start_off, &end_off)) {
+		if (textselection__selected_part(box, start_idx, end_idx, &start_off, &end_off)) {
 			int width, height;
 			int x, y;
 
@@ -217,7 +217,7 @@ coords_from_range(struct box *box,
 			 * the tree */
 			struct box *next = child->next;
 
-			res = coords_from_range(child,
+			res = textselection__coords_from_range(child,
 						start_idx,
 						end_idx,
 						rdwi,
@@ -248,7 +248,7 @@ coords_from_range(struct box *box,
  * \return NSERROR_OK iff successful and traversal should continue else error code
  */
 static nserror
-selection_copy_box(const char *text,
+textselection__copy_box(const char *text,
 		   size_t length,
 		   struct box *box,
 		   const css_unit_ctx *unit_len_ctx,
@@ -311,7 +311,7 @@ selection_copy_box(const char *text,
  * \return NSERROR_OK on sucess else error code
  */
 static nserror
-selection_copy(struct box *box,
+textselection__copy(struct box *box,
 	       const css_unit_ctx *unit_len_ctx,
 	       unsigned start_idx,
 	       unsigned end_idx,
@@ -339,7 +339,7 @@ selection_copy(struct box *box,
 	if (box->list_marker) {
 		/* do the marker box before continuing with the rest of the
 		 * list element */
-		res = selection_copy(box->list_marker,
+		res = textselection__copy(box->list_marker,
 				     unit_len_ctx,
 				     start_idx,
 				     end_idx,
@@ -379,8 +379,8 @@ selection_copy(struct box *box,
 		unsigned start_off;
 		unsigned end_off;
 
-		if (selected_part(box, start_idx, end_idx, &start_off, &end_off)) {
-			res = selection_copy_box(box->text + start_off,
+		if (textselection__selected_part(box, start_idx, end_idx, &start_off, &end_off)) {
+			res = textselection__copy_box(box->text + start_off,
 						 min(box->length, end_off) - start_off,
 						 box,
 						 unit_len_ctx,
@@ -414,7 +414,7 @@ selection_copy(struct box *box,
 			 * the tree */
 			struct box *next = child->next;
 
-			res = selection_copy(child,
+			res = textselection__copy(child,
 					     unit_len_ctx,
 					     start_idx,
 					     end_idx,
@@ -442,7 +442,7 @@ selection_copy(struct box *box,
  * \param idx current position within textual representation
  * \return updated position
  */
-static unsigned selection_label_subtree(struct box *box, unsigned idx)
+static unsigned textselection__label_subtree(struct box *box, unsigned idx)
 {
 	struct box *child;
 
@@ -458,10 +458,10 @@ static unsigned selection_label_subtree(struct box *box, unsigned idx)
 
 	while (child) {
 		if (child->list_marker) {
-			idx = selection_label_subtree(child->list_marker, idx);
+			idx = textselection__label_subtree(child->list_marker, idx);
 		}
 
-		idx = selection_label_subtree(child, idx);
+		idx = textselection__label_subtree(child, idx);
 		child = child->next;
 	}
 
@@ -485,7 +485,7 @@ html_textselection_redraw(struct content *c,
 
 	rdw.inited = false;
 
-	res = coords_from_range(html->layout, start_idx, end_idx, &rdw, false);
+	res = textselection__coords_from_range(html->layout, start_idx, end_idx, &rdw, false);
 	if (res != NSERROR_OK) {
 		return res;
 	}
@@ -517,7 +517,7 @@ html_textselection_copy(struct content *c,
 		return NSERROR_INVALID;
 	}
 
-	return selection_copy(html->layout,
+	return textselection__copy(html->layout,
 			      &html->unit_len_ctx,
 			      start_idx,
 			      end_idx,
@@ -541,7 +541,7 @@ html_textselection_get_end(struct content *c, unsigned *end_idx)
 
 	root_idx = 0;
 
-	*end_idx = selection_label_subtree(html->layout, root_idx);
+	*end_idx = textselection__label_subtree(html->layout, root_idx);
 
 	return NSERROR_OK;
 }

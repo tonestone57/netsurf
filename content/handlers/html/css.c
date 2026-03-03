@@ -52,7 +52,7 @@ static nsurl *html_user_stylesheet_url;
 /**
  * Convert css error to netsurf error.
  */
-static nserror css_error_to_nserror(css_error error)
+static nserror css__error_to_nserror(css_error error)
 {
 	switch (error) {
 	case CSS_OK:
@@ -90,7 +90,7 @@ static nserror css_error_to_nserror(css_error error)
  * Callback for fetchcache() for stylesheets.
  */
 static nserror
-html_convert_css_callback(hlcache_handle *css,
+css__convert_callback(hlcache_handle *css,
 			  const hlcache_event *event,
 			  void *pw)
 {
@@ -145,7 +145,7 @@ html_convert_css_callback(hlcache_handle *css,
 
 
 static nserror
-html_stylesheet_from_domnode(html_content *c,
+css__stylesheet_from_domnode(html_content *c,
 			     dom_node *node,
 			     hlcache_handle **sheet)
 {
@@ -183,7 +183,7 @@ html_stylesheet_from_domnode(html_content *c,
 
 	error = hlcache_handle_retrieve(url, 0,
 			content_get_url(&c->base), NULL,
-			html_convert_css_callback, c, &child, CONTENT_CSS,
+			css__convert_callback, c, &child, CONTENT_CSS,
 			sheet);
 	if (error != NSERROR_OK) {
 		nsurl_unref(url);
@@ -207,7 +207,7 @@ html_stylesheet_from_domnode(html_content *c,
  * \return  true on success, false if an error occurred
  */
 static struct html_stylesheet *
-html_create_style_element(html_content *c, dom_node *style)
+css__create_style_element(html_content *c, dom_node *style)
 {
 	dom_string *val;
 	dom_exception exc;
@@ -259,12 +259,12 @@ html_create_style_element(html_content *c, dom_node *style)
 
 
 static bool
-html_css_process_modified_style(html_content *c, struct html_stylesheet *s)
+css__process_modified_style(html_content *c, struct html_stylesheet *s)
 {
 	hlcache_handle *sheet = NULL;
 	nserror error;
 
-	error = html_stylesheet_from_domnode(c, s->node, &sheet);
+	error = css__stylesheet_from_domnode(c, s->node, &sheet);
 	if (error != NSERROR_OK) {
 		NSLOG(netsurf, INFO, "Failed to update sheet");
 		content_broadcast_error(&c->base, error, NULL);
@@ -299,7 +299,7 @@ html_css_process_modified_style(html_content *c, struct html_stylesheet *s)
 /**
  * process a stylesheet that has been modified.
  */
-static void html_css_process_modified_styles(void *pw)
+static void css__process_modified_styles(void *pw)
 {
 	html_content *c = pw;
 	struct html_stylesheet *s;
@@ -308,13 +308,13 @@ static void html_css_process_modified_styles(void *pw)
 
 	for (i = 0, s = c->stylesheets; i != c->stylesheet_count; i++, s++) {
 		if (c->stylesheets[i].modified) {
-			all_done &= html_css_process_modified_style(c, s);
+			all_done &= css__process_modified_style(c, s);
 		}
 	}
 
 	/* If we failed to process any sheet, schedule a retry */
 	if (all_done == false) {
-		guit->misc->schedule(1000, html_css_process_modified_styles, c);
+		guit->misc->schedule(1000, css__process_modified_styles, c);
 	}
 }
 
@@ -331,7 +331,7 @@ bool html_css_update_style(html_content *c, dom_node *style)
 			break;
 	}
 	if (i == c->stylesheet_count) {
-		s = html_create_style_element(c, style);
+		s = css__create_style_element(c, style);
 	}
 	if (s == NULL) {
 		NSLOG(netsurf, INFO,
@@ -342,7 +342,7 @@ bool html_css_update_style(html_content *c, dom_node *style)
 
 	s->modified = true;
 
-	guit->misc->schedule(0, html_css_process_modified_styles, c);
+	guit->misc->schedule(0, css__process_modified_styles, c);
 
 	return true;
 }
@@ -493,7 +493,7 @@ bool html_css_process_link(html_content *htmlc, dom_node *node)
 
 	ns_error = hlcache_handle_retrieve(joined, 0,
 			content_get_url(&htmlc->base),
-			NULL, html_convert_css_callback,
+			NULL, css__convert_callback,
 			htmlc, &child, CONTENT_CSS,
 			&htmlc->stylesheets[htmlc->stylesheet_count].sheet);
 
@@ -553,7 +553,7 @@ nserror html_css_free_stylesheets(html_content *html)
 {
 	unsigned int i;
 
-	guit->misc->schedule(-1, html_css_process_modified_styles, html);
+	guit->misc->schedule(-1, css__process_modified_styles, html);
 
 	for (i = 0; i != html->stylesheet_count; i++) {
 		if (html->stylesheets[i].sheet != NULL) {
@@ -583,7 +583,7 @@ nserror html_css_quirks_stylesheets(html_content *c)
 
 		ns_error = hlcache_handle_retrieve(html_quirks_stylesheet_url,
 				0, content_get_url(&c->base), NULL,
-				html_convert_css_callback, c, &child,
+				css__convert_callback, c, &child,
 				CONTENT_CSS,
 				&c->stylesheets[STYLESHEET_QUIRKS].sheet);
 		if (ns_error != NSERROR_OK) {
@@ -629,7 +629,7 @@ nserror html_css_new_stylesheets(html_content *c)
 
 	ns_error = hlcache_handle_retrieve(html_default_stylesheet_url, 0,
 			content_get_url(&c->base), NULL,
-			html_convert_css_callback, c, &child, CONTENT_CSS,
+			css__convert_callback, c, &child, CONTENT_CSS,
 			&c->stylesheets[STYLESHEET_BASE].sheet);
 	if (ns_error != NSERROR_OK) {
 		return ns_error;
@@ -642,7 +642,7 @@ nserror html_css_new_stylesheets(html_content *c)
 	if (nsoption_bool(block_advertisements)) {
 		ns_error = hlcache_handle_retrieve(html_adblock_stylesheet_url,
 				0, content_get_url(&c->base), NULL,
-				html_convert_css_callback,
+				css__convert_callback,
 				c, &child, CONTENT_CSS,
 				&c->stylesheets[STYLESHEET_ADBLOCK].sheet);
 		if (ns_error != NSERROR_OK) {
@@ -656,7 +656,7 @@ nserror html_css_new_stylesheets(html_content *c)
 
 	ns_error = hlcache_handle_retrieve(html_user_stylesheet_url, 0,
 			content_get_url(&c->base), NULL,
-			html_convert_css_callback, c, &child, CONTENT_CSS,
+			css__convert_callback, c, &child, CONTENT_CSS,
 			&c->stylesheets[STYLESHEET_USER].sheet);
 	if (ns_error != NSERROR_OK) {
 		return ns_error;
@@ -685,7 +685,7 @@ html_css_new_selection_context(html_content *c, css_select_ctx **ret_select_ctx)
 	/* Create selection context */
 	css_ret = css_select_ctx_create(&select_ctx);
 	if (css_ret != CSS_OK) {
-		return css_error_to_nserror(css_ret);
+		return css__error_to_nserror(css_ret);
 	}
 
 	/* Add sheets to it */
@@ -734,7 +734,7 @@ html_css_new_selection_context(html_content *c, css_select_ctx **ret_select_ctx)
 
 			if (css_ret != CSS_OK) {
 				css_select_ctx_destroy(select_ctx);
-				return css_error_to_nserror(css_ret);
+				return css__error_to_nserror(css_ret);
 			}
 		}
 	}

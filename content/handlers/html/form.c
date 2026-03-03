@@ -104,7 +104,7 @@ static plot_font_style_t plot_fstyle_entry = {
  * \return Pointer to converted string (on heap, caller frees), or NULL
  */
 static char *
-form_encode_item(const char *item,
+form__encode_item(const char *item,
 		 uint32_t len,
 		 const char *charset,
 		 const char *fallback)
@@ -174,7 +174,7 @@ form_encode_item(const char *item,
  * \param fetch_data_next_ptr The multipart data list to append to.
  */
 static nserror
-fetch_data_list_add_sname(const char *name,
+form__fetch_data_list_add_sname(const char *name,
 			  const char *ksfx,
 			  int value,
 			  struct fetch_multipart_data ***fetch_data_next_ptr)
@@ -229,7 +229,7 @@ fetch_data_list_add_sname(const char *name,
  * \return NSERROR_OK on success or appropriate error code.
  */
 static nserror
-fetch_data_list_add(dom_string *name,
+form__fetch_data_list_add(dom_string *name,
 		    dom_string *value,
 		    const char *rawfile,
 		    const char *form_charset,
@@ -246,7 +246,7 @@ fetch_data_list_add(dom_string *name,
 		return NSERROR_NOMEM;
 	}
 
-	fetch_data->name = form_encode_item(dom_string_data(name),
+	fetch_data->name = form__encode_item(dom_string_data(name),
 					    dom_string_byte_length(name),
 					    form_charset,
 					    docu_charset);
@@ -259,7 +259,7 @@ fetch_data_list_add(dom_string *name,
 	if (value == NULL) {
 		fetch_data->value = strdup("");
 	} else {
-		fetch_data->value = form_encode_item(dom_string_data(value),
+		fetch_data->value = form__encode_item(dom_string_data(value),
 						     dom_string_byte_length(value),
 						     form_charset,
 						     docu_charset);
@@ -303,7 +303,7 @@ fetch_data_list_add(dom_string *name,
  * \return NSERROR_OK on success or appropriate error code.
  */
 static nserror
-form_dom_to_data_textarea(dom_html_text_area_element *text_area_element,
+form__dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 			  const char *form_charset,
 			  const char *doc_charset,
 			  struct fetch_multipart_data ***fetch_data_next_ptr)
@@ -353,7 +353,7 @@ form_dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(inputname,
+	res = form__fetch_data_list_add(inputname,
 				  inputvalue,
 				  NULL,
 				  form_charset,
@@ -368,7 +368,7 @@ form_dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 
 
 static nserror
-form_dom_to_data_select_option(dom_html_option_element *option_element,
+form__dom_to_data_select_option(dom_html_option_element *option_element,
 			      dom_string *keyname,
 			      const char *form_charset,
 			      const char *docu_charset,
@@ -397,7 +397,7 @@ form_dom_to_data_select_option(dom_html_option_element *option_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(keyname,
+	res = form__fetch_data_list_add(keyname,
 				  value,
 				  NULL,
 				  form_charset,
@@ -420,7 +420,7 @@ form_dom_to_data_select_option(dom_html_option_element *option_element,
  * \return NSERROR_OK on success or appropriate error code.
  */
 static nserror
-form_dom_to_data_select(dom_html_select_element *select_element,
+form__dom_to_data_select(dom_html_select_element *select_element,
 			const char *form_charset,
 			const char *doc_charset,
 			struct fetch_multipart_data ***fetch_data_next_ptr)
@@ -490,7 +490,7 @@ form_dom_to_data_select(dom_html_select_element *select_element,
 			      "Could not get options item %"PRId32, option_index);
 			res = NSERROR_DOM;
 		} else {
-			res = form_dom_to_data_select_option(
+			res = form__dom_to_data_select_option(
 				(dom_html_option_element *)option_element,
 				inputname,
 				form_charset,
@@ -513,7 +513,7 @@ form_dom_to_data_select(dom_html_select_element *select_element,
 
 
 static nserror
-form_dom_to_data_input_submit(dom_html_input_element *input_element,
+form__dom_to_data_input_submit(dom_html_input_element *input_element,
 			      dom_string *inputname,
 			      const char *charset,
 			      const char *document_charset,
@@ -539,7 +539,7 @@ form_dom_to_data_input_submit(dom_html_input_element *input_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(inputname,
+	res = form__fetch_data_list_add(inputname,
 				  inputvalue,
 				  NULL,
 				  charset,
@@ -553,7 +553,7 @@ form_dom_to_data_input_submit(dom_html_input_element *input_element,
 
 
 static nserror
-form_dom_to_data_input_image(dom_html_input_element *input_element,
+form__dom_to_data_input_image(dom_html_input_element *input_element,
 			     dom_string *inputname,
 			     const char *charset,
 			     const char *document_charset,
@@ -584,7 +584,7 @@ form_dom_to_data_input_image(dom_html_input_element *input_element,
 	}
 
 	/* encode input name once */
-	basename = form_encode_item(dom_string_data(inputname),
+	basename = form__encode_item(dom_string_data(inputname),
 				    dom_string_byte_length(inputname),
 				    charset,
 				    document_charset);
@@ -593,12 +593,12 @@ form_dom_to_data_input_image(dom_html_input_element *input_element,
 		return NSERROR_NOMEM;
 	}
 
-	res = fetch_data_list_add_sname(basename, ".x",
+	res = form__fetch_data_list_add_sname(basename, ".x",
 					coords->x,
 					fetch_data_next_ptr);
 
 	if (res == NSERROR_OK) {
-		res = fetch_data_list_add_sname(basename, ".y",
+		res = form__fetch_data_list_add_sname(basename, ".y",
 						coords->y,
 						fetch_data_next_ptr);
 	}
@@ -610,7 +610,7 @@ form_dom_to_data_input_image(dom_html_input_element *input_element,
 
 
 static nserror
-form_dom_to_data_input_checkbox(dom_html_input_element *input_element,
+form__dom_to_data_input_checkbox(dom_html_input_element *input_element,
 				dom_string *inputname,
 				const char *charset,
 				const char *document_charset,
@@ -646,7 +646,7 @@ form_dom_to_data_input_checkbox(dom_html_input_element *input_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(inputname,
+	res = form__fetch_data_list_add(inputname,
 				  inputvalue,
 				  NULL,
 				  charset,
@@ -660,7 +660,7 @@ form_dom_to_data_input_checkbox(dom_html_input_element *input_element,
 
 
 static nserror
-form_dom_to_data_input_file(dom_html_input_element *input_element,
+form__dom_to_data_input_file(dom_html_input_element *input_element,
 			    dom_string *inputname,
 			    const char *charset,
 			    const char *document_charset,
@@ -690,7 +690,7 @@ form_dom_to_data_input_file(dom_html_input_element *input_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(inputname,
+	res = form__fetch_data_list_add(inputname,
 				  inputvalue,
 				  rawfile,
 				  charset,
@@ -704,7 +704,7 @@ form_dom_to_data_input_file(dom_html_input_element *input_element,
 
 
 static nserror
-form_dom_to_data_input_text(dom_html_input_element *input_element,
+form__dom_to_data_input_text(dom_html_input_element *input_element,
 			    dom_string *inputname,
 			    const char *charset,
 			    const char *document_charset,
@@ -721,7 +721,7 @@ form_dom_to_data_input_text(dom_html_input_element *input_element,
 	}
 
 	/* add key/value pair to fetch data list */
-	res = fetch_data_list_add(inputname,
+	res = form__fetch_data_list_add(inputname,
 				  inputvalue,
 				  NULL,
 				  charset,
@@ -747,7 +747,7 @@ form_dom_to_data_input_text(dom_html_input_element *input_element,
  * \return NSERROR_OK on success or appropriate error code.
  */
 static nserror
-form_dom_to_data_input(dom_html_input_element *input_element,
+form__dom_to_data_input(dom_html_input_element *input_element,
 		       const char *charset,
 		       const char *document_charset,
 		       dom_html_element **submit_button,
@@ -797,7 +797,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
 	/* process according to input element type */
 	if (dom_string_caseless_isequal(inputtype, corestring_dom_submit)) {
 
-		res = form_dom_to_data_input_submit(input_element,
+		res = form__dom_to_data_input_submit(input_element,
 						    inputname,
 						    charset,
 						    document_charset,
@@ -807,7 +807,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
 	} else if (dom_string_caseless_isequal(inputtype,
 					       corestring_dom_image)) {
 
-		res = form_dom_to_data_input_image(input_element,
+		res = form__dom_to_data_input_image(input_element,
 						   inputname,
 						   charset,
 						   document_charset,
@@ -819,7 +819,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
 		   dom_string_caseless_isequal(inputtype,
 					       corestring_dom_checkbox)) {
 
-		res = form_dom_to_data_input_checkbox(input_element,
+		res = form__dom_to_data_input_checkbox(input_element,
 						      inputname,
 						      charset,
 						      document_charset,
@@ -828,7 +828,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
 	} else if (dom_string_caseless_isequal(inputtype,
 					       corestring_dom_file)) {
 
-		res = form_dom_to_data_input_file(input_element,
+		res = form__dom_to_data_input_file(input_element,
 						  inputname,
 						  charset,
 						  document_charset,
@@ -844,7 +844,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
 
 	} else {
 		/* Everything else is treated as text values */
-		res = form_dom_to_data_input_text(input_element,
+		res = form__dom_to_data_input_text(input_element,
 						  inputname,
 						  charset,
 						  document_charset,
@@ -872,7 +872,7 @@ form_dom_to_data_input(dom_html_input_element *input_element,
  * \return NSERROR_OK on success or appropriate error code.
  */
 static nserror
-form_dom_to_data_button(dom_html_button_element *button_element,
+form__dom_to_data_button(dom_html_button_element *button_element,
 			const char *form_charset,
 			const char *doc_charset,
 			dom_html_element **submit_button,
@@ -951,7 +951,7 @@ form_dom_to_data_button(dom_html_button_element *button_element,
 		NSLOG(netsurf, INFO, "Could not get submit button value");
 		res = NSERROR_DOM;
 	} else {
-		res = fetch_data_list_add(inputname,
+		res = form__fetch_data_list_add(inputname,
 					  inputvalue,
 					  NULL,
 					  form_charset,
@@ -973,7 +973,7 @@ form_dom_to_data_button(dom_html_button_element *button_element,
  * \param form  The form
  * \return Pointer to charset name (on heap, caller should free) or NULL
  */
-static char *form_acceptable_charset(struct form *form)
+static char *form__acceptable_charset(struct form *form)
 {
 	char *temp, *c;
 
@@ -1051,7 +1051,7 @@ static char *form_acceptable_charset(struct form *form)
  * \return NSERROR_OK on success or appropriate error code
  */
 static nserror
-form_dom_to_data(struct form *form,
+form__dom_to_data(struct form *form,
 		 struct form_control *submit_control,
 		 struct fetch_multipart_data **fetch_data_out)
 {
@@ -1075,7 +1075,7 @@ form_dom_to_data(struct form *form,
 	}
 
 	/** \todo Replace this call with something DOMish */
-	charset = form_acceptable_charset(form);
+	charset = form__acceptable_charset(form);
 	if (charset == NULL) {
 		NSLOG(netsurf, INFO, "failed to find charset");
 		return NSERROR_NOMEM;
@@ -1120,7 +1120,7 @@ form_dom_to_data(struct form *form,
 
 		if (dom_string_isequal(nodename, corestring_dom_TEXTAREA)) {
 			/* Form element is HTMLTextAreaElement */
-			res = form_dom_to_data_textarea(
+			res = form__dom_to_data_textarea(
 				(dom_html_text_area_element *)element,
 				charset,
 				form->document_charset,
@@ -1128,7 +1128,7 @@ form_dom_to_data(struct form *form,
 
 		} else if (dom_string_isequal(nodename, corestring_dom_SELECT)) {
 			/* Form element is HTMLSelectElement */
-			res = form_dom_to_data_select(
+			res = form__dom_to_data_select(
 				(dom_html_select_element *)element,
 				charset,
 				form->document_charset,
@@ -1136,7 +1136,7 @@ form_dom_to_data(struct form *form,
 
 		} else if (dom_string_isequal(nodename, corestring_dom_INPUT)) {
 			/* Form element is HTMLInputElement */
-			res = form_dom_to_data_input(
+			res = form__dom_to_data_input(
 				(dom_html_input_element *)element,
 				charset,
 				form->document_charset,
@@ -1145,7 +1145,7 @@ form_dom_to_data(struct form *form,
 
 		} else if (dom_string_isequal(nodename, corestring_dom_BUTTON)) {
 			/* Form element is HTMLButtonElement */
-			res = form_dom_to_data_button(
+			res = form__dom_to_data_button(
 				(dom_html_button_element *)element,
 				charset,
 				form->document_charset,
@@ -1194,7 +1194,7 @@ form_dom_to_data_error:
  * \return NSERROR_OK on success and \a encoded_out updated else appropriate error code
  */
 static nserror
-form_url_encode(struct form *form,
+form__url_encode(struct form *form,
 		struct fetch_multipart_data *control,
 		char **encoded_out)
 {
@@ -1260,7 +1260,7 @@ form_url_encode(struct form *form,
  * Callback for the select menus scroll
  */
 static void
-form_select_menu_scroll_callback(void *client_data,
+form__select_menu_scroll_callback(void *client_data,
 				 struct scrollbar_msg_data *scrollbar_data)
 {
 	struct form_control *control = client_data;
@@ -1397,7 +1397,7 @@ form__select_process_selection(html_content *html,
  * \param x X coordinate of click
  * \param y Y coordinate of click
  */
-static void form_select_menu_clicked(struct form_control *control, int x, int y)
+static void form__select_menu_clicked(struct form_control *control, int x, int y)
 {
 	struct form_select_menu *menu = control->data.select.menu;
 	struct form_option *option;
@@ -1623,7 +1623,7 @@ form_open_select_menu(void *client_data,
 				       total_height,
 				       menu->height,
 				       control,
-				       form_select_menu_scroll_callback,
+				       form__select_menu_scroll_callback,
 				       &(menu->scrollbar));
 		if (res != NSERROR_OK) {
 			control->data.select.menu = NULL;
@@ -1903,7 +1903,7 @@ form_select_mouse_action(struct form_control *control,
 
 		if (mouse & (BROWSER_MOUSE_CLICK_1 | BROWSER_MOUSE_CLICK_2))
 			/* button 1 or 2 click */
-			form_select_menu_clicked(control, x, y);
+			form__select_menu_clicked(control, x, y);
 
 		if (!(mouse & BROWSER_MOUSE_CLICK_1 && !multiple))
 			/* anything but a button 1 click over a single select
@@ -1956,7 +1956,7 @@ form_select_mouse_drag_end(struct form_control *control,
 
 	if (x > x0 && x < x1 - SCROLLBAR_WIDTH && y >  y0 && y < y1) {
 		/* handle drag end above the option area like a regular click */
-		form_select_menu_clicked(control, x, y);
+		form__select_menu_clicked(control, x, y);
 	}
 }
 
@@ -2058,7 +2058,7 @@ form_submit(nsurl *page_url,
 	assert(form != NULL);
 
 	/* obtain list of controls from DOM */
-	res = form_dom_to_data(form, submit_button, &success);
+	res = form__dom_to_data(form, submit_button, &success);
 	if (res != NSERROR_OK) {
 		return res;
 	}
@@ -2072,7 +2072,7 @@ form_submit(nsurl *page_url,
 
 	switch (form->method) {
 	case method_GET:
-		res = form_url_encode(form, success, &data);
+		res = form__url_encode(form, success, &data);
 		if (res == NSERROR_OK) {
 			/* Replace query segment */
 			res = nsurl_replace_query(action_url, data, &query_url);
@@ -2092,7 +2092,7 @@ form_submit(nsurl *page_url,
 		break;
 
 	case method_POST_URLENC:
-		res = form_url_encode(form, success, &data);
+		res = form__url_encode(form, success, &data);
 		if (res == NSERROR_OK) {
 			res = browser_window_navigate(target,
 						      action_url,

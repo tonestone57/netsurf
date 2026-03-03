@@ -127,7 +127,7 @@ nserror box_textarea_keypress(html_content *html, struct box *box, uint32_t key)
 /**
  * Callback for html form textareas.
  */
-static void box_textarea_callback(void *data, struct textarea_msg *msg)
+static void box_textarea__callback(void *data, struct textarea_msg *msg)
 {
 	struct form_textarea_data *d = data;
 	struct form_control *gadget = d->gadget;
@@ -358,7 +358,7 @@ bool box_textarea_create_textarea(html_content *html,
 	gadget->data.text.initial = dom_text;
 
 	gadget->data.text.ta = textarea_create(ta_flags, &ta_setup,
-			box_textarea_callback, &gadget->data.text.data);
+			box_textarea__callback, &gadget->data.text.data);
 
 	if (gadget->data.text.ta == NULL) {
 		return false;

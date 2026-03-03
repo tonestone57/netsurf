@@ -48,7 +48,7 @@
 #include "html/object.h"
 
 /* break reference loop */
-static void html_object_refresh(void *p);
+static void object__refresh(void *p);
 
 /**
  * Retrieve objects used by HTML document
@@ -78,7 +78,7 @@ struct content_html_object *html_get_objects(hlcache_handle *h, unsigned int *n)
  */
 
 static void
-html_object_failed(struct box *box, html_content *content, bool background)
+object__failed(struct box *box, html_content *content, bool background)
 {
 	/* Nothing to do */
 	return;
@@ -89,7 +89,7 @@ html_object_failed(struct box *box, html_content *content, bool background)
  */
 
 static void
-html_object_done(struct box *box,
+object__done(struct box *box,
 		 hlcache_handle *object,
 		 bool background)
 {
@@ -130,7 +130,7 @@ html_object_done(struct box *box,
  * Callback for hlcache_handle_retrieve() for objects with no box.
  */
 static nserror
-html_object_nobox_callback(hlcache_handle *object,
+object__nobox_callback(hlcache_handle *object,
 			   const hlcache_event *event,
 			   void *pw)
 {
@@ -155,7 +155,7 @@ html_object_nobox_callback(hlcache_handle *object,
  * Callback for hlcache_handle_retrieve() for objects with a box.
  */
 static nserror
-html_object_callback(hlcache_handle *object,
+object__callback(hlcache_handle *object,
 		     const hlcache_event *event,
 		     void *pw)
 {
@@ -184,7 +184,7 @@ html_object_callback(hlcache_handle *object,
 							box->height : 0);
 
 			/* Adjust parent content for new object size */
-			html_object_done(box, object, o->background);
+			object__done(box, object, o->background);
 			if (c->base.status == CONTENT_STATUS_READY ||
 					c->base.status == CONTENT_STATUS_DONE)
 				content__reformat(&c->base, false,
@@ -197,7 +197,7 @@ html_object_callback(hlcache_handle *object,
 		c->base.active--;
 		NSLOG(netsurf, INFO, "%d fetches active", c->base.active);
 
-		html_object_done(box, object, o->background);
+		object__done(box, object, o->background);
 
 		if (c->base.status != CONTENT_STATUS_LOADING &&
 				box->flags & REPLACE_DIM) {
@@ -229,7 +229,7 @@ html_object_callback(hlcache_handle *object,
 		c->base.active--;
 		NSLOG(netsurf, INFO, "%d fetches active", c->base.active);
 
-		html_object_failed(box, c, o->background);
+		object__failed(box, c, o->background);
 
 		break;
 
@@ -355,7 +355,7 @@ html_object_callback(hlcache_handle *object,
 		if (content_get_type(object) == CONTENT_HTML) {
 			/* only for HTML objects */
 			guit->misc->schedule(event->data.delay * 1000,
-					html_object_refresh, o);
+					object__refresh, o);
 		}
 
 		break;
@@ -520,7 +520,7 @@ html_object_callback(hlcache_handle *object,
  * \param  url             URL of object to fetch (copied)
  * \return  true on success, false on memory exhaustion
  */
-static bool html_replace_object(struct content_html_object *object, nsurl *url)
+static bool object__replace(struct content_html_object *object, nsurl *url)
 {
 	html_content *c;
 	hlcache_child_context child;
@@ -552,7 +552,7 @@ static bool html_replace_object(struct content_html_object *object, nsurl *url)
 	/* initialise fetch */
 	error = hlcache_handle_retrieve(url, HLCACHE_RETRIEVE_SNIFF_TYPE,
 			content_get_url(&c->base), NULL,
-			html_object_callback, object, &child,
+			object__callback, object, &child,
 			object->permitted_types,
 			&object->content);
 
@@ -572,7 +572,7 @@ static bool html_replace_object(struct content_html_object *object, nsurl *url)
 /**
  * schedule callback for object refresh
  */
-static void html_object_refresh(void *p)
+static void object__refresh(void *p)
 {
 	struct content_html_object *object = p;
 	nsurl *refresh_url;
@@ -588,7 +588,7 @@ static void html_object_refresh(void *p)
 
 	content_invalidate_reuse_data(object->content);
 
-	if (!html_replace_object(object, refresh_url)) {
+	if (!object__replace(object, refresh_url)) {
 		/** \todo handle memory exhaustion */
 	}
 }
@@ -636,7 +636,7 @@ nserror html_object_abort_objects(html_content *htmlc)
 		case CONTENT_STATUS_READY:
 			hlcache_handle_abort(object->content);
 			/* Active count will be updated when
-			 * html_object_callback receives
+			 * object__callback receives
 			 * CONTENT_MSG_DONE from this object
 			 */
 			break;
@@ -674,7 +674,7 @@ nserror html_object_close_objects(html_content *html)
 			continue;
 
 		if (content_get_type(object->content) == CONTENT_HTML) {
-			guit->misc->schedule(-1, html_object_refresh, object);
+			guit->misc->schedule(-1, object__refresh, object);
 		}
 
 		content_close(object->content);
@@ -693,7 +693,7 @@ nserror html_object_free_objects(html_content *html)
 			NSLOG(netsurf, INFO, "object %p", victim->content);
 
 			if (content_get_type(victim->content) == CONTENT_HTML) {
-				guit->misc->schedule(-1, html_object_refresh, victim);
+				guit->misc->schedule(-1, object__refresh, victim);
 			}
 			hlcache_handle_release(victim->content);
 		}
@@ -731,9 +731,9 @@ html_fetch_object(html_content *c,
 	}
 
 	if (box == NULL) {
-		object_callback = html_object_nobox_callback;
+		object_callback = object__nobox_callback;
 	} else {
-		object_callback = html_object_callback;
+		object_callback = object__callback;
 	}
 
 	object->parent = (struct content *) c;

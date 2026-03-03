@@ -65,25 +65,25 @@ static uint32_t current_key = 0;
 static html_css_fetcher_item *items = NULL;
 static html_css_fetcher_context *ring = NULL;
 
-static bool html_css_fetcher_initialise(lwc_string *scheme)
+static bool css_fetcher__initialise(lwc_string *scheme)
 {
-	NSLOG(netsurf, INFO, "html_css_fetcher_initialise called for %s",
+	NSLOG(netsurf, INFO, "css_fetcher__initialise called for %s",
 	      lwc_string_data(scheme));
 	return true;
 }
 
-static void html_css_fetcher_finalise(lwc_string *scheme)
+static void css_fetcher__finalise(lwc_string *scheme)
 {
-	NSLOG(netsurf, INFO, "html_css_fetcher_finalise called for %s",
+	NSLOG(netsurf, INFO, "css_fetcher__finalise called for %s",
 	      lwc_string_data(scheme));
 }
 
-static bool html_css_fetcher_can_fetch(const nsurl *url)
+static bool css_fetcher__can_fetch(const nsurl *url)
 {
 	return true;
 }
 
-static void *html_css_fetcher_setup(struct fetch *parent_fetch, nsurl *url,
+static void *css_fetcher__setup(struct fetch *parent_fetch, nsurl *url,
 		 bool only_2xx, bool downgrade_tls, const char *post_urlenc,
 		 const struct fetch_multipart_data *post_multipart,
 		 const char **headers)
@@ -141,12 +141,12 @@ static void *html_css_fetcher_setup(struct fetch *parent_fetch, nsurl *url,
 	return ctx;
 }
 
-static bool html_css_fetcher_start(void *ctx)
+static bool css_fetcher__start(void *ctx)
 {
 	return true;
 }
 
-static void html_css_fetcher_free(void *ctx)
+static void css_fetcher__free(void *ctx)
 {
 	html_css_fetcher_context *c = ctx;
 
@@ -161,7 +161,7 @@ static void html_css_fetcher_free(void *ctx)
 	free(ctx);
 }
 
-static void html_css_fetcher_abort(void *ctx)
+static void css_fetcher__abort(void *ctx)
 {
 	html_css_fetcher_context *c = ctx;
 
@@ -172,7 +172,7 @@ static void html_css_fetcher_abort(void *ctx)
 	c->aborted = true;
 }
 
-static void html_css_fetcher_send_callback(const fetch_msg *msg,
+static void css_fetcher__send_callback(const fetch_msg *msg,
 		html_css_fetcher_context *c)
 {
 	c->locked = true;
@@ -180,7 +180,7 @@ static void html_css_fetcher_send_callback(const fetch_msg *msg,
 	c->locked = false;
 }
 
-static void html_css_fetcher_poll(lwc_string *scheme)
+static void css_fetcher__poll(lwc_string *scheme)
 {
 	fetch_msg msg;
 	html_css_fetcher_context *c, *next;
@@ -212,14 +212,14 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 
 			/* Any callback can result in the fetch being aborted.
 			 * Therefore, we _must_ check for this after _every_
-			 * call to html_css_fetcher_send_callback().
+			 * call to css_fetcher__send_callback().
 			 */
 			snprintf(header, sizeof header,
 				"Content-Type: text/css; charset=utf-8");
 			msg.type = FETCH_HEADER;
 			msg.data.header_or_data.buf = (const uint8_t *) header;
 			msg.data.header_or_data.len = strlen(header);
-			html_css_fetcher_send_callback(&msg, c);
+			css_fetcher__send_callback(&msg, c);
 
 			if (c->aborted == false) {
 				snprintf(header, sizeof header,
@@ -229,7 +229,7 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 				msg.data.header_or_data.buf =
 						(const uint8_t *) header;
 				msg.data.header_or_data.len = strlen(header);
-				html_css_fetcher_send_callback(&msg, c);
+				css_fetcher__send_callback(&msg, c);
 			}
 
 			if (c->aborted == false) {
@@ -241,7 +241,7 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 				msg.data.header_or_data.buf =
 						(const uint8_t *) header;
 				msg.data.header_or_data.len = strlen(header);
-				html_css_fetcher_send_callback(&msg, c);
+				css_fetcher__send_callback(&msg, c);
 			}
 
 			if (c->aborted == false) {
@@ -251,12 +251,12 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 						dom_string_data(c->item->data);
 				msg.data.header_or_data.len =
 					dom_string_byte_length(c->item->data);
-				html_css_fetcher_send_callback(&msg, c);
+				css_fetcher__send_callback(&msg, c);
 			}
 
 			if (c->aborted == false) {
 				msg.type = FETCH_FINISHED;
-				html_css_fetcher_send_callback(&msg, c);
+				css_fetcher__send_callback(&msg, c);
 			}
 		} else {
 			NSLOG(netsurf, INFO, "Processing of %s failed!",
@@ -286,14 +286,14 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 nserror html_css_fetcher_register(void)
 {
 	const struct fetcher_operation_table html_css_fetcher_ops = {
-		.initialise = html_css_fetcher_initialise,
-		.acceptable = html_css_fetcher_can_fetch,
-		.setup = html_css_fetcher_setup,
-		.start = html_css_fetcher_start,
-		.abort = html_css_fetcher_abort,
-		.free = html_css_fetcher_free,
-		.poll = html_css_fetcher_poll,
-		.finalise = html_css_fetcher_finalise
+		.initialise = css_fetcher__initialise,
+		.acceptable = css_fetcher__can_fetch,
+		.setup = css_fetcher__setup,
+		.start = css_fetcher__start,
+		.abort = css_fetcher__abort,
+		.free = css_fetcher__free,
+		.poll = css_fetcher__poll,
+		.finalise = css_fetcher__finalise
 	};
 
 	return fetcher_add(lwc_string_ref(corestring_lwc_x_ns_css),
