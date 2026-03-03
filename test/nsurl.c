@@ -1018,7 +1018,7 @@ START_TEST(nsurl_api_assert_access_test)
 
 	res_s = nsurl_access(NULL);
 
-	ck_assert(res_s == NULL);
+	ck_assert_str_eq(res_s, "");
 }
 END_TEST
 
@@ -1031,7 +1031,7 @@ START_TEST(nsurl_api_assert_access_leaf_test)
 
 	res_s = nsurl_access_leaf(NULL);
 
-	ck_assert(res_s == NULL);
+	ck_assert_str_eq(res_s, "");
 }
 END_TEST
 
