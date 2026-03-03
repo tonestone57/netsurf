@@ -533,7 +533,9 @@ mouse_action_drag_textarea(html_content *html,
 			      x - box_x,
 			      y - box_y);
 
-	/* TODO: Set appropriate statusbar message */
+	/* Set appropriate statusbar message */
+	browser_window_set_status(bw, messages_get("FormText"));
+
 	return NSERROR_OK;
 }
 

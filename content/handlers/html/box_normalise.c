@@ -92,7 +92,8 @@ calculate_table_row(struct columns *col_info,
 	struct span_info *spans;
 	struct box *rg = cell->parent->parent; /* Cell's row group */
 
-	/* Skip columns with cells spanning from above */
+	/* Skip columns with cells spanning from above.
+	 * Note: rowspans do not cross row group boundaries. */
 	while (col_info->spans[cell_start_col].row_span != 0 &&
 			col_info->spans[cell_start_col].rg == rg) {
 		cell_start_col++;

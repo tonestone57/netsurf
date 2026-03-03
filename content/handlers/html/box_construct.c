@@ -418,10 +418,6 @@ box_construct_marker(struct box *box,
 		nsurl *url;
 		nserror error;
 
-		/* TODO: we get a url out of libcss as a lwc string, but
-		 *       earlier we already had it as a nsurl after we
-		 *       nsurl_joined it.  Can this be improved?
-		 *       For now, just making another nsurl. */
 		error = nsurl_create(lwc_string_data(image_uri), &url);
 		if (error != NSERROR_OK)
 			return false;
@@ -690,10 +686,6 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 		nsurl *url;
 		nserror error;
 
-		/* TODO: we get a url out of libcss as a lwc string, but
-		 *       earlier we already had it as a nsurl after we
-		 *       nsurl_joined it.  Can this be improved?
-		 *       For now, just making another nsurl. */
 		error = nsurl_create(lwc_string_data(bgimage_uri), &url);
 		if (error == NSERROR_OK) {
 			/* Fetch image if we got a valid URL */

@@ -1539,11 +1539,27 @@ html_scroll_at_point(struct content *c, int x, int y, int scrx, int scry)
 	int box_x = 0, box_y = 0;
 	bool handled_scroll = false;
 
-	/* TODO: invert order; visit deepest box first */
+	struct {
+		struct box *box;
+		int x, y;
+	} path[64];
+	int depth = 0;
 
-	while ((next = box_at_point(&html->unit_len_ctx, box, x, y,
+	/* Collect boxes from root to leaf containing the point */
+	while (depth < 64 && (next = box_at_point(&html->unit_len_ctx, box, x, y,
 			&box_x, &box_y)) != NULL) {
 		box = next;
+		path[depth].box = box;
+		path[depth].x = box_x;
+		path[depth].y = box_y;
+		depth++;
+	}
+
+	/* Iterate backwards from leaf to root to visit deepest box first */
+	for (int i = depth - 1; i >= 0; i--) {
+		box = path[i].box;
+		box_x = path[i].x;
+		box_y = path[i].y;
 
 		if (box->style && css_computed_visibility(box->style) ==
 				CSS_VISIBILITY_HIDDEN)

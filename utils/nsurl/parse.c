@@ -1313,7 +1313,8 @@ nserror nsurl_create(const char * const url_s, nsurl **url)
 	nserror e = NSERROR_OK;
 	bool match;
 
-	assert(url_s != NULL);
+	if (url_s == NULL)
+		return NSERROR_BAD_PARAMETER;
 
 	/* Peg out the URL sections */
 	nsurl__get_string_markers(url_s, &m, false);
@@ -1400,8 +1401,8 @@ nserror nsurl_join(const nsurl *base, const char *rel, nsurl **joined)
 		NSURL_F_BASE_QUERY	= (1 << 4)
 	} joined_parts;
 
-	assert(base != NULL);
-	assert(rel != NULL);
+	if (base == NULL || rel == NULL)
+		return NSERROR_BAD_PARAMETER;
 
 	NSLOG(netsurf, DEEPDEBUG, "base: \"%s\", rel: \"%s\"",
 			nsurl_access(base), rel);
