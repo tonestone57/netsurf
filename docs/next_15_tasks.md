@@ -2,10 +2,10 @@
 
 ## Phase 2: Engine Integration & Glue Layer
 1.  **[COMPLETED] String Conversion Helpers**: Implemented `js_value_to_dom_string` and `dom_string_to_js_value` in `qjsky.c` with correct UTF-8 byte length handling.
- 2.  **[COMPLETED] Node Memoization (and inline handler scanning)**: Implemented a hidden `JSMap` with `BigUint64` keys on the global object to robustly memoize `dom_node*` -> `JSValue` mappings.
+2.  **[COMPLETED] Node Memoization**: Implemented a hidden `JSMap` with `BigUint64` keys on the global object to robustly memoize `dom_node*` -> `JSValue` mappings.
 3.  **[COMPLETED] Event Dispatch Bridge**: Implemented `js_fire_event` in `quickjs.c` conforming to the `js.h` adapter interface.
  4.  **[COMPLETED] Auto-Handler Registration**: Implement `js_handle_new_element` to scan for `on*` HTML attributes and compile them into JS functions.
- 5.  **[COMPLETED] XMLHttpRequest Skeleton**: Create the base implementation for `XMLHttpRequest` in `quickjs/`.
+ 5.  **[COMPLETED] XMLHttpRequest Implementation**: Implement asynchronous `XMLHttpRequest` bridged to NetSurf fetch API.
 6.  **[COMPLETED] Timer System Port**: Implement `setTimeout` and `setInterval` logic using NetSurf's `guit->misc->schedule`.
 7.  **[COMPLETED] Timer Management**: Implement `js_closethread` to correctly cancel pending timers and cleanup callbacks.
  8.  **[COMPLETED] Context User Data**: Use `JS_SetContextOpaque` to store NetSurf-specific thread state (browser window, content handles).
@@ -19,7 +19,8 @@
 
 ## Phase 4: Basic Web APIs
 14. **[COMPLETED] Window.alert Bridge**: Implement a bridge to NetSurf's native alert dialogs.
-15. **Build System Bindings**: Add `nsgenbind` invocation rules to `quickjs/Makefile`.
+15. **[COMPLETED] Core BOM APIs**: Implement `Location`, `History`, and `Navigator` objects.
+16. **Build System Bindings**: Add `nsgenbind` invocation rules to `quickjs/Makefile`.
 
 ## Phase 5: Advanced Integration & Performance
 16. **Weak Reference Memoization**: Migrate the node map to a native-managed registry using `JS_SetOpaque` with proper garbage collection tracking to eliminate current memory leaks.
