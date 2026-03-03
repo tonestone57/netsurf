@@ -150,7 +150,7 @@ START_TEST(squash_whitespace_api_test)
 	char *res_str;
 
 	res_str = squash_whitespace(NULL);
-	ck_assert(res_str != NULL);
+	ck_assert(res_str == NULL);
 
 	free(res_str);
 }
@@ -161,7 +161,7 @@ static TCase *squash_whitespace_case_create(void)
 	TCase *tc;
 	tc = tcase_create("Squash whitespace");
 
-	tcase_add_test_raise_signal(tc, squash_whitespace_api_test, 6);
+	tcase_add_test(tc, squash_whitespace_api_test);
 
 	tcase_add_loop_test(tc, squash_whitespace_test,
 			    0, NELEMS(squash_whitespace_test_vec));
