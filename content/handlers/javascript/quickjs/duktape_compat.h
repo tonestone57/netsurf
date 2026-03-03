@@ -18,4 +18,12 @@ typedef JSValue duk_ret_t;
 
 #define DUK_RET_TYPE_ERROR JS_EXCEPTION
 
+static inline void *duk_get_pointer(JSContext *ctx, int index)
+{
+	/* This is a simplified shim for .bnd compatibility.
+	 * In a real migration, nsgenbind should handle this via JS_GetOpaque.
+	 */
+	return NULL;
+}
+
 #endif

@@ -12,6 +12,7 @@
 #include "content/handlers/javascript/quickjs/location.h"
 #include "content/handlers/javascript/quickjs/history.h"
 #include "content/handlers/javascript/quickjs/navigator.h"
+#include "content/handlers/javascript/quickjs/screen.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -100,6 +101,7 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_location(thread->ctx);
 	qjsky_init_history(thread->ctx);
 	qjsky_init_navigator(thread->ctx);
+	qjsky_init_screen(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -146,6 +148,10 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	/* window.navigator */
 	JSValue nav_obj = qjsky_create_navigator(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "navigator", nav_obj);
+
+	/* window.screen */
+	JSValue screen_obj = qjsky_create_screen(thread->ctx);
+	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
 
 	JS_FreeValue(thread->ctx, global);
 
