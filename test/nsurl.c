@@ -1382,54 +1382,30 @@ static Suite *nsurl_suite(void)
 				    corestring_create,
 				    corestring_teardown);
 
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_create_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_ref_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_unref_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_compare1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_compare2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_component1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_component2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_has_component1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_has_component2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_access_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_access_leaf_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_length_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_hash_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_join1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_join2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_defragment_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_refragment1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_refragment2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query3_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_nice_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_parent_test, 6);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_create_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_ref_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_unref_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_compare1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_compare2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_component1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_component2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_has_component1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_has_component2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_access_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_access_leaf_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_length_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_hash_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_join1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_join2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_defragment_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_refragment1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_refragment2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query3_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_nice_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_parent_test);
 
 	suite_add_tcase(s, tc_api_assert);
 
