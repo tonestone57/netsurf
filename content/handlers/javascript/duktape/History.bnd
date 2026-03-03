@@ -1,0 +1,115 @@
+/* History binding for browser using duktape and libdom
+ *
+ * Copyright 2023 Jules
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class History {
+};
+
+prologue History()
+%{
+#include "netsurf/types.h"
+#include "netsurf/browser_window.h"
+#include "desktop/browser_private.h"
+#include "desktop/browser_history.h"
+#include "javascript/duktape/dukky.h"
+
+static bool history_count_cb(const struct browser_window *bw,
+		int x0, int y0, int x1, int y1,
+		const struct history_entry *entry, void *user_data)
+{
+	unsigned int *count = user_data;
+	(*count)++;
+	return true;
+}
+%}
+
+getter History::length()
+%{
+	window_private_t *win_priv;
+	unsigned int count = 0;
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	win_priv = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
+	if (win_priv != NULL && win_priv->win != NULL) {
+		browser_window_history_enumerate(win_priv->win, history_count_cb, &count);
+	}
+	duk_push_uint(ctx, count);
+	return 1;
+%}
+
+getter History::state()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method History::back()
+%{
+	window_private_t *win_priv;
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	win_priv = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
+	if (win_priv != NULL && win_priv->win != NULL) {
+		browser_window_history_back(win_priv->win, false);
+	}
+	return 0;
+%}
+
+method History::forward()
+%{
+	window_private_t *win_priv;
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	win_priv = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
+	if (win_priv != NULL && win_priv->win != NULL) {
+		browser_window_history_forward(win_priv->win, false);
+	}
+	return 0;
+%}
+
+method History::go()
+%{
+	window_private_t *win_priv;
+	duk_int_t delta = 0;
+	if (duk_get_top(ctx) > 0) {
+		delta = duk_to_int(ctx, 0);
+	}
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	win_priv = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
+	if (win_priv != NULL && win_priv->win != NULL) {
+		if (delta == 0) {
+			browser_window_reload(win_priv->win, false);
+		} else {
+			while (delta > 0) {
+				browser_window_history_forward(win_priv->win, false);
+				delta--;
+			}
+			while (delta < 0) {
+				browser_window_history_back(win_priv->win, false);
+				delta++;
+			}
+		}
+	}
+	return 0;
+%}
+
+method History::pushState()
+%{
+	return 0;
+%}
+
+method History::replaceState()
+%{
+	return 0;
+%}

@@ -21,6 +21,8 @@ class Window {
 #include "html/html.h"
 #include "html/private.h"
 #include "desktop/gui_internal.h"
+#include "desktop/browser_private.h"
+#include "desktop/scrollbar.h"
 #include "netsurf/misc.h"
 #include "utils/ring.h"
 #include "netsurf/inttypes.h"
@@ -424,6 +426,65 @@ getter Window::window()
 	return 1;
 %}
 
+getter Window::self()
+%{
+	duk_push_this(ctx);
+	return 1;
+%}
+
+getter Window::frames()
+%{
+	duk_push_this(ctx);
+	return 1;
+%}
+
+getter Window::top()
+%{
+	struct browser_window *top = browser_window_get_root(priv->win);
+	/* We need to push the Window object for this browser_window.
+	 * Currently our infrastructure doesn't easily map back from
+	 * browser_window to its Window JS object if it's a different one.
+	 * For now, if it's us, return us.
+	 */
+	if (top == priv->win) {
+		duk_push_this(ctx);
+	} else {
+		/* TODO: Proper cross-window support */
+		duk_push_null(ctx);
+	}
+	return 1;
+%}
+
+getter Window::parent()
+%{
+	struct browser_window *parent = priv->win->parent;
+	if (parent == NULL || parent == priv->win) {
+		duk_push_this(ctx);
+	} else {
+		/* TODO: Proper cross-window support */
+		duk_push_null(ctx);
+	}
+	return 1;
+%}
+
+getter Window::opener()
+%{
+	/* NetSurf doesn't currently track the opener window */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::length()
+%{
+	/* total number of frames + iframes */
+	int count = priv->win->iframe_count;
+	if (priv->win->browser_window_type == BROWSER_WINDOW_FRAMESET) {
+		count += priv->win->rows * priv->win->cols;
+	}
+	duk_push_int(ctx, count);
+	return 1;
+%}
+
 getter Window::console()
 %{
 	duk_push_this(ctx);
@@ -435,6 +496,131 @@ getter Window::console()
 		}
 		duk_dup(ctx, -1);
 		duk_put_prop_string(ctx, -3, MAGIC(Console));
+	}
+	return 1;
+%}
+
+getter Window::locationbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(locationbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(locationbar));
+	}
+	return 1;
+%}
+
+getter Window::menubar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(menubar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(menubar));
+	}
+	return 1;
+%}
+
+getter Window::personalbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(personalbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(personalbar));
+	}
+	return 1;
+%}
+
+getter Window::scrollbars()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(scrollbars));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(scrollbars));
+	}
+	return 1;
+%}
+
+getter Window::statusbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(statusbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(statusbar));
+	}
+	return 1;
+%}
+
+getter Window::toolbar()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(toolbar));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(BARPROP), 0) != DUK_EXEC_SUCCESS) {
+			return 0;
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(toolbar));
+	}
+	return 1;
+%}
+
+getter Window::screen()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Screen));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+
+		if (dukky_create_object(ctx,
+					PROTO_NAME(SCREEN),
+					0) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx,
+				  DUK_ERR_ERROR,
+				  "Unable to create screen object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(Screen));
+	}
+	return 1;
+%}
+
+getter Window::history()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(History));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(HISTORY), 0) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx, DUK_ERR_ERROR, "Unable to create history object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(History));
 	}
 	return 1;
 %}
@@ -487,6 +673,64 @@ getter Window::name()
 	return 1;
 %}
 
+getter Window::innerWidth()
+%{
+	duk_push_int(ctx, priv->win->width);
+	return 1;
+%}
+
+getter Window::innerHeight()
+%{
+	duk_push_int(ctx, priv->win->height);
+	return 1;
+%}
+
+getter Window::scrollX()
+%{
+	int sx = 0;
+	if (priv->win->scroll_x != NULL) {
+		sx = scrollbar_get_offset(priv->win->scroll_x);
+	}
+	duk_push_int(ctx, sx);
+	return 1;
+%}
+
+getter Window::pageXOffset()
+%{
+	int sx = 0;
+	if (priv->win->scroll_x != NULL) {
+		sx = scrollbar_get_offset(priv->win->scroll_x);
+	}
+	duk_push_int(ctx, sx);
+	return 1;
+%}
+
+getter Window::scrollY()
+%{
+	int sy = 0;
+	if (priv->win->scroll_y != NULL) {
+		sy = scrollbar_get_offset(priv->win->scroll_y);
+	}
+	duk_push_int(ctx, sy);
+	return 1;
+%}
+
+getter Window::pageYOffset()
+%{
+	int sy = 0;
+	if (priv->win->scroll_y != NULL) {
+		sy = scrollbar_get_offset(priv->win->scroll_y);
+	}
+	duk_push_int(ctx, sy);
+	return 1;
+%}
+
+getter Window::devicePixelRatio()
+%{
+	duk_push_number(ctx, 1.0);
+	return 1;
+%}
+
 setter Window::name()
 %{
 	const char *name;
@@ -510,6 +754,26 @@ method Window::alert()
 		msg = duk_safe_to_lstring(ctx, 0, &msg_len);
 		NSLOG(netsurf, INFO, "JS ALERT: %*s", (int)msg_len, msg);
 	}
+	return 0;
+%}
+
+method Window::confirm()
+%{
+	/* confirm always returns true for now as we don't have a UI popup */
+	duk_push_boolean(ctx, true);
+	return 1;
+%}
+
+method Window::prompt()
+%{
+	/* prompt returns null for now */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Window::print()
+%{
+	/* print is a no-op */
 	return 0;
 %}
 
@@ -561,12 +825,89 @@ method Window::clearTimeout()
 	return 0;
 %}
 
+method Window::requestAnimationFrame()
+%{
+	/* Simplistic fallback to setTimeout */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, "setTimeout");
+
+	/* We want to call callback(performance.now()) or similar.
+	 * NetSurf doesn't have performance.now() yet, so we use Date.now().
+	 */
+	duk_push_object(ctx);
+	duk_push_string(ctx, "func");
+	duk_dup(ctx, 0); /* The callback */
+	duk_put_prop(ctx, -3);
+
+	duk_push_string(ctx, "args");
+	duk_push_array(ctx);
+	duk_get_global_string(ctx, "Date");
+	duk_get_prop_string(ctx, -1, "now");
+	duk_call(ctx, 0);
+	duk_put_prop_index(ctx, -2, 0);
+	duk_put_prop(ctx, -3);
+
+	/* Now we have a wrapper object. But setTimeout expects a function.
+	 * Let's just do it properly and pass the arg.
+	 * Current window_alloc_new_callback handles extra args.
+	 */
+	duk_pop(ctx); /* pop global */
+
+	/* stack: callback */
+	duk_push_int(ctx, 16);
+	duk_get_global_string(ctx, "Date");
+	duk_get_prop_string(ctx, -1, "now");
+	duk_call(ctx, 0);
+	duk_replace(ctx, -2); /* replace Date with now() */
+
+	/* stack: callback, 16, timestamp */
+	/* call setTimeout(callback, 16, timestamp) */
+	duk_get_global_string(ctx, "setTimeout");
+	duk_insert(ctx, 0);
+	duk_call(ctx, 3);
+	return 1;
+%}
+
+method Window::cancelAnimationFrame()
+%{
+	/* Simplistic fallback to clearTimeout */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, "clearTimeout");
+	duk_dup(ctx, 0);
+	duk_call(ctx, 1);
+	duk_pop_2(ctx);
+	return 0;
+%}
+
 method Window::clearInterval()
 %{
 	duk_int_t handle = duk_get_int(ctx, 0);
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 
 	return 0;
+%}
+
+method Window::btoa()
+%{
+	duk_idx_t nargs = duk_get_top(ctx);
+	if (nargs < 1) return 0;
+	duk_to_string(ctx, 0);
+	duk_base64_encode(ctx, 0);
+	return 1;
+%}
+
+method Window::atob()
+%{
+	duk_idx_t nargs = duk_get_top(ctx);
+	if (nargs < 1) return 0;
+	/* atob is supposed to throw if the input contains non-latin1 characters
+	 * or is not valid base64. duk_base64_decode handles the latter.
+	 */
+	duk_to_string(ctx, 0);
+	duk_base64_decode(ctx, 0);
+	/* Convert the decoded buffer back to a string for compliance */
+	duk_to_string(ctx, 0);
+	return 1;
 %}
 
 getter Window::onabort();

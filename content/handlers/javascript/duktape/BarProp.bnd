@@ -1,0 +1,18 @@
+/* BarProp binding for browser using duktape and libdom
+ *
+ * Copyright 2023 Jules
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class BarProp {
+};
+
+getter BarProp::visible()
+%{
+	duk_push_boolean(ctx, true);
+	return 1;
+%}

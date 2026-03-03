@@ -8,7 +8,50 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+prologue HTMLImageElement()
+%{
+#include "utils/corestrings.h"
+#include "netsurf/content.h"
+#include "content/hlcache.h"
+#include "content/content_protected.h"
+#include "html/box.h"
+%}
+
 init HTMLImageElement(struct dom_html_element *html_image_element::html_element);
+
+getter HTMLImageElement::naturalWidth()
+%{
+	dom_exception err;
+	struct box *box;
+	int width = 0;
+
+	err = dom_node_get_user_data(priv->parent.parent.parent.node,
+				     corestring_dom___ns_key_box_node_data,
+				     (void **)&box);
+	if (err == DOM_NO_ERR && box != NULL && box->object != NULL) {
+		width = content_get_width(box->object);
+	}
+
+	duk_push_uint(ctx, (duk_uint_t)width);
+	return 1;
+%}
+
+getter HTMLImageElement::naturalHeight()
+%{
+	dom_exception err;
+	struct box *box;
+	int height = 0;
+
+	err = dom_node_get_user_data(priv->parent.parent.parent.node,
+				     corestring_dom___ns_key_box_node_data,
+				     (void **)&box);
+	if (err == DOM_NO_ERR && box != NULL && box->object != NULL) {
+		height = content_get_height(box->object);
+	}
+
+	duk_push_uint(ctx, (duk_uint_t)height);
+	return 1;
+%}
 
 getter HTMLImageElement::align()
 %{
