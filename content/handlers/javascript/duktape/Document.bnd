@@ -144,41 +144,6 @@ method Document::createTextNode()
 	return 1;
 %}
 
-getter Document::embeds()
-%{
-	dom_exception err;
-	dom_html_collection *coll;
-
-	err = dom_html_document_get_embeds((dom_html_document *)priv->parent.node, &coll);
-	if (err != DOM_NO_ERR) return 0;
-
-	dukky_push_generics(ctx, "makeListProxy");
-	duk_push_pointer(ctx, coll);
-	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
-	dom_html_collection_unref(coll);
-
-	if (dukky_pcall(ctx, 1, false) != 0) return 0;
-
-	return 1;
-%}
-
-getter Document::plugins()
-%{
-	dom_exception err;
-	dom_html_collection *coll;
-
-	err = dom_html_document_get_plugins((dom_html_document *)priv->parent.node, &coll);
-	if (err != DOM_NO_ERR) return 0;
-
-	dukky_push_generics(ctx, "makeListProxy");
-	duk_push_pointer(ctx, coll);
-	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
-	dom_html_collection_unref(coll);
-
-	if (dukky_pcall(ctx, 1, false) != 0) return 0;
-
-	return 1;
-%}
 
 getter Document::title()
 %{
@@ -355,11 +320,14 @@ getter Document::lastModified()
 		} else {
 			/* Fallback to current date/time if no header */
 			time_t now = time(NULL);
-			struct tm tm_now;
-			localtime_r(&now, &tm_now);
-			char buf[32];
-			strftime(buf, sizeof(buf), "%m/%d/%Y %H:%M:%S", &tm_now);
-			duk_push_string(ctx, buf);
+			struct tm *tm_ptr = localtime(&now);
+			if (tm_ptr) {
+				char buf[32];
+				strftime(buf, sizeof(buf), "%m/%d/%Y %H:%M:%S", tm_ptr);
+				duk_push_string(ctx, buf);
+			} else {
+				duk_push_string(ctx, "01/01/1970 00:00:00");
+			}
 		}
 		return 1;
 	}
@@ -646,7 +614,6 @@ setter Document::body()
 	dom_node *new_body;
 	dom_node *old_body = NULL;
 	dom_exception err;
-	dom_node_type type;
 
 	/* Get the node to set as body */
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -661,30 +628,23 @@ setter Document::body()
 	/* Verify it's a <body> or <frameset> */
 	dom_string *name;
 	dom_node_get_node_name(new_body, &name);
-	if (name != corestring_dom_BODY && name != corestring_dom_FRAMESET) {
+	bool matches = (name == corestring_dom_BODY);
+	if (!matches) {
+		const char *name_c = (const char *)dom_string_data(name);
+		size_t name_l = dom_string_byte_length(name);
+		if (name_l == 8 && strncmp(name_c, "FRAMESET", 8) == 0) {
+			matches = true;
+		}
+	}
+	if (!matches) {
 		dom_string_unref(name);
-		return duk_error(ctx, DUK_ERR_HIERARCHY_REQUEST_ERROR, "Body must be BODY or FRAMESET element");
+		return duk_error(ctx, DUK_ERR_ERROR, "Body must be BODY or FRAMESET element");
 	}
 	dom_string_unref(name);
 
 	/* Find existing body */
-	struct dom_nodelist *nodes;
-	err = dom_document_get_elements_by_tag_name(priv->parent.node,
-						    corestring_dom_BODY,
-						    &nodes);
-	if (err == DOM_NO_ERR && nodes != NULL) {
-		dom_nodelist_item(nodes, 0, &old_body);
-		dom_nodelist_unref(nodes);
-	}
-	if (old_body == NULL) {
-		err = dom_document_get_elements_by_tag_name(priv->parent.node,
-							    corestring_dom_FRAMESET,
-							    &nodes);
-		if (err == DOM_NO_ERR && nodes != NULL) {
-			dom_nodelist_item(nodes, 0, &old_body);
-			dom_nodelist_unref(nodes);
-		}
-	}
+	err = dom_html_document_get_body((dom_html_document *)priv->parent.node, (dom_html_element **)&old_body);
+	if (err != DOM_NO_ERR) old_body = NULL;
 
 	dom_node *parent;
 	if (old_body != NULL) {
