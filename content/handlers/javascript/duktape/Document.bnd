@@ -628,14 +628,7 @@ setter Document::body()
 	/* Verify it's a <body> or <frameset> */
 	dom_string *name;
 	dom_node_get_node_name(new_body, &name);
-	bool matches = (name == corestring_dom_BODY);
-	if (!matches) {
-		const char *name_c = (const char *)dom_string_data(name);
-		size_t name_l = dom_string_byte_length(name);
-		if (name_l == 8 && strncmp(name_c, "FRAMESET", 8) == 0) {
-			matches = true;
-		}
-	}
+	bool matches = (name == corestring_dom_BODY) || (name == corestring_dom_FRAMESET);
 	if (!matches) {
 		dom_string_unref(name);
 		return duk_error(ctx, DUK_ERR_ERROR, "Body must be BODY or FRAMESET element");
