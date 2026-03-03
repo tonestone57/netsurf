@@ -16,6 +16,8 @@ prologue Document()
 #include "content/hlcache.h"
 #include "html/private.h"
 #include "content/urldb.h"
+#include "content/llcache.h"
+#include <time.h>
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 
@@ -141,6 +143,7 @@ method Document::createTextNode()
 
 	return 1;
 %}
+
 
 getter Document::title()
 %{
@@ -298,6 +301,36 @@ setter Document::domain()
 	/* Setting document.domain is currently not supported by libdom.
 	 * Any value passed is currently ignored.
 	 */
+	return 0;
+%}
+
+getter Document::lastModified()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+	const char *last_mod;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		last_mod = llcache_handle_get_header(htmlc->base.llcache, "Last-Modified");
+		if (last_mod != NULL) {
+			duk_push_string(ctx, last_mod);
+		} else {
+			/* Fallback to current date/time if no header */
+			time_t now = time(NULL);
+			struct tm *tm_ptr = localtime(&now);
+			if (tm_ptr) {
+				char buf[32];
+				strftime(buf, sizeof(buf), "%m/%d/%Y %H:%M:%S", tm_ptr);
+				duk_push_string(ctx, buf);
+			} else {
+				duk_push_string(ctx, "01/01/1970 00:00:00");
+			}
+		}
+		return 1;
+	}
 	return 0;
 %}
 
@@ -574,6 +607,61 @@ getter Document::body()
 	}
 
 	return 0; /* coerced to undefined */
+%}
+
+setter Document::body()
+%{
+	dom_node *new_body;
+	dom_node *old_body = NULL;
+	dom_exception err;
+
+	/* Get the node to set as body */
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *new_priv = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (new_priv == NULL || new_priv->node == NULL) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid node for body");
+	}
+	new_body = new_priv->node;
+
+	/* Verify it's a <body> or <frameset> */
+	dom_string *name;
+	dom_node_get_node_name(new_body, &name);
+	bool matches = (name == corestring_dom_BODY) || (name == corestring_dom_FRAMESET);
+	if (!matches) {
+		dom_string_unref(name);
+		return duk_error(ctx, DUK_ERR_ERROR, "Body must be BODY or FRAMESET element");
+	}
+	dom_string_unref(name);
+
+	/* Find existing body */
+	err = dom_html_document_get_body((dom_html_document *)priv->parent.node, (dom_html_element **)&old_body);
+	if (err != DOM_NO_ERR) old_body = NULL;
+
+	dom_node *parent;
+	if (old_body != NULL) {
+		err = dom_node_get_parent_node(old_body, &parent);
+		if (err == DOM_NO_ERR && parent != NULL) {
+			dom_node *replaced;
+			err = dom_node_replace_child(parent, new_body, old_body, &replaced);
+			if (err == DOM_NO_ERR) dom_node_unref(replaced);
+			dom_node_unref(parent);
+		}
+		dom_node_unref(old_body);
+	} else {
+		/* No old body, append to documentElement */
+		dom_element *doc_ele;
+		err = dom_document_get_document_element(priv->parent.node, &doc_ele);
+		if (err == DOM_NO_ERR && doc_ele != NULL) {
+			dom_node *appended;
+			err = dom_node_append_child((dom_node *)doc_ele, new_body, &appended);
+			if (err == DOM_NO_ERR) dom_node_unref(appended);
+			dom_node_unref(doc_ele);
+		}
+	}
+
+	return 0;
 %}
 
 getter Document::location()

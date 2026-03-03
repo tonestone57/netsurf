@@ -8,15 +8,18 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+class DOMImplementation {
+};
+
 prologue DOMImplementation ()
 %{
 #include "utils/corestrings.h"
 %}
 
-method DOMImplemention::hasFeature ()
+method DOMImplementation::hasFeature ()
 %{
 	/* Always return true */
-	duk_push_bool(ctx, true);
+	duk_push_boolean(ctx, true);
 	return 1;
 %}
 

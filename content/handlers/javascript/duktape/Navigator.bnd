@@ -8,9 +8,14 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+class Navigator {
+};
+
 prologue Navigator()
 %{
+#include <string.h>
 #include "utils/useragent.h"
+#include "utils/nsoption.h"
 %}
 
 method Navigator::taintEnabled()
@@ -69,7 +74,13 @@ getter Navigator::vendorSub()
 
 getter Navigator::cookieEnabled()
 %{
-	duk_push_boolean(ctx, false);
+	duk_push_boolean(ctx, true);
+	return 1;
+%}
+
+getter Navigator::onLine()
+%{
+	duk_push_boolean(ctx, true);
 	return 1;
 %}
 
@@ -83,5 +94,72 @@ getter Navigator::javaEnabled()
 getter Navigator::userAgent()
 %{
 	duk_push_string(ctx, user_agent_string());
+	return 1;
+%}
+
+getter Navigator::hardwareConcurrency()
+%{
+	duk_push_uint(ctx, 1);
+	return 1;
+%}
+
+getter Navigator::language()
+%{
+	const char *accept_language = nsoption_charp(accept_language);
+	if (accept_language == NULL || accept_language[0] == '\0') {
+		duk_push_string(ctx, "en-GB");
+	} else {
+		/* Extract first language from comma-separated list and strip q-value */
+		const char *p = accept_language;
+		while (*p == ' ') p++; /* Skip leading spaces */
+		const char *comma = strchr(p, ',');
+		size_t len = comma ? (size_t)(comma - p) : strlen(p);
+		const char *semi = memchr(p, ';', len);
+		if (semi) {
+			len = semi - p;
+		}
+		/* Strip trailing spaces */
+		while (len > 0 && p[len-1] == ' ') len--;
+
+		if (len == 0) {
+			duk_push_string(ctx, "en-GB");
+		} else {
+			duk_push_lstring(ctx, p, len);
+		}
+	}
+	return 1;
+%}
+
+getter Navigator::languages()
+%{
+	const char *accept_language = nsoption_charp(accept_language);
+	duk_push_array(ctx);
+	if (accept_language == NULL || accept_language[0] == '\0') {
+		duk_push_string(ctx, "en-GB");
+		duk_put_prop_index(ctx, -2, 0);
+	} else {
+		/* Parse comma-separated list into array, stripping q-values */
+		const char *p = accept_language;
+		duk_uarridx_t i = 0;
+		while (p != NULL && *p != '\0') {
+			while (*p == ' ') p++; /* Skip leading spaces */
+			const char *end = strchr(p, ',');
+			size_t len = end ? (size_t)(end - p) : strlen(p);
+			const char *semi = memchr(p, ';', len);
+			if (semi) {
+				len = semi - p;
+			}
+			/* Strip trailing spaces from the language tag */
+			size_t tag_len = len;
+			while (tag_len > 0 && p[tag_len-1] == ' ') tag_len--;
+
+			if (tag_len > 0) {
+				duk_push_lstring(ctx, p, tag_len);
+				duk_put_prop_index(ctx, -2, i++);
+			}
+			if (end == NULL) break;
+			p = end + 1;
+		}
+	}
 	return 1;
 %}

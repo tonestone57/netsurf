@@ -1383,6 +1383,15 @@ dictionary DragEventInit : MouseEventInit {
   DataTransfer? dataTransfer = null;
 };
 
+interface Screen {
+  readonly attribute long availWidth;
+  readonly attribute long availHeight;
+  readonly attribute long width;
+  readonly attribute long height;
+  readonly attribute unsigned long colorDepth;
+  readonly attribute unsigned long pixelDepth;
+};
+
 [PrimaryGlobal]
 /*sealed*/ interface Window : EventTarget {
   // the current browsing context
@@ -1412,6 +1421,19 @@ dictionary DragEventInit : MouseEventInit {
   attribute any opener;
   [Replaceable] readonly attribute WindowProxy parent;
   readonly attribute Element? frameElement;
+
+  readonly attribute long innerWidth;
+  readonly attribute long innerHeight;
+
+  readonly attribute long scrollX;
+  readonly attribute long pageXOffset;
+  readonly attribute long scrollY;
+  readonly attribute long pageYOffset;
+
+  readonly attribute Screen screen;
+
+  readonly attribute double devicePixelRatio;
+
   WindowProxy open(optional DOMString url = "about:blank", optional DOMString target = "_blank", [TreatNullAs=EmptyString] optional DOMString features = "", optional boolean replace = false);
   getter WindowProxy (unsigned long index);
   getter object (DOMString name);
@@ -1431,6 +1453,9 @@ dictionary DragEventInit : MouseEventInit {
 
   unsigned long requestAnimationFrame(FrameRequestCallback callback);
   void cancelAnimationFrame(unsigned long handle);
+
+  DOMString btoa(DOMString btoa);
+  DOMString atob(DOMString atob);
 
   void postMessage(any message, DOMString targetOrigin, optional sequence<Transferable> transfer);
 
@@ -1645,8 +1670,6 @@ interface WindowEventHandlers {
 
 [NoInterfaceObject, Exposed=(Window,Worker)]
 interface WindowBase64 {
-  DOMString btoa(DOMString btoa);
-  DOMString atob(DOMString atob);
 };
 Window implements WindowBase64;
 WorkerGlobalScope implements WindowBase64;
@@ -1700,8 +1723,13 @@ partial interface NavigatorID {
 
 [NoInterfaceObject, Exposed=(Window,Worker)]
 interface NavigatorLanguage {
-  readonly attribute DOMString? language;
+  readonly attribute DOMString language;
   readonly attribute DOMString[] languages;
+};
+
+[NoInterfaceObject, Exposed=(Window,Worker)]
+interface NavigatorConcurrentHardware {
+  readonly attribute unsigned long long hardwareConcurrency;
 };
 
 [NoInterfaceObject]
@@ -1945,6 +1973,7 @@ interface WorkerNavigator {};
 WorkerNavigator implements NavigatorID;
 WorkerNavigator implements NavigatorLanguage;
 WorkerNavigator implements NavigatorOnLine;
+Navigator implements NavigatorConcurrentHardware;
 
 [Exposed=Worker]
 interface WorkerLocation {
