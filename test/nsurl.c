@@ -862,7 +862,7 @@ END_TEST
 
 
 /**
- * check creation asserts on NULL parameter
+ * check creation behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_create_test)
 {
@@ -870,21 +870,21 @@ START_TEST(nsurl_api_assert_create_test)
 	nsurl *res1;
 	err = nsurl_create(NULL, &res1);
 
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
 /**
- * check ref asserts on NULL parameter
+ * check ref behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_ref_test)
 {
-	nsurl_ref(NULL);
+	ck_assert(nsurl_ref(NULL) == NULL);
 }
 END_TEST
 
 /**
- * check unref asserts on NULL parameter
+ * check unref behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_unref_test)
 {
@@ -893,7 +893,7 @@ START_TEST(nsurl_api_assert_unref_test)
 END_TEST
 
 /**
- * check compare asserts on NULL parameter
+ * check compare behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_compare1_test)
 {
@@ -913,7 +913,7 @@ START_TEST(nsurl_api_assert_compare1_test)
 END_TEST
 
 /**
- * check compare asserts on NULL parameter
+ * check compare behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_compare2_test)
 {
@@ -927,11 +927,13 @@ START_TEST(nsurl_api_assert_compare2_test)
 	same = nsurl_compare(res, NULL, NSURL_PATH);
 
 	ck_assert(same == false);
+
+	nsurl_unref(res);
 }
 END_TEST
 
 /**
- * check get asserts on NULL parameter
+ * check get behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_get_test)
 {
@@ -940,14 +942,14 @@ START_TEST(nsurl_api_assert_get_test)
 	size_t url_l = 0;
 
 	err = nsurl_get(NULL, NSURL_PATH, &url_s, &url_l);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 	ck_assert(url_s == NULL);
 	ck_assert(url_l == 0);
 }
 END_TEST
 
 /**
- * check get component asserts on NULL parameter
+ * check get component behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_get_component1_test)
 {
@@ -959,7 +961,7 @@ START_TEST(nsurl_api_assert_get_component1_test)
 END_TEST
 
 /**
- * check get component asserts on bad component parameter
+ * check get component behavior on bad component parameter
  */
 START_TEST(nsurl_api_assert_get_component2_test)
 {
@@ -978,7 +980,7 @@ START_TEST(nsurl_api_assert_get_component2_test)
 END_TEST
 
 /**
- * check has component asserts on NULL parameter
+ * check has component behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_has_component1_test)
 {
@@ -990,7 +992,7 @@ START_TEST(nsurl_api_assert_has_component1_test)
 END_TEST
 
 /**
- * check has component asserts on bad component parameter
+ * check has component behavior on bad component parameter
  */
 START_TEST(nsurl_api_assert_has_component2_test)
 {
@@ -1010,7 +1012,7 @@ END_TEST
 
 
 /**
- * check access asserts on NULL parameter
+ * check access behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_access_test)
 {
@@ -1018,12 +1020,12 @@ START_TEST(nsurl_api_assert_access_test)
 
 	res_s = nsurl_access(NULL);
 
-	ck_assert(res_s == NULL);
+	ck_assert_str_eq(res_s, "");
 }
 END_TEST
 
 /**
- * check access asserts on NULL parameter
+ * check access behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_access_leaf_test)
 {
@@ -1031,12 +1033,12 @@ START_TEST(nsurl_api_assert_access_leaf_test)
 
 	res_s = nsurl_access_leaf(NULL);
 
-	ck_assert(res_s == NULL);
+	ck_assert_str_eq(res_s, "");
 }
 END_TEST
 
 /**
- * check length asserts on NULL parameter
+ * check length behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_length_test)
 {
@@ -1049,7 +1051,7 @@ START_TEST(nsurl_api_assert_length_test)
 END_TEST
 
 /**
- * check hash asserts on NULL parameter
+ * check hash behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_hash_test)
 {
@@ -1062,7 +1064,7 @@ START_TEST(nsurl_api_assert_hash_test)
 END_TEST
 
 /**
- * check join asserts on NULL parameter
+ * check join behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_join1_test)
 {
@@ -1071,12 +1073,12 @@ START_TEST(nsurl_api_assert_join1_test)
 	nserror err;
 
 	err = nsurl_join(NULL, rel, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
 /**
- * check join asserts on NULL parameter
+ * check join behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_join2_test)
 {
@@ -1088,14 +1090,14 @@ START_TEST(nsurl_api_assert_join2_test)
 	ck_assert(err == NSERROR_OK);
 
 	err = nsurl_join(url, NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 
 	nsurl_unref(url);
 }
 END_TEST
 
 /**
- * check defragment asserts on NULL parameter
+ * check defragment behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_defragment_test)
 {
@@ -1103,13 +1105,13 @@ START_TEST(nsurl_api_assert_defragment_test)
 	nserror err;
 
 	err = nsurl_defragment(NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
 
 /**
- * check refragment join asserts on NULL parameter
+ * check refragment join behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_refragment1_test)
 {
@@ -1117,12 +1119,12 @@ START_TEST(nsurl_api_assert_refragment1_test)
 	nserror err;
 
 	err = nsurl_refragment(NULL, corestring_lwc_http, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
 /**
- * check refragment asserts on NULL parameter
+ * check refragment behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_refragment2_test)
 {
@@ -1134,14 +1136,14 @@ START_TEST(nsurl_api_assert_refragment2_test)
 	ck_assert(err == NSERROR_OK);
 
 	err = nsurl_refragment(url, NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 
 	nsurl_unref(url);
 }
 END_TEST
 
 /**
- * check query replacement asserts on NULL parameter
+ * check query replacement behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_replace_query1_test)
 {
@@ -1150,12 +1152,12 @@ START_TEST(nsurl_api_assert_replace_query1_test)
 	nserror err;
 
 	err = nsurl_replace_query(NULL, rel, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
 /**
- * check query replacement asserts on NULL parameter
+ * check query replacement behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_replace_query2_test)
 {
@@ -1167,14 +1169,14 @@ START_TEST(nsurl_api_assert_replace_query2_test)
 	ck_assert(err == NSERROR_OK);
 
 	err = nsurl_replace_query(url, NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 
 	nsurl_unref(url);
 }
 END_TEST
 
 /**
- * check query replacement asserts on bad parameter
+ * check query replacement behavior on bad parameter
  */
 START_TEST(nsurl_api_assert_replace_query3_test)
 {
@@ -1186,14 +1188,14 @@ START_TEST(nsurl_api_assert_replace_query3_test)
 	ck_assert(err == NSERROR_OK);
 
 	err = nsurl_replace_query(url, NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 
 	nsurl_unref(url);
 }
 END_TEST
 
 /**
- * check nice asserts on NULL parameter
+ * check nice behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_nice_test)
 {
@@ -1201,7 +1203,7 @@ START_TEST(nsurl_api_assert_nice_test)
 	nserror err;
 
 	err = nsurl_nice(NULL, &res_s, false);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 
 	ck_assert(res_s == NULL);
 }
@@ -1209,7 +1211,7 @@ END_TEST
 
 
 /**
- * check parent asserts on NULL parameter
+ * check parent behavior on NULL parameter
  */
 START_TEST(nsurl_api_assert_parent_test)
 {
@@ -1217,7 +1219,7 @@ START_TEST(nsurl_api_assert_parent_test)
 	nserror err;
 
 	err = nsurl_parent(NULL, &res);
-	ck_assert(err != NSERROR_OK);
+	ck_assert(err == NSERROR_BAD_PARAMETER);
 }
 END_TEST
 
@@ -1382,54 +1384,30 @@ static Suite *nsurl_suite(void)
 				    corestring_create,
 				    corestring_teardown);
 
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_create_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_ref_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_unref_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_compare1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_compare2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_component1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_get_component2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_has_component1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_has_component2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_access_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_access_leaf_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_length_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_hash_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_join1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_join2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_defragment_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_refragment1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_refragment2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query1_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query2_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_replace_query3_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_nice_test, 6);
-	tcase_add_test_raise_signal(tc_api_assert,
-				    nsurl_api_assert_parent_test, 6);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_create_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_ref_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_unref_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_compare1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_compare2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_component1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_get_component2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_has_component1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_has_component2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_access_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_access_leaf_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_length_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_hash_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_join1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_join2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_defragment_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_refragment1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_refragment2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query1_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query2_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_replace_query3_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_nice_test);
+	tcase_add_test(tc_api_assert, nsurl_api_assert_parent_test);
 
 	suite_add_tcase(s, tc_api_assert);
 

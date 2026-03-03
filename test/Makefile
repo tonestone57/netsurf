@@ -20,7 +20,7 @@ NSURL_SOURCES := utils/nsurl/nsurl.c utils/nsurl/parse.c utils/idna.c \
 	utils/punycode.c
 
 # nsurl test sources
-nsurl_SRCS := $(NSURL_SOURCES) utils/corestrings.c test/log.c test/nsurl.c
+nsurl_SRCS := $(NSURL_SOURCES) utils/corestrings.c test/log.c test/nsurl.c test/stubs.c
 
 # url database test sources
 urldbtest_SRCS := $(NSURL_SOURCES) \
