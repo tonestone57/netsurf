@@ -26,10 +26,25 @@ static inline void *duk_get_pointer(JSContext *ctx, int index)
 	return NULL;
 }
 
-#define duk_get_top(ctx) 0
+#define duk_get_top(ctx) (0)
 #define duk_pop(ctx) ((void)0)
-#define duk_push_boolean(ctx, b) ((void)0)
-#define duk_get_prop_string(ctx, idx, s) ((void)0)
-#define duk_put_prop_string(ctx, idx, s) ((void)0)
+#define duk_pop_2(ctx) ((void)0)
+#define duk_pop_n(ctx, n) ((void)0)
+#define duk_push_boolean(ctx, b) ((void)(b))
+#define duk_get_prop_string(ctx, idx, s) (1)
+#define duk_put_prop_string(ctx, idx, s) (1)
+#define duk_insert(ctx, idx) ((void)0)
+#define duk_push_int(ctx, i) ((void)0)
+#define duk_push_uint(ctx, u) ((void)0)
+#define duk_push_string(ctx, s) ((void)0)
+#define duk_push_object(ctx) ((void)0)
+#define duk_push_array(ctx) ((void)0)
+#define duk_push_null(ctx) ((void)0)
+#define duk_push_undefined(ctx) ((void)0)
+#define duk_is_undefined(ctx, idx) (0)
+#define duk_error(ctx, err, msg) (JS_EXCEPTION)
+
+#define DUK_VARARGS (-1)
+#define DUK_EXEC_SUCCESS (0)
 
 #endif

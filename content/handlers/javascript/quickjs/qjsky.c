@@ -653,6 +653,16 @@ static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int arg
 	return JS_UNDEFINED;
 }
 
+static JSValue qjsky_window_confirm(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	return JS_TRUE;
+}
+
+static JSValue qjsky_window_prompt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	return JS_NULL;
+}
+
 /* Event Support */
 
 static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
@@ -1053,5 +1063,7 @@ void qjsky_init_window(JSContext *ctx)
 {
 	JSValue global = JS_GetGlobalObject(ctx);
 	JS_SetPropertyStr(ctx, global, "alert", JS_NewCFunction(ctx, qjsky_window_alert, "alert", 1));
+	JS_SetPropertyStr(ctx, global, "confirm", JS_NewCFunction(ctx, qjsky_window_confirm, "confirm", 1));
+	JS_SetPropertyStr(ctx, global, "prompt", JS_NewCFunction(ctx, qjsky_window_prompt, "prompt", 2));
 	JS_FreeValue(ctx, global);
 }

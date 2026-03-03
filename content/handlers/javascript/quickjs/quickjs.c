@@ -14,6 +14,7 @@
 #include "content/handlers/javascript/quickjs/navigator.h"
 #include "content/handlers/javascript/quickjs/screen.h"
 #include "content/handlers/javascript/quickjs/barprop.h"
+#include "content/handlers/html/html.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -154,6 +155,13 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	/* window.screen */
 	JSValue screen_obj = qjsky_create_screen(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
+
+	/* window.document */
+	if (thread->doc_priv) {
+		struct dom_document *doc = ((struct html_content *)thread->doc_priv)->document;
+		JSValue doc_obj = qjsky_push_node(thread->ctx, (struct dom_node *)doc);
+		JS_SetPropertyStr(thread->ctx, global, "document", doc_obj);
+	}
 
 	/* window.BarProps */
 	JS_SetPropertyStr(thread->ctx, global, "locationbar", qjsky_create_barprop(thread->ctx));
