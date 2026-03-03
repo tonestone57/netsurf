@@ -98,8 +98,8 @@ content quickly.
 # Layout Engine
 
 The NetSurf layout engine supports various HTML and CSS features. Recent work has significantly improved support for:
-- **Flexbox**: Full support for `justify-content`, `align-content`, and the `order` property (including painting order reordering).
-- **Tables**: Proportional vertical spare height distribution and correct row-spanning alignment.
+- **Flexbox**: Full support for `justify-content`, `align-content`, and the `order` property (including painting order reordering). Cross-axis `stretch` alignment now correctly respects `min/max` constraints.
+- **Tables**: Proportional vertical spare height distribution and correct row-spanning alignment. Column span information is normalized at row-group boundaries to prevent `rowspan` leaks.
 - **Inline Layout**: Spec-compliant `text-indent` interaction with floats.
 
 # Javascript
@@ -112,8 +112,15 @@ Javascript provision is split into four parts:
 
 ## Library
 
-JavaScript is provided by integrating the duktape library. There are
-[instructions](docs/updating-duktape.md) on how to update the library.
+JavaScript support is provided by integrating either the Duktape or QuickJS
+library. NetSurf traditionally uses Duktape, which is well-supported and
+documented. QuickJS has been recently integrated as a modern, faster
+alternative that supports more recent ECMAScript specifications and native
+Promises.
+
+Engine selection is controlled via build-time options. There are
+[instructions](docs/updating-duktape.md) on how to update the Duktape
+library.
 
 ## Interface binding
 

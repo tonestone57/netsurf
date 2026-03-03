@@ -121,9 +121,10 @@
       http://www.aminet.net/package/comm/www/OpenURL-OS4
 
 
-  Spidermonkey
---------------
+  Javascript
+------------
 
-  Experimental Javascript support requires Spidermonkey.  The patches to
-  build v1.7 are available from the NetSurf toolchains Git repository.
+  Javascript support is provided by either the Duktape or QuickJS engines.
+  Appropriate development libraries for either must be available to enable
+  Javascript support.
 

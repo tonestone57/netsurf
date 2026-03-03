@@ -111,6 +111,8 @@ the browser. These are:
 | LibNSGIF       | GIF format image decoder                                 |
 | LibNSBMP       | BMP and ICO format image decoder                         |
 | LibROSprite    | RISC OS Sprite format image decoder                      |
+| LibNSUtils     | NetSurf common utility functions                         |
+| LibUTF8Proc    | UTF-8 processing library                                  |
 
 To fetch each of these libraries, run the appropriate commands from the
 Docs/LIBRARIES file, from within your workspace directory.

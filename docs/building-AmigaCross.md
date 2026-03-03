@@ -81,3 +81,5 @@ libhubbub
 libcss
 libnsbmp
 libnsgif
+libnsutils
+libutf8proc

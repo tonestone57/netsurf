@@ -19,6 +19,8 @@
       $ git clone git://git.netsurf-browser.org/libdom
       $ git clone git://git.netsurf-browser.org/libnsbmp
       $ git clone git://git.netsurf-browser.org/libnsgif
+      $ git clone git://git.netsurf-browser.org/libnsutils
+      $ git clone git://git.netsurf-browser.org/libutf8proc
 
   Optional:
 
