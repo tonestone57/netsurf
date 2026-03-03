@@ -26,4 +26,10 @@ static inline void *duk_get_pointer(JSContext *ctx, int index)
 	return NULL;
 }
 
+#define duk_get_top(ctx) 0
+#define duk_pop(ctx) ((void)0)
+#define duk_push_boolean(ctx, b) ((void)0)
+#define duk_get_prop_string(ctx, idx, s) ((void)0)
+#define duk_put_prop_string(ctx, idx, s) ((void)0)
+
 #endif

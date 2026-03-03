@@ -263,6 +263,7 @@ extern JSClassDef qjsky_location_class;
 extern JSClassDef qjsky_history_class;
 extern JSClassDef qjsky_navigator_class;
 extern JSClassDef qjsky_screen_class;
+extern JSClassDef qjsky_barprop_class;
 
 void qjsky_init_runtime(struct jsheap *heap)
 {
@@ -295,6 +296,9 @@ void qjsky_init_runtime(struct jsheap *heap)
 
 	JS_NewClassID(&heap->screen_class_id);
 	JS_NewClass(heap->rt, heap->screen_class_id, &qjsky_screen_class);
+
+	JS_NewClassID(&heap->barprop_class_id);
+	JS_NewClass(heap->rt, heap->barprop_class_id, &qjsky_barprop_class);
 
 	JS_SetRuntimeOpaque(heap->rt, heap);
 }

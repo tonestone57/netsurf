@@ -26,10 +26,6 @@ void qjsky_init_console(JSContext *ctx);
 /* Window Integration */
 void qjsky_init_window(JSContext *ctx);
 
-/* Screen Integration */
-void qjsky_init_screen(JSContext *ctx);
-JSValue qjsky_create_screen(JSContext *ctx);
-
 /* Timer Support */
 void qjsky_timer_init(JSContext *ctx);
 void qjsky_timer_cleanup(JSContext *ctx);

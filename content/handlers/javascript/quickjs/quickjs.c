@@ -13,6 +13,7 @@
 #include "content/handlers/javascript/quickjs/history.h"
 #include "content/handlers/javascript/quickjs/navigator.h"
 #include "content/handlers/javascript/quickjs/screen.h"
+#include "content/handlers/javascript/quickjs/barprop.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -102,6 +103,7 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_history(thread->ctx);
 	qjsky_init_navigator(thread->ctx);
 	qjsky_init_screen(thread->ctx);
+	qjsky_init_barprop(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -152,6 +154,14 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	/* window.screen */
 	JSValue screen_obj = qjsky_create_screen(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
+
+	/* window.BarProps */
+	JS_SetPropertyStr(thread->ctx, global, "locationbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "menubar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "personalbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "scrollbars", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "statusbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "toolbar", qjsky_create_barprop(thread->ctx));
 
 	JS_FreeValue(thread->ctx, global);
 
