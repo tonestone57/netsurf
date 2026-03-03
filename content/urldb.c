@@ -1367,7 +1367,9 @@ static struct path_data *urldb_find_url(nsurl *url)
 	unsigned int port_int;
 	bool match;
 
-	assert(url);
+	if (url == NULL) {
+		return NULL;
+	}
 
 	if (url_bloom != NULL) {
 		if (bloom_search_hash(url_bloom, nsurl_hash(url)) == false) {

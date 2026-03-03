@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
-  Build Instructions for Framebuffer NetSurf                     16 March 2014
+  Build Instructions for Framebuffer NetSurf                     November 2024
 --------------------------------------------------------------------------------
 
   This document provides instructions for building the Framebuffer version of 
@@ -119,6 +119,8 @@
   LibNSGIF        --  GIF format image decoder
   LibNSBMP        --  BMP and ICO format image decoder
   LibROSprite     --  RISC OS Sprite format image decoder
+  LibNSUtils      --  NetSurf common utility functions
+  LibUTF8Proc     --  UTF-8 processing library
   LibNSFB         --  Framebuffer abstraction
 
   To fetch each of these libraries, run the appropriate commands from the

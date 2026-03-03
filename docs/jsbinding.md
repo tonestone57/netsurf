@@ -56,6 +56,27 @@ specifications and native Promises.
 Selection of the engine is controlled via the `NETSURF_USE_DUKTAPE` and
 `NETSURF_USE_QUICKJS` makefile options.
 
+QuickJS Integration
+-------------------
+
+The QuickJS integration uses the `qjs_libdom` backend for `nsgenbind`. Unlike
+Duktape's stack-based API, QuickJS uses a reference-counted `JSValue` type.
+
+### Private Data
+QuickJS bindings use `JS_SetOpaque` and `JS_GetOpaque` to associate C private
+data with JavaScript objects. This replaces the "magic property" approach
+used in Duktape.
+
+### Reference Counting
+Strict adherence to QuickJS reference counting rules is required to prevent
+memory leaks. Functions such as `JS_DupValue` and `JS_FreeValue` are used to
+manage the lifecycle of objects, strings, and other heap-allocated values.
+
+### Qjsky
+The `qjsky` layer provides common functionality for the QuickJS backend,
+including DOM node memoization and event listener management, similar to the
+`dukky` layer for Duktape.
+
 Dukky
 -----
 

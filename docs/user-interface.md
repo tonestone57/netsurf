@@ -43,6 +43,10 @@ This is the internal unit test frontend.
 
 There is a basic user guide [monkey](docs/using-monkey.md)
 
+## qt
+
+Frontend that uses the Qt toolkit.
+
 ## riscos
 
 Frontend for the RISC OS WIMP toolkit.

@@ -1072,7 +1072,7 @@ static TCase *urldb_cookie_case_create(void)
 
 
 /**
- * Test urldb_add_url handle NULL.
+ * Test urldb_add_url handles NULL.
  */
 START_TEST(urldb_api_add_url_null_test)
 {

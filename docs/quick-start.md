@@ -1,7 +1,7 @@
 Quick Build Steps for NetSurf
 =============================
 
-Last Updated: 28th May 2024
+Last Updated: November 2024
 
 This document provides steps for building NetSurf.
 
