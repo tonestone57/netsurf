@@ -828,43 +828,23 @@ method Window::clearTimeout()
 method Window::requestAnimationFrame()
 %{
 	/* Simplistic fallback to setTimeout */
-	duk_push_global_object(ctx);
-	duk_get_prop_string(ctx, -1, "setTimeout");
-
-	/* We want to call callback(performance.now()) or similar.
-	 * NetSurf doesn't have performance.now() yet, so we use Date.now().
-	 */
-	duk_push_object(ctx);
-	duk_push_string(ctx, "func");
-	duk_dup(ctx, 0); /* The callback */
-	duk_put_prop(ctx, -3);
-
-	duk_push_string(ctx, "args");
-	duk_push_array(ctx);
-	duk_get_global_string(ctx, "Date");
-	duk_get_prop_string(ctx, -1, "now");
-	duk_call(ctx, 0);
-	duk_put_prop_index(ctx, -2, 0);
-	duk_put_prop(ctx, -3);
-
-	/* Now we have a wrapper object. But setTimeout expects a function.
-	 * Let's just do it properly and pass the arg.
-	 * Current window_alloc_new_callback handles extra args.
-	 */
-	duk_pop(ctx); /* pop global */
 
 	/* stack: callback */
-	duk_push_int(ctx, 16);
+
+	/* Get timestamp: Date.now() */
 	duk_get_global_string(ctx, "Date");
 	duk_get_prop_string(ctx, -1, "now");
 	duk_call(ctx, 0);
-	duk_replace(ctx, -2); /* replace Date with now() */
+	/* stack: callback, timestamp */
 
-	/* stack: callback, 16, timestamp */
 	/* call setTimeout(callback, 16, timestamp) */
 	duk_get_global_string(ctx, "setTimeout");
-	duk_insert(ctx, 0);
+	duk_dup(ctx, 0);       /* callback */
+	duk_push_int(ctx, 16); /* 16ms */
+	duk_dup(ctx, 1);       /* timestamp */
 	duk_call(ctx, 3);
+
+	/* return the timer ID from setTimeout as the requestAnimationFrame handle */
 	return 1;
 %}
 
