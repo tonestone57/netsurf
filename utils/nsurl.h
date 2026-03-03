@@ -69,6 +69,8 @@ typedef enum nsurl_component {
  *
  * It is up to the client to call nsurl_unref when they are finished with
  * the created object.
+ *
+ * \note if url_s is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_create(const char * const url_s, nsurl **url);
 
@@ -77,7 +79,7 @@ nserror nsurl_create(const char * const url_s, nsurl **url);
  * Increment the reference count to a NetSurf URL object
  *
  * \param url	  NetSurf URL to create another reference to
- * \return The NetSurf URL pointer to use as the copy
+ * \return The NetSurf URL pointer to use as the copy, or NULL if url was NULL
  *
  * Use this when copying a NetSurf URL into a persistent data structure.
  */
@@ -89,7 +91,8 @@ nsurl *nsurl_ref(nsurl *url);
  *
  * \param url	  NetSurf URL to drop reference to
  *
- * When the reference count reaches zero then the NetSurf URL will be destroyed
+ * When the reference count reaches zero then the NetSurf URL will be destroyed.
+ * If url is NULL, this function does nothing.
  */
 void nsurl_unref(nsurl *url);
 
@@ -102,6 +105,7 @@ void nsurl_unref(nsurl *url);
  * \param parts	  The URL components to be compared
  * \return true on match else false
  *
+ * \note if either url1 or url2 is NULL, it returns (url1 == url2).
  */
 bool nsurl_compare(const nsurl *url1, const nsurl *url2, nsurl_component parts);
 
@@ -127,6 +131,8 @@ bool nsurl_compare(const nsurl *url1, const nsurl *url2, nsurl_component parts);
  * is removal of credentials from a URL, such as for display in browser
  * window URL bar.  'NSURL_COMPLETE &~ NSURL_PASSWORD' would remove the
  * password from a complete URL.
+ *
+ * \note if url is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_get(const nsurl *url, nsurl_component parts,
 		char **url_s, size_t *url_l);
@@ -137,7 +143,7 @@ nserror nsurl_get(const nsurl *url, nsurl_component parts,
  *
  * \param url	  NetSurf URL object
  * \param part	  The URL component required
- * \return the required component as an lwc_string, or NULL
+ * \return the required component as an lwc_string, or NULL if url is NULL
  *
  * The caller owns the returned lwc_string and should call lwc_string_unref
  * when they are done with it.
@@ -160,6 +166,8 @@ lwc_string *nsurl_get_component(const nsurl *url, nsurl_component part);
  *
  * \param url   NetSurf URL object
  * \return The URL scheme type.
+ *
+ * \note if url is NULL, NSURL_SCHEME_OTHER is returned.
  */
 enum nsurl_scheme_type nsurl_get_scheme_type(const nsurl *url);
 
@@ -170,6 +178,8 @@ enum nsurl_scheme_type nsurl_get_scheme_type(const nsurl *url);
  * \param url	  NetSurf URL object
  * \param part	  The URL components confirm existence of
  * \return true iff the component in question exists in url
+ *
+ * \note if url is NULL, false is returned.
  *
  * The valid values for the part parameter are:
  *    NSURL_SCHEME
@@ -189,7 +199,7 @@ bool nsurl_has_component(const nsurl *url, nsurl_component part);
  * Access a NetSurf URL object as a string
  *
  * \param url	  NetSurf URL to retrieve a string pointer for.
- * \return the required string
+ * \return the required string, or "" if url is NULL
  *
  * The returned string is owned by the NetSurf URL object.  It will die
  * with the NetSurf URL object.  Keep a reference to the URL if you need it.
@@ -203,7 +213,7 @@ const char *nsurl_access(const nsurl *url);
  * Variant of \ref nsurl_access for logging.
  *
  * \param url	  NetSurf URL to retrieve a string pointer for.
- * \return the required string
+ * \return the required string, or "" if url is NULL
  *
  * This will not necessarily return the actual nsurl's URL, but something
  * that is suitable for recording to logs.  E.g. URLs with the `data` scheme
@@ -231,6 +241,8 @@ const char *nsurl_access_log(const nsurl *url);
  * to free it.  It includes a trailing '\0'.
  *
  * The length returned in url_l excludes the trailing '\0'.
+ *
+ * \note if url is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_get_utf8(const nsurl *url, char **url_s, size_t *url_l);
 
@@ -239,7 +251,7 @@ nserror nsurl_get_utf8(const nsurl *url, char **url_s, size_t *url_l);
  * Access a URL's path leaf as a string
  *
  * \param url	  NetSurf URL to retrieve a string pointer for.
- * \return the required string
+ * \return the required string, or "" if url is NULL
  *
  * The returned string is owned by the NetSurf URL object.  It will die
  * with the NetSurf URL object.  Keep a reference to the URL if you need it.
@@ -253,7 +265,7 @@ const char *nsurl_access_leaf(const nsurl *url);
  * Find the length of a NetSurf URL object's URL, as returned by nsurl_access
  *
  * \param url	  NetSurf URL to find length of.
- * \return the required string
+ * \return the required length, or 0 if url is NULL
  *
  * The returned length excludes the trailing '\0'.
  */
@@ -264,7 +276,7 @@ size_t nsurl_length(const nsurl *url);
  * Get a URL's hash value
  *
  * \param url	  NetSurf URL get hash value for.
- * \return the hash value
+ * \return the hash value, or 0 if url is NULL
  */
 uint32_t nsurl_hash(const nsurl *url);
 
@@ -281,6 +293,8 @@ uint32_t nsurl_hash(const nsurl *url);
  *
  * It is up to the client to call nsurl_unref when they are finished with
  * the created object.
+ *
+ * \note if base or rel is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_join(const nsurl *base, const char *rel, nsurl **joined);
 
@@ -296,6 +310,8 @@ nserror nsurl_join(const nsurl *base, const char *rel, nsurl **joined);
  *
  * It is up to the client to call nsurl_unref when they are finished with
  * the created object.
+ *
+ * \note if url is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_defragment(const nsurl *url, nsurl **no_frag);
 
@@ -314,6 +330,8 @@ nserror nsurl_defragment(const nsurl *url, nsurl **no_frag);
  * the created object.
  *
  * Any fragment in url is replaced with frag in new_url.
+ *
+ * \note if url or frag is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_refragment(const nsurl *url, lwc_string *frag, nsurl **new_url);
 
@@ -335,6 +353,8 @@ nserror nsurl_refragment(const nsurl *url, lwc_string *frag, nsurl **new_url);
  *
  * Passing the empty string as a replacement will result in the query
  * component being removed.
+ *
+ * \note if url or query is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_replace_query(const nsurl *url, const char *query,
 		nsurl **new_url);
@@ -354,6 +374,8 @@ nserror nsurl_replace_query(const nsurl *url, const char *query,
  * the created object.
  *
  * Any scheme component in url is replaced with scheme in new_url.
+ *
+ * \note if url or scheme is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_replace_scheme(const nsurl *url, lwc_string *scheme,
 		nsurl **new_url);
@@ -368,6 +390,8 @@ nserror nsurl_replace_scheme(const nsurl *url, lwc_string *scheme,
  * \return NSERROR_OK on success, appropriate error otherwise
  *
  * Caller must ensure string result string is freed, if NSERROR_OK returned.
+ *
+ * \note if url is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_nice(const nsurl *url, char **result, bool remove_extensions);
 
@@ -385,6 +409,8 @@ nserror nsurl_nice(const nsurl *url, char **result, bool remove_extensions);
  * the created object.
  *
  * As well as stripping top most path segment, query and fragments are stripped.
+ *
+ * \note if url is NULL, NSERROR_BAD_PARAMETER is returned.
  */
 nserror nsurl_parent(const nsurl *url, nsurl **new_url);
 
@@ -395,6 +421,8 @@ nserror nsurl_parent(const nsurl *url, nsurl **new_url);
  * generally.
  *
  * \param url	The NetSurf URL to dump components of
+ *
+ * \note if url is NULL, this function does nothing.
  */
 void nsurl_dump(const nsurl *url);
 

@@ -437,9 +437,30 @@ bool html_css_process_link(html_content *htmlc, dom_node *node)
 	if (exc != DOM_NO_ERR || href == NULL)
 		return true;
 
-	/* TODO: only the first preferred stylesheets (ie.
-	 * those with a title attribute) should be loaded
-	 * (see HTML4 14.3) */
+	/* Only the first preferred stylesheets (ie. those with a title
+	 * attribute) should be loaded (see HTML4 14.3). */
+	dom_string *title_attr;
+	exc = dom_element_get_attribute(node, corestring_dom_title, &title_attr);
+	if (exc == DOM_NO_ERR && title_attr != NULL) {
+		bool found_preferred = false;
+		for (unsigned int i = 0; i < htmlc->stylesheet_count; i++) {
+			if (htmlc->stylesheets[i].node != NULL) {
+				dom_string *t;
+				if (dom_element_get_attribute(htmlc->stylesheets[i].node,
+						corestring_dom_title, &t) == DOM_NO_ERR && t != NULL) {
+					dom_string_unref(t);
+					found_preferred = true;
+					break;
+				}
+			}
+		}
+		if (found_preferred) {
+			dom_string_unref(title_attr);
+			dom_string_unref(href);
+			return true;
+		}
+		dom_string_unref(title_attr);
+	}
 
 	ns_error = nsurl_join(htmlc->base_url, dom_string_data(href), &joined);
 	if (ns_error != NSERROR_OK) {
@@ -692,13 +713,25 @@ html_css_new_selection_context(html_content *c, css_select_ctx **ret_select_ctx)
 		}
 
 		if (sheet != NULL) {
-			/* TODO: Pass the sheet's full media query, instead of
-			 *       "screen".
-			 */
+			dom_string *media = NULL;
+			const char *media_s = "screen";
+
+			if (hsheet->node != NULL &&
+					dom_element_get_attribute(hsheet->node,
+					corestring_dom_media, &media) ==
+					DOM_NO_ERR && media != NULL) {
+				media_s = dom_string_data(media);
+			}
+
 			css_ret = css_select_ctx_append_sheet(select_ctx,
 							      sheet,
 							      origin,
-							      "screen");
+							      media_s);
+
+			if (media != NULL) {
+				dom_string_unref(media);
+			}
+
 			if (css_ret != CSS_OK) {
 				css_select_ctx_destroy(select_ctx);
 				return css_error_to_nserror(css_ret);

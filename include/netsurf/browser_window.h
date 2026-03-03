@@ -816,4 +816,12 @@ nserror browser_window_show_cookies(
 nserror browser_window_show_certificates(
 		struct browser_window *bw);
 
+/**
+ * Change the status bar of a browser window.
+ *
+ * \param  bw   browser window
+ * \param  text  new status text (copied)
+ */
+void browser_window_set_status(struct browser_window *bw, const char *text);
+
 #endif
