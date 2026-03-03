@@ -250,32 +250,32 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 
 	for (idx = 0; idx < siz; idx++) {
 		exc = dom_namednodemap_item(map, idx, &attr);
-		if (exc != DOM_NO_ERR) break;
+		if (exc != DOM_NO_ERR || attr == NULL) continue;
 
 		exc = dom_attr_get_name(attr, &key);
-		if (exc != DOM_NO_ERR) {
+		if (exc != DOM_NO_ERR || key == NULL) {
 			dom_node_unref(attr);
-			break;
+			continue;
 		}
 
-		if (dom_string_length(key) > 2) {
-			const uint8_t *data = (const uint8_t *)dom_string_data(key);
+		if (dom_string_byte_length(key) > 2) {
+			const uint8_t *data = dom_string_data(key);
 			if (data[0] == 'o' && data[1] == 'n') {
-				dom_string *sub = NULL;
-				dom_string *val = NULL;
-				dom_string_substr(key, 2, dom_string_length(key) - 2, &sub);
-				dom_element_get_attribute(node, key, &val);
-				if (sub && val) {
-					qjsky_register_event_listener_for(thread->ctx, node, sub, val, false);
-				}
-				if (sub) dom_string_unref(sub);
-				if (val) dom_string_unref(val);
+				/* This is an on* attribute.
+				 * NetSurf core will handle the actual compilation
+				 * when the event fires by calling into the engine.
+				 * Here we could potentially pre-compile, but for now
+				 * we'll just ensure the engine is aware of the element.
+				 */
+				JSValue val = qjsky_push_node(thread->ctx, (dom_node *)node);
+				JS_FreeValue(thread->ctx, val);
 			}
 		}
 
 		dom_string_unref(key);
 		dom_node_unref(attr);
 	}
+
 	dom_namednodemap_unref(map);
 }
 

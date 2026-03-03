@@ -10,6 +10,7 @@
 
 prologue Document()
 %{
+#include "javascript/duktape/dukky.h"
 #include "utils/corestrings.h"
 #include "utils/libdom.h"
 #include "utils/utils.h"
@@ -124,7 +125,7 @@ method Document::createTextNode()
 	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
 	dom_string *text_str;
 
-	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	err = dom_string_create((const uint8_t *)text, text_len, &text_str);
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
 	err = dom_document_create_text_node(priv->parent.node,
@@ -138,7 +139,89 @@ method Document::createTextNode()
 	dom_string_unref(text_str);
 
 	dukky_push_node(ctx, newnode);
+	dom_node_unref(newnode);
 
+	return 1;
+%}
+
+method Document::createComment()
+%{
+	dom_node *newnode;
+	dom_exception err;
+	duk_size_t text_len;
+	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+	dom_string *text_str;
+
+	err = dom_string_create((const uint8_t *)text, text_len, &text_str);
+	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
+
+	err = dom_document_create_comment(priv->parent.node,
+					    text_str,
+					    &newnode);
+	if (err != DOM_NO_ERR) {
+		dom_string_unref(text_str);
+		return 0; /* coerced to undefined */
+	}
+
+	dom_string_unref(text_str);
+
+	dukky_push_node(ctx, newnode);
+	dom_node_unref(newnode);
+
+	return 1;
+%}
+
+method Document::createProcessingInstruction()
+%{
+	dom_node *newnode;
+	dom_exception err;
+	duk_size_t t_len, d_len;
+	const char *target = duk_safe_to_lstring(ctx, 0, &t_len);
+	const char *data = duk_safe_to_lstring(ctx, 1, &d_len);
+	dom_string *t_str, *d_str;
+
+	err = dom_string_create((const uint8_t *)target, t_len, &t_str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_string_create((const uint8_t *)data, d_len, &d_str);
+	if (err != DOM_NO_ERR) {
+		dom_string_unref(t_str);
+		return 0;
+	}
+
+	err = dom_document_create_processing_instruction(priv->parent.node,
+					    t_str, d_str,
+					    (dom_processing_instruction **)&newnode);
+	dom_string_unref(t_str);
+	dom_string_unref(d_str);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, newnode);
+	dom_node_unref(newnode);
+
+	return 1;
+%}
+
+method Document::createAttribute()
+%{
+	dom_node *newnode;
+	dom_exception err;
+	duk_size_t name_len;
+	const char *name = duk_safe_to_lstring(ctx, 0, &name_len);
+	dom_string *name_str;
+
+	err = dom_string_create((const uint8_t *)name, name_len, &name_str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_document_create_attribute(priv->parent.node,
+					    name_str,
+					    (dom_attr **)&newnode);
+	dom_string_unref(name_str);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, newnode);
 	dom_node_unref(newnode);
 
 	return 1;
@@ -203,7 +286,7 @@ setter Document::title()
 		return 0;
 	}
 
-	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	err = dom_string_create((const uint8_t *)text, text_len, &text_str);
 	if (err != DOM_NO_ERR) return 0;
 
 	if (htmlc->title == NULL) {
@@ -472,7 +555,7 @@ method Document::createElement()
 	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
 	dom_string *text_str;
 
-	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	err = dom_string_create((const uint8_t *)text, text_len, &text_str);
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
 	err = dom_document_create_element_ns(priv->parent.node,
@@ -497,39 +580,148 @@ method Document::createElementNS()
 %{
 	dom_node *newnode;
 	dom_exception err;
-	duk_size_t text_len;
-	duk_size_t ns_len;
-	const char *ns = duk_safe_to_lstring(ctx, 0, &ns_len);
-	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
-	dom_string *text_str;
-	dom_string *ns_str;
+	duk_size_t qn_len, ns_len;
+	dom_string *qn_str = NULL;
+	dom_string *ns_str = NULL;
 
-	err = dom_string_create((const uint8_t*)ns, ns_len, &ns_str);
-	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		const char *ns = duk_safe_to_lstring(ctx, 0, &ns_len);
+		err = dom_string_create((const uint8_t *)ns, ns_len, &ns_str);
+		if (err != DOM_NO_ERR) return 0;
+	}
 
-	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	const char *qname = duk_safe_to_lstring(ctx, 1, &qn_len);
+	err = dom_string_create((const uint8_t *)qname, qn_len, &qn_str);
 	if (err != DOM_NO_ERR) {
-		dom_string_unref(ns_str);
-		return 0; /* coerced to undefined */
+		if (ns_str) dom_string_unref(ns_str);
+		return 0;
 	}
 
 	err = dom_document_create_element_ns(priv->parent.node,
 					     ns_str,
-					     text_str,
+					     qn_str,
 					     &newnode);
-	if (err != DOM_NO_ERR) {
-		dom_string_unref(ns_str);
-		dom_string_unref(text_str);
-		return 0; /* coerced to undefined */
-	}
+	if (ns_str) dom_string_unref(ns_str);
+	dom_string_unref(qn_str);
 
-	dom_string_unref(text_str);
-	dom_string_unref(ns_str);
+	if (err != DOM_NO_ERR) return 0;
 
 	dukky_push_node(ctx, newnode);
-
 	dom_node_unref(newnode);
 
+	return 1;
+%}
+
+method Document::getElementsByTagNameNS()
+%{
+	dom_nodelist *nodes;
+	dom_exception err;
+	duk_size_t ns_len, ln_len;
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+	dom_string *ns = NULL, *ln = NULL;
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		err = dom_string_create((const uint8_t *)ns_str, ns_len, &ns);
+		if (err != DOM_NO_ERR) return 0;
+	}
+
+	err = dom_string_create((const uint8_t *)ln_str, ln_len, &ln);
+	if (err != DOM_NO_ERR) {
+		if (ns) dom_string_unref(ns);
+		return 0;
+	}
+
+	err = dom_document_get_elements_by_tag_name_ns(priv->parent.node, ns, ln, &nodes);
+	if (ns) dom_string_unref(ns);
+	dom_string_unref(ln);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	if (nodes == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) return 0;
+
+	return 1;
+%}
+
+method Document::createAttributeNS()
+%{
+	dom_node *attr;
+	dom_exception err;
+	duk_size_t qn_len;
+	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
+	dom_string *ns = NULL, *qn = NULL;
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		err = dom_string_create((const uint8_t *)ns_str, ns_len, &ns);
+		if (err != DOM_NO_ERR) return 0;
+	}
+
+	err = dom_string_create((const uint8_t *)qn_str, qn_len, &qn);
+	if (err != DOM_NO_ERR) {
+		if (ns) dom_string_unref(ns);
+		return 0;
+	}
+
+	err = dom_document_create_attribute_ns(priv->parent.node, ns, qn, (dom_attr **)&attr);
+	if (ns) dom_string_unref(ns);
+	dom_string_unref(qn);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	if (attr == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	dukky_push_node(ctx, attr);
+	dom_node_unref(attr);
+	return 1;
+%}
+
+method Document::importNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+	bool deep = duk_to_boolean(ctx, 1);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_document_import_node(priv->parent.node, other->node, deep, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method Document::adoptNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_node *result;
+	dom_exception err;
+	err = dom_document_adopt_node(priv->parent.node, other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, result);
+	dom_node_unref(result);
 	return 1;
 %}
 
@@ -831,17 +1023,19 @@ getter Document::childElementCount()
 
 getter Document::children()
 %{
-	dukky_push_generics(ctx, "getChildren");
-	duk_push_this(ctx);
-	if (dukky_pcall(ctx, 1, false) != 0) {
-		return 0;
-	}
+	duk_uarridx_t idx = 0;
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+
+	dukky_push_children(ctx, priv->parent.node, arr_idx, &idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList/HTMLCollection */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
 	if (dukky_pcall(ctx, 1, false) != 0) {
 		return 0;
 	}
+
 	return 1;
 %}
 
@@ -854,7 +1048,7 @@ method Document::getElementById()
 	duk_size_t text_len;
 	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
 
-	exc = dom_string_create((uint8_t*)text, text_len, &elementId_dom);
+	exc = dom_string_create((const uint8_t *)text, text_len, &elementId_dom);
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
@@ -905,7 +1099,7 @@ method Document::getElementsByTagName()
 	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
 	dom_string *tag;
 
-	err = dom_string_create((uint8_t*)text, text_len, &tag);
+	err = dom_string_create((const uint8_t *)text, text_len, &tag);
 
 	if (err != DOM_NO_ERR) return 0; /* coerced to undefined */
 
@@ -932,18 +1126,21 @@ method Document::getElementsByTagName()
 
 method Document::getElementsByClassName()
 %{
-	dukky_push_generics(ctx, "getElementsByClassName");
-	duk_push_this(ctx);
-	duk_dup(ctx, 0);
-	if (dukky_pcall(ctx, 2, false) != 0) {
-		return 0;
-	}
+	duk_size_t clen;
+	const char *cls = duk_to_lstring(ctx, 0, &clen);
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	dukky_getElementsByClassName_recursive(ctx, priv->parent.node, cls, clen, &idx, arr_idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
 	if (dukky_pcall(ctx, 1, false) != 0) {
 		return 0;
 	}
+
 	return 1;
 %}
 
@@ -1004,6 +1201,24 @@ setter Document::cookie()
 	return 0;
 %}
 
+method Document::createRange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::createNodeIterator()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::createTreeWalker()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
 method Document::createEvent ()
 %{
 	/* Create a new event, mark it untrusted since it's new from JS */
@@ -1042,129 +1257,570 @@ getter Document::implementation ()
 	return 1;
 %}
 
-getter Document::onabort();
-setter Document::onabort();
-getter Document::onautocompleteerror();
-setter Document::onautocompleteerror();
-getter Document::onautocomplete();
-setter Document::onautocomplete();
-getter Document::onblur();
-setter Document::onblur();
-getter Document::oncancel();
-setter Document::oncancel();
-getter Document::oncanplaythrough();
-setter Document::oncanplaythrough();
-getter Document::oncanplay();
-setter Document::oncanplay();
-getter Document::onchange();
-setter Document::onchange();
-getter Document::onclick();
-setter Document::onclick();
-getter Document::onclose();
-setter Document::onclose();
-getter Document::oncontextmenu();
-setter Document::oncontextmenu();
-getter Document::oncuechange();
-setter Document::oncuechange();
-getter Document::ondblclick();
-setter Document::ondblclick();
-getter Document::ondragend();
-setter Document::ondragend();
-getter Document::ondragenter();
-setter Document::ondragenter();
-getter Document::ondragexit();
-setter Document::ondragexit();
-getter Document::ondragleave();
-setter Document::ondragleave();
-getter Document::ondragover();
-setter Document::ondragover();
-getter Document::ondragstart();
-setter Document::ondragstart();
-getter Document::ondrag();
-setter Document::ondrag();
-getter Document::ondrop();
-setter Document::ondrop();
-getter Document::ondurationchange();
-setter Document::ondurationchange();
-getter Document::onemptied();
-setter Document::onemptied();
-getter Document::onended();
-setter Document::onended();
-getter Document::onfocus();
-setter Document::onfocus();
-getter Document::oninput();
-setter Document::oninput();
-getter Document::oninvalid();
-setter Document::oninvalid();
-getter Document::onkeydown();
-setter Document::onkeydown();
-getter Document::onkeypress();
-setter Document::onkeypress();
-getter Document::onkeyup();
-setter Document::onkeyup();
-getter Document::onloadeddata();
-setter Document::onloadeddata();
-getter Document::onloadedmetadata();
-setter Document::onloadedmetadata();
-getter Document::onloadstart();
-setter Document::onloadstart();
-getter Document::onload();
-setter Document::onload();
-getter Document::onmousedown();
-setter Document::onmousedown();
-getter Document::onmouseenter();
-setter Document::onmouseenter();
-getter Document::onmouseleave();
-setter Document::onmouseleave();
-getter Document::onmousemove();
-setter Document::onmousemove();
-getter Document::onmouseout();
-setter Document::onmouseout();
-getter Document::onmouseover();
-setter Document::onmouseover();
-getter Document::onmouseup();
-setter Document::onmouseup();
-getter Document::onpause();
-setter Document::onpause();
-getter Document::onplaying();
-setter Document::onplaying();
-getter Document::onplay();
-setter Document::onplay();
-getter Document::onprogress();
-setter Document::onprogress();
-getter Document::onratechange();
-setter Document::onratechange();
-getter Document::onreadystatechange();
-setter Document::onreadystatechange();
-getter Document::onreset();
-setter Document::onreset();
-getter Document::onresize();
-setter Document::onresize();
-getter Document::onscroll();
-setter Document::onscroll();
-getter Document::onseeked();
-setter Document::onseeked();
-getter Document::onseeking();
-setter Document::onseeking();
-getter Document::onselect();
-setter Document::onselect();
-getter Document::onshow();
-setter Document::onshow();
-getter Document::onsort();
-setter Document::onsort();
-getter Document::onstalled();
-setter Document::onstalled();
-getter Document::onsubmit();
-setter Document::onsubmit();
-getter Document::onsuspend();
-setter Document::onsuspend();
-getter Document::ontimeupdate();
-setter Document::ontimeupdate();
-getter Document::ontoggle();
-setter Document::ontoggle();
-getter Document::onvolumechange();
-setter Document::onvolumechange();
-getter Document::onwaiting();
-setter Document::onwaiting();
-getter Document::onwheel();
-setter Document::onwheel();
+getter Document::onabort()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onabort()
+%{
+	return 0;
+%}
+getter Document::onautocompleteerror()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onautocompleteerror()
+%{
+	return 0;
+%}
+getter Document::onautocomplete()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onautocomplete()
+%{
+	return 0;
+%}
+getter Document::onblur()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onblur()
+%{
+	return 0;
+%}
+getter Document::oncancel()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oncancel()
+%{
+	return 0;
+%}
+getter Document::oncanplaythrough()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oncanplaythrough()
+%{
+	return 0;
+%}
+getter Document::oncanplay()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oncanplay()
+%{
+	return 0;
+%}
+getter Document::onchange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onchange()
+%{
+	return 0;
+%}
+getter Document::onclick()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onclick()
+%{
+	return 0;
+%}
+getter Document::onclose()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onclose()
+%{
+	return 0;
+%}
+getter Document::oncontextmenu()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oncontextmenu()
+%{
+	return 0;
+%}
+getter Document::oncuechange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oncuechange()
+%{
+	return 0;
+%}
+getter Document::ondblclick()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondblclick()
+%{
+	return 0;
+%}
+getter Document::ondragend()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragend()
+%{
+	return 0;
+%}
+getter Document::ondragenter()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragenter()
+%{
+	return 0;
+%}
+getter Document::ondragexit()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragexit()
+%{
+	return 0;
+%}
+getter Document::ondragleave()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragleave()
+%{
+	return 0;
+%}
+getter Document::ondragover()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragover()
+%{
+	return 0;
+%}
+getter Document::ondragstart()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondragstart()
+%{
+	return 0;
+%}
+getter Document::ondrag()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondrag()
+%{
+	return 0;
+%}
+getter Document::ondrop()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondrop()
+%{
+	return 0;
+%}
+getter Document::ondurationchange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ondurationchange()
+%{
+	return 0;
+%}
+getter Document::onemptied()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onemptied()
+%{
+	return 0;
+%}
+getter Document::onended()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onended()
+%{
+	return 0;
+%}
+getter Document::onfocus()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onfocus()
+%{
+	return 0;
+%}
+getter Document::oninput()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oninput()
+%{
+	return 0;
+%}
+getter Document::oninvalid()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::oninvalid()
+%{
+	return 0;
+%}
+getter Document::onkeydown()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onkeydown()
+%{
+	return 0;
+%}
+getter Document::onkeypress()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onkeypress()
+%{
+	return 0;
+%}
+getter Document::onkeyup()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onkeyup()
+%{
+	return 0;
+%}
+getter Document::onloadeddata()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onloadeddata()
+%{
+	return 0;
+%}
+getter Document::onloadedmetadata()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onloadedmetadata()
+%{
+	return 0;
+%}
+getter Document::onloadstart()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onloadstart()
+%{
+	return 0;
+%}
+getter Document::onload()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onload()
+%{
+	return 0;
+%}
+getter Document::onmousedown()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmousedown()
+%{
+	return 0;
+%}
+getter Document::onmouseenter()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmouseenter()
+%{
+	return 0;
+%}
+getter Document::onmouseleave()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmouseleave()
+%{
+	return 0;
+%}
+getter Document::onmousemove()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmousemove()
+%{
+	return 0;
+%}
+getter Document::onmouseout()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmouseout()
+%{
+	return 0;
+%}
+getter Document::onmouseover()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmouseover()
+%{
+	return 0;
+%}
+getter Document::onmouseup()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onmouseup()
+%{
+	return 0;
+%}
+getter Document::onpause()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onpause()
+%{
+	return 0;
+%}
+getter Document::onplaying()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onplaying()
+%{
+	return 0;
+%}
+getter Document::onplay()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onplay()
+%{
+	return 0;
+%}
+getter Document::onprogress()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onprogress()
+%{
+	return 0;
+%}
+getter Document::onratechange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onratechange()
+%{
+	return 0;
+%}
+getter Document::onreadystatechange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onreadystatechange()
+%{
+	return 0;
+%}
+getter Document::onreset()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onreset()
+%{
+	return 0;
+%}
+getter Document::onresize()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onresize()
+%{
+	return 0;
+%}
+getter Document::onscroll()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onscroll()
+%{
+	return 0;
+%}
+getter Document::onseeked()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onseeked()
+%{
+	return 0;
+%}
+getter Document::onseeking()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onseeking()
+%{
+	return 0;
+%}
+getter Document::onselect()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onselect()
+%{
+	return 0;
+%}
+getter Document::onshow()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onshow()
+%{
+	return 0;
+%}
+getter Document::onsort()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onsort()
+%{
+	return 0;
+%}
+getter Document::onstalled()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onstalled()
+%{
+	return 0;
+%}
+getter Document::onsubmit()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onsubmit()
+%{
+	return 0;
+%}
+getter Document::onsuspend()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onsuspend()
+%{
+	return 0;
+%}
+getter Document::ontimeupdate()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ontimeupdate()
+%{
+	return 0;
+%}
+getter Document::ontoggle()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::ontoggle()
+%{
+	return 0;
+%}
+getter Document::onvolumechange()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onvolumechange()
+%{
+	return 0;
+%}
+getter Document::onwaiting()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onwaiting()
+%{
+	return 0;
+%}
+getter Document::onwheel()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+setter Document::onwheel()
+%{
+	return 0;
+%}

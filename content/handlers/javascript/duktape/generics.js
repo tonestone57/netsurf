@@ -150,39 +150,6 @@ var NetSurf = {
 
 	return Formatter.apply(result);
     },
-    getElementsByClassName: function(root, classNames) {
-        var names = classNames.split(/\s+/).filter(Boolean);
-        if (names.length === 0) {
-            return {
-                length: 0,
-                item: function() { return null; },
-                toString: function() { return "[object HTMLCollection]"; }
-            };
-        }
-        return this.makeLiveCollection(function() {
-            var res = [];
-            function walk(node) {
-                var child = node.firstChild;
-                while (child) {
-                    if (child.nodeType === 1) { // ELEMENT_NODE
-                        var classList = child.classList;
-                        if (classList) {
-                            var matches = names.every(function(name) {
-                                return classList.contains(name);
-                            });
-                            if (matches) {
-                                res.push(child);
-                            }
-                        }
-                        walk(child);
-                    }
-                    child = child.nextSibling;
-                }
-            }
-            walk(root);
-            return res;
-        });
-    },
     makeDatasetProxy: function(element) {
         return new Proxy({}, {
             get: function(target, name) {
@@ -219,19 +186,6 @@ var NetSurf = {
             }
         });
     },
-    getChildren: function(root) {
-        return this.makeLiveCollection(function() {
-            var result = [];
-            var child = root.firstChild;
-            while (child) {
-                if (child.nodeType === 1) { // ELEMENT_NODE
-                    result.push(child);
-                }
-                child = child.nextSibling;
-            }
-            return result;
-        });
-    },
     mutationHelper: function(args, ownerDocument) {
         if (args.length === 1) {
             var arg = args[0];
@@ -251,40 +205,4 @@ var NetSurf = {
         }
         return fragment;
     },
-    getInnerText: function(root) {
-        var res = "";
-        function walk(node) {
-            if (node.nodeType === 3) { // TEXT_NODE
-                res += node.nodeValue;
-            } else if (node.nodeType === 1) { // ELEMENT_NODE
-                var tag = node.tagName.toLowerCase();
-                if (tag === "script" || tag === "style" || tag === "head") return;
-
-                if (tag === "br") {
-                    res += "\n";
-                    return;
-                }
-
-                var isBlock = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"].indexOf(tag) !== -1;
-
-                /* Block start: add newline if needed */
-                if (isBlock && res.length > 0 && !res.endsWith("\n")) {
-                    res += "\n";
-                }
-
-                var child = node.firstChild;
-                while (child) {
-                    walk(child);
-                    child = child.nextSibling;
-                }
-
-                /* Block end: add newline if needed */
-                if (isBlock && !res.endsWith("\n")) {
-                    res += "\n";
-                }
-            }
-        }
-        walk(root);
-        return res.trim();
-    }
 };

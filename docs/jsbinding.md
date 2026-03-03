@@ -113,6 +113,16 @@ The binding implementations are in the form of C code fragments
 directly pasted into the generated code with generated setup code
 surrounding it.
 
+### Performance Note: Live Collections
+
+In the Duktape binding, several DOM methods that are specified to
+return "live" collections (such as `children` and
+`getElementsByClassName`) instead return static snapshots (arrays) for
+performance reasons. This minimizes the overhead of crossing the
+JavaScript-to-C boundary during repeated access, though it means the
+returned collections do not automatically update when the DOM is
+modified.
+
 ### Simple attribute example
 
 The Window interface (class) in the HTML specification has an
