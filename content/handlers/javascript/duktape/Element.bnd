@@ -13,16 +13,26 @@ class Element {
 #include <strings.h>
 #include <utils/corestrings.h>
 #include <dom/bindings/hubbub/parser.h>
+#include <ctype.h>
+#include "javascript/duktape/dukky.h"
 
 static void dukky_push_escaped_string(duk_context *ctx, dom_string *str)
 {
 	const char *data = dom_string_data(str);
 	size_t len = dom_string_byte_length(str);
-	char *escaped = malloc(len * 6 + 1);
-	if (escaped == NULL) {
-		duk_push_string(ctx, "");
-		return;
+	char buf[1024];
+	char *escaped;
+
+	if (len * 6 + 1 < sizeof(buf)) {
+		escaped = buf;
+	} else {
+		escaped = malloc(len * 6 + 1);
+		if (escaped == NULL) {
+			duk_push_string(ctx, "");
+			return;
+		}
 	}
+
 	char *p = escaped;
 	for (size_t i = 0; i < len; i++) {
 		switch (data[i]) {
@@ -35,7 +45,7 @@ static void dukky_push_escaped_string(duk_context *ctx, dom_string *str)
 	}
 	*p = '\0';
 	duk_push_lstring(ctx, escaped, p - escaped);
-	free(escaped);
+	if (escaped != buf) free(escaped);
 }
 
 static bool dukky_is_void_element(dom_string *name)
@@ -72,6 +82,7 @@ static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarr
 	dom_string *node_name = NULL;
 	dom_node *child = NULL;
 	dom_node *next_child = NULL;
+	char buf[256];
 
 	exc = dom_node_get_node_type(node, &type);
 	if (exc != DOM_NO_ERR) return;
@@ -81,10 +92,19 @@ static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarr
 		exc = dom_node_get_node_name(node, &node_name);
 		if (exc != DOM_NO_ERR || node_name == NULL) return;
 
-		duk_push_string(ctx, "<");
-		duk_put_prop_index(ctx, arr_idx, (*idx)++);
-		duk_push_lstring(ctx, dom_string_data(node_name), dom_string_byte_length(node_name));
-		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		/* Batching "<" + tagName */
+		size_t name_len = dom_string_byte_length(node_name);
+		if (name_len < sizeof(buf) - 2) {
+			buf[0] = '<';
+			memcpy(buf + 1, dom_string_data(node_name), name_len);
+			duk_push_lstring(ctx, buf, name_len + 1);
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		} else {
+			duk_push_string(ctx, "<");
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			duk_push_lstring(ctx, dom_string_data(node_name), name_len);
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		}
 
 		/* Attributes */
 		dom_namednodemap *attrs = NULL;
@@ -101,12 +121,24 @@ static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarr
 						dom_node_get_node_name(attr, &name);
 						dom_node_get_node_value(attr, &value);
 
-						duk_push_string(ctx, " ");
-						duk_put_prop_index(ctx, arr_idx, (*idx)++);
-						duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-						duk_put_prop_index(ctx, arr_idx, (*idx)++);
-						duk_push_string(ctx, "=\"");
-						duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						/* Batching " " + name + "=\"" */
+						size_t nlen = dom_string_byte_length(name);
+						if (nlen < sizeof(buf) - 4) {
+							buf[0] = ' ';
+							memcpy(buf + 1, dom_string_data(name), nlen);
+							buf[nlen + 1] = '=';
+							buf[nlen + 2] = '"';
+							duk_push_lstring(ctx, buf, nlen + 3);
+							duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						} else {
+							duk_push_string(ctx, " ");
+							duk_put_prop_index(ctx, arr_idx, (*idx)++);
+							duk_push_lstring(ctx, dom_string_data(name), nlen);
+							duk_put_prop_index(ctx, arr_idx, (*idx)++);
+							duk_push_string(ctx, "=\"");
+							duk_put_prop_index(ctx, arr_idx, (*idx)++);
+						}
+
 						if (value) {
 							dukky_push_escaped_string(ctx, value);
 							duk_put_prop_index(ctx, arr_idx, (*idx)++);
@@ -142,12 +174,23 @@ static void dukky_innerHTML_serialize(duk_context *ctx, dom_node *node, duk_uarr
 			child = next_child;
 		}
 
-		duk_push_string(ctx, "</");
-		duk_put_prop_index(ctx, arr_idx, (*idx)++);
-		duk_push_lstring(ctx, dom_string_data(node_name), dom_string_byte_length(node_name));
-		duk_put_prop_index(ctx, arr_idx, (*idx)++);
-		duk_push_string(ctx, ">");
-		duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		/* Batching "</" + tagName + ">" */
+		name_len = dom_string_byte_length(node_name);
+		if (name_len < sizeof(buf) - 4) {
+			buf[0] = '<';
+			buf[1] = '/';
+			memcpy(buf + 2, dom_string_data(node_name), name_len);
+			buf[name_len + 2] = '>';
+			duk_push_lstring(ctx, buf, name_len + 3);
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		} else {
+			duk_push_string(ctx, "</");
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			duk_push_lstring(ctx, dom_string_data(node_name), name_len);
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+			duk_push_string(ctx, ">");
+			duk_put_prop_index(ctx, arr_idx, (*idx)++);
+		}
 
 		dom_string_unref(node_name);
 		break;
@@ -199,54 +242,6 @@ getter Element::tagName()
 	return 1;
 %}
 
-getter Element::localName()
-%{
-	dom_exception exc;
-	dom_string *name;
-	exc = dom_node_get_local_name(priv->parent.node, &name);
-	if (exc != DOM_NO_ERR) return 0;
-	if (name == NULL) {
-		/* Per spec: localName is the same as tagName if not in a namespace */
-		exc = dom_node_get_node_name(priv->parent.node, &name);
-		if (exc != DOM_NO_ERR || name == NULL) return 0;
-		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-		dom_string_unref(name);
-	} else {
-		duk_push_lstring(ctx, dom_string_data(name), dom_string_byte_length(name));
-		dom_string_unref(name);
-	}
-	return 1;
-%}
-
-getter Element::namespaceURI()
-%{
-	dom_exception exc;
-	dom_string *uri;
-	exc = dom_node_get_namespace(priv->parent.node, &uri);
-	if (exc != DOM_NO_ERR) return 0;
-	if (uri == NULL) {
-		duk_push_null(ctx);
-	} else {
-		duk_push_lstring(ctx, dom_string_data(uri), dom_string_byte_length(uri));
-		dom_string_unref(uri);
-	}
-	return 1;
-%}
-
-getter Element::prefix()
-%{
-	dom_exception exc;
-	dom_string *pfx;
-	exc = dom_node_get_prefix(priv->parent.node, &pfx);
-	if (exc != DOM_NO_ERR) return 0;
-	if (pfx == NULL) {
-		duk_push_null(ctx);
-		return 1;
-	}
-	duk_push_lstring(ctx, dom_string_data(pfx), dom_string_byte_length(pfx));
-	dom_string_unref(pfx);
-	return 1;
-%}
 
 getter Element::firstElementChild()
 %{
@@ -419,82 +414,6 @@ getter Element::childElementCount()
 	return 1;
 %}
 
-getter Element::tagName()
-%{
-	dom_exception exc;
-	dom_string *str = NULL;
-	exc = dom_node_get_node_name(((node_private_t *)priv)->node, &str);
-	if (exc != DOM_NO_ERR) return 0;
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
-	dom_string_unref(str);
-	return 1;
-%}
-
-method Element::hasAttributes()
-%{
-	dom_exception exc;
-	dom_namednodemap *map = NULL;
-	uint32_t len = 0;
-
-	exc = dom_node_get_attributes(((node_private_t *)priv)->node, &map);
-	if (exc != DOM_NO_ERR || map == NULL) {
-		duk_push_boolean(ctx, false);
-		return 1;
-	}
-
-	exc = dom_namednodemap_get_length(map, &len);
-	dom_namednodemap_unref(map);
-
-	if (exc != DOM_NO_ERR) {
-		duk_push_boolean(ctx, false);
-		return 1;
-	}
-
-	duk_push_boolean(ctx, len > 0);
-	return 1;
-%}
-
-getter Element::localName()
-%{
-	dom_exception exc;
-	dom_string *str = NULL;
-	exc = dom_node_get_local_name(((node_private_t *)priv)->node, &str);
-	if (exc != DOM_NO_ERR || str == NULL) {
-		duk_push_null(ctx);
-		return 1;
-	}
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
-	dom_string_unref(str);
-	return 1;
-%}
-
-getter Element::prefix()
-%{
-	dom_exception exc;
-	dom_string *str = NULL;
-	exc = dom_node_get_prefix(((node_private_t *)priv)->node, &str);
-	if (exc != DOM_NO_ERR || str == NULL) {
-		duk_push_null(ctx);
-		return 1;
-	}
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
-	dom_string_unref(str);
-	return 1;
-%}
-
-getter Element::namespaceURI()
-%{
-	dom_exception exc;
-	dom_string *str = NULL;
-	exc = dom_node_get_namespace(((node_private_t *)priv)->node, &str);
-	if (exc != DOM_NO_ERR || str == NULL) {
-		duk_push_null(ctx);
-		return 1;
-	}
-	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
-	dom_string_unref(str);
-	return 1;
-%}
 
 method Element::getElementsByTagName ()
 %{
@@ -529,18 +448,21 @@ method Element::getElementsByTagName ()
 
 method Element::getElementsByClassName()
 %{
-	dukky_push_generics(ctx, "getElementsByClassName");
-	duk_push_this(ctx);
-	duk_dup(ctx, 0);
-	if (dukky_pcall(ctx, 2, false) != 0) {
-		return 0;
-	}
+	duk_size_t clen;
+	const char *cls = duk_to_lstring(ctx, 0, &clen);
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+	duk_uarridx_t idx = 0;
+
+	dukky_getElementsByClassName_recursive(ctx, priv->parent.node, cls, clen, &idx, arr_idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);
 	if (dukky_pcall(ctx, 1, false) != 0) {
 		return 0;
 	}
+
 	return 1;
 %}
 
@@ -818,21 +740,6 @@ out:
 	return 0;
 %}
 
-method Element::hasAttributes()
-%{
-	dom_exception exc;
-	dom_namednodemap *attrs = NULL;
-	dom_ulong len = 0;
-
-	exc = dom_node_get_attributes(priv->parent.node, &attrs);
-	if (exc == DOM_NO_ERR && attrs != NULL) {
-		dom_namednodemap_get_length(attrs, &len);
-		dom_namednodemap_unref(attrs);
-	}
-
-	duk_push_boolean(ctx, len > 0);
-	return 1;
-%}
 
 
 getter Element::id ()
@@ -965,6 +872,260 @@ method Element::hasAttribute()
 	if (exc != DOM_NO_ERR) {
 		return 0;
 	}
+
+	duk_push_boolean(ctx, res);
+	return 1;
+%}
+
+method Element::getAttributeNode()
+%{
+	dom_string *name_dom;
+	dom_attr *attr;
+	dom_exception exc;
+	duk_size_t text_len;
+	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+
+	exc = dom_string_create((uint8_t*)text, text_len, &name_dom);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_element_get_attribute_node(priv->parent.node, name_dom, &attr);
+	dom_string_unref(name_dom);
+	if (exc != DOM_NO_ERR) return 0;
+
+	if (attr != NULL) {
+		dukky_push_node(ctx, (dom_node *)attr);
+		dom_node_unref(attr);
+		return 1;
+	}
+
+	return 0;
+%}
+
+method Element::setAttributeNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_attr *result;
+	dom_exception err;
+	err = dom_element_set_attribute_node(priv->parent.node, (dom_attr *)other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, (dom_node *)result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method Element::removeAttributeNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_attr *result;
+	dom_exception err;
+	err = dom_element_remove_attribute_node(priv->parent.node, (dom_attr *)other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, (dom_node *)result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method Element::getAttributeNodeNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_attr *attr = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_element_get_attribute_node_ns(priv->parent.node, namespace, local_name, &attr);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
+
+	if (attr != NULL) {
+		dukky_push_node(ctx, (dom_node *)attr);
+		dom_node_unref(attr);
+		return 1;
+	}
+
+	return 0;
+%}
+
+method Element::setAttributeNodeNS()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	dom_attr *result;
+	dom_exception err;
+	err = dom_element_set_attribute_node_ns(priv->parent.node, (dom_attr *)other->node, &result);
+	if (err != DOM_NO_ERR) return 0;
+
+	dukky_push_node(ctx, (dom_node *)result);
+	dom_node_unref(result);
+	return 1;
+%}
+
+method Element::getAttributeNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_string *attr_value = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_element_get_attribute_ns(priv->parent.node, namespace, local_name, &attr_value);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
+
+	if (attr_value == NULL) {
+		duk_push_null(ctx);
+	} else {
+		duk_push_lstring(ctx, dom_string_data(attr_value), dom_string_byte_length(attr_value));
+		dom_string_unref(attr_value);
+	}
+	return 1;
+%}
+
+method Element::setAttributeNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *qualified_name = NULL;
+	dom_string *value = NULL;
+	dom_exception exc;
+	duk_size_t qn_len, v_len;
+
+	const char *qn_str = duk_safe_to_lstring(ctx, 1, &qn_len);
+	const char *v_str = duk_safe_to_lstring(ctx, 2, &v_len);
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)qn_str, qn_len, &qualified_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)v_str, v_len, &value);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		dom_string_unref(qualified_name);
+		return 0;
+	}
+
+	exc = dom_element_set_attribute_ns(priv->parent.node, namespace, qualified_name, value);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(qualified_name);
+	dom_string_unref(value);
+
+	if (exc != DOM_NO_ERR) return 0;
+	return 0;
+%}
+
+method Element::removeAttributeNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_element_remove_attribute_ns(priv->parent.node, namespace, local_name);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
+	return 0;
+%}
+
+method Element::hasAttributeNS()
+%{
+	dom_string *namespace = NULL;
+	dom_string *local_name = NULL;
+	dom_exception exc;
+	duk_size_t ln_len;
+	bool res;
+
+	const char *ln_str = duk_safe_to_lstring(ctx, 1, &ln_len);
+
+	if (!duk_is_null(ctx, 0) && !duk_is_undefined(ctx, 0)) {
+		duk_size_t ns_len;
+		const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+		exc = dom_string_create((const uint8_t *)ns_str, ns_len, &namespace);
+		if (exc != DOM_NO_ERR) return 0;
+	}
+
+	exc = dom_string_create((const uint8_t *)ln_str, ln_len, &local_name);
+	if (exc != DOM_NO_ERR) {
+		if (namespace) dom_string_unref(namespace);
+		return 0;
+	}
+
+	exc = dom_element_has_attribute_ns(priv->parent.node, namespace, local_name, &res);
+	if (namespace) dom_string_unref(namespace);
+	dom_string_unref(local_name);
+
+	if (exc != DOM_NO_ERR) return 0;
 
 	duk_push_boolean(ctx, res);
 	return 1;
@@ -1304,11 +1465,12 @@ out:
 
 getter Element::children()
 %{
-	dukky_push_generics(ctx, "getChildren");
-	duk_push_this(ctx);
-	if (dukky_pcall(ctx, 1, false) != 0) {
-		return 0;
-	}
+	duk_uarridx_t idx = 0;
+	duk_push_array(ctx);
+	int arr_idx = duk_normalize_index(ctx, -1);
+
+	dukky_push_children(ctx, priv->parent.node, arr_idx, &idx);
+
 	/* Wrap result array in a proxy to make it look like a NodeList/HTMLCollection */
 	dukky_push_generics(ctx, "makeListProxy");
 	duk_insert(ctx, -2);

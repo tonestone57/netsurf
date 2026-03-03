@@ -14,6 +14,7 @@ class DOMImplementation {
 prologue DOMImplementation ()
 %{
 #include "utils/corestrings.h"
+#include "javascript/duktape/dukky.h"
 %}
 
 method DOMImplementation::hasFeature ()
@@ -23,10 +24,66 @@ method DOMImplementation::hasFeature ()
 	return 1;
 %}
 
+method DOMImplementation::createDocumentType()
+%{
+	dom_exception err;
+	dom_document_type *doctype;
+	duk_size_t qn_len, pi_len, si_len;
+	const char *qn_str = duk_safe_to_lstring(ctx, 0, &qn_len);
+	const char *pi_str = (duk_is_null(ctx, 1) || duk_is_undefined(ctx, 1)) ? NULL : duk_safe_to_lstring(ctx, 1, &pi_len);
+	const char *si_str = (duk_is_null(ctx, 2) || duk_is_undefined(ctx, 2)) ? NULL : duk_safe_to_lstring(ctx, 2, &si_len);
+
+	err = dom_implementation_create_document_type(qn_str, pi_str, si_str, &doctype);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	if (doctype != NULL) {
+		dukky_push_node(ctx, (dom_node *)doctype);
+		dom_node_unref(doctype);
+		return 1;
+	}
+	return 0;
+%}
+
+method DOMImplementation::createDocument()
+%{
+	dom_exception err;
+	struct dom_document *doc;
+	duk_size_t ns_len, qn_len;
+	const char *ns_str = (duk_is_null(ctx, 0) || duk_is_undefined(ctx, 0)) ? NULL : duk_safe_to_lstring(ctx, 0, &ns_len);
+	const char *qn_str = (duk_is_null(ctx, 1) || duk_is_undefined(ctx, 1)) ? NULL : duk_safe_to_lstring(ctx, 1, &qn_len);
+	dom_document_type *doctype = NULL;
+
+	if (!duk_is_null(ctx, 2) && !duk_is_undefined(ctx, 2)) {
+		if (!dukky_instanceof(ctx, 2, PROTO_NAME(NODE))) return 0;
+		duk_get_prop_string(ctx, 2, PRIVATE_MAGIC);
+		node_private_t *priv_data = duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		dom_node_type ntype;
+		dom_node_get_node_type(priv_data->node, &ntype);
+		if (ntype != DOM_DOCUMENT_TYPE_NODE) return 0;
+		doctype = (dom_document_type *)priv_data->node;
+	}
+
+	err = dom_implementation_create_document(DOM_IMPLEMENTATION_XML, ns_str, qn_str, doctype, NULL, NULL, &doc);
+
+	if (err != DOM_NO_ERR) return 0;
+
+	if (doc != NULL) {
+		dukky_push_node(ctx, (dom_node *)doc);
+		dom_node_unref(doc);
+		return 1;
+	}
+	return 0;
+%}
+
 method DOMImplementation::createHTMLDocument ()
 %{
-	duk_size_t text_len;
-	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+	duk_size_t text_len = 0;
+	const char *text = "";
+	if (!duk_is_undefined(ctx, 0)) {
+		text = duk_safe_to_lstring(ctx, 0, &text_len);
+	}
 	struct dom_document *doc = NULL, *ret = NULL;
 	struct dom_document_type *doctype = NULL;
 	struct dom_html_element *html = NULL, *head = NULL, *title = NULL, *body = NULL;
