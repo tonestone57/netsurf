@@ -93,8 +93,6 @@ calculate_table_row(struct columns *col_info,
 	struct box *rg = cell->parent->parent; /* Cell's row group */
 
 	/* Skip columns with cells spanning from above */
-	/* TODO: Need to ignore cells spanning from above that belong to
-	 *       different row group.  We don't have that info here. */
 	while (col_info->spans[cell_start_col].row_span != 0 &&
 			col_info->spans[cell_start_col].rg == rg) {
 		cell_start_col++;
@@ -304,6 +302,13 @@ box_normalise_table_row_group(struct box *row_group,
 	NSLOG(netsurf, INFO, "row_group %p", row_group);
 #endif
 
+	/* Clear spanning information for new row group */
+	for (unsigned int i = 0; i < col_info->num_columns; i++) {
+		col_info->spans[i].row_span = 0;
+		col_info->spans[i].auto_row = false;
+		col_info->spans[i].rg = NULL;
+	}
+
 	for (child = row_group->children; child != NULL; child = next_child) {
 		next_child = child->next;
 
@@ -467,14 +472,15 @@ box_normalise_table_spans(struct box *table,
 
 	ctx.root_style = root->style;
 
-	/* Clear span data */
-	memset(spans, 0, table->columns * sizeof(struct span_info));
-
 	/* Scan table, filling in width and height of table cells with
 	 * colspan = 0 and rowspan = 0. Also generate empty cells */
 	for (table_row_group = table->children;
 	     table_row_group != NULL;
 	     table_row_group = table_row_group->next) {
+
+		/* Clear span data for each row group - rowspans do not cross
+		 * row group boundaries. */
+		memset(spans, 0, table->columns * sizeof(struct span_info));
 
 		group_rows_left = table_row_group->rows;
 
@@ -605,9 +611,8 @@ box_normalise_table_spans(struct box *table,
 			assert(rows_left > 0);
 
 			rows_left--;
+			group_rows_left--;
 		}
-
-		group_rows_left--;
 	}
 
 	return true;

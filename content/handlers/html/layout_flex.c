@@ -176,8 +176,8 @@ static struct flex_ctx *layout_flex_ctx__create(
 	ctx->wrap = css_computed_flex_wrap(flex->style);
 	ctx->justify_content = css_computed_justify_content(flex->style);
 	ctx->align_content = css_computed_align_content(flex->style);
-	ctx->horizontal = lh__flex_main_is_horizontal(flex);
-	ctx->main_reversed = lh__flex_direction_reversed(flex);
+	ctx->horizontal = layout__flex_main_is_horizontal(flex);
+	ctx->main_reversed = layout__flex_direction_reversed(flex);
 
 	return ctx;
 }
@@ -273,7 +273,7 @@ static inline bool layout_flex__base_and_main_sizes(
 	struct box *b = item->box;
 	int content_min_width = b->min_width;
 	int content_max_width = b->max_width;
-	int delta_outer_main = lh__delta_outer_main(ctx->flex, b);
+	int delta_outer_main = layout__delta_outer_main(ctx->flex, b);
 
 	NSLOG(flex, DEEPDEBUG, "box %p: delta_outer_main: %i",
 			b, delta_outer_main);
@@ -300,7 +300,7 @@ static inline bool layout_flex__base_and_main_sizes(
 		if (b->width == AUTO) {
 			b->width = min(max(content_min_width, available_width),
 					content_max_width);
-			b->width -= lh__delta_outer_width(b);
+			b->width -= layout__delta_outer_width(b);
 		}
 
 		if (!layout_flex_item(ctx, item, b->width)) {
@@ -487,15 +487,15 @@ static struct flex_line_data *layout_flex__build_line(struct flex_ctx *ctx,
 
 		pos_main = ctx->horizontal ?
 				item->main_size :
-				b->height + lh__delta_outer_main(ctx->flex, b);
+				b->height + layout__delta_outer_main(ctx->flex, b);
 
 		if (ctx->wrap == CSS_FLEX_WRAP_NOWRAP ||
 		    pos_main + used_main <= ctx->available_main ||
-		    lh__box_is_absolute(item->box) ||
+		    layout__box_is_absolute(item->box) ||
 		    ctx->available_main == AUTO ||
 		    line->count == 0 ||
 		    pos_main == 0) {
-			if (lh__box_is_absolute(item->box) == false) {
+			if (layout__box_is_absolute(item->box) == false) {
 				line->main_size += item->main_size;
 				used_main += pos_main;
 
@@ -536,7 +536,7 @@ static inline void layout_flex__item_freeze(
 	item->freeze = true;
 	line->frozen++;
 
-	if (!lh__box_is_absolute(item->box)){
+	if (!layout__box_is_absolute(item->box)){
 		line->used_main_size += item->target_main_size;
 	}
 
@@ -870,12 +870,12 @@ static bool layout_flex__place_line_items_main(
 	size_t non_abs_processed = 0;
 
 	if (ctx->main_reversed) {
-		main_pos = lh__box_size_main(ctx->horizontal, ctx->flex) -
+		main_pos = layout__box_size_main(ctx->horizontal, ctx->flex) -
 				main_pos;
 	}
 
 	for (size_t i = line->first; i < item_count; i++) {
-		if (!lh__box_is_absolute(ctx->item.data[i].box))
+		if (!layout__box_is_absolute(ctx->item.data[i].box))
 			non_abs_count++;
 	}
 
@@ -937,17 +937,17 @@ static bool layout_flex__place_line_items_main(
 		int box_size_main;
 		int *box_pos_main;
 
-		int delta_main = lh__delta_outer_main(ctx->flex, b);
-		*lh__box_size_main_ptr(ctx->horizontal, b) = item->target_main_size - delta_main;
+		int delta_main = layout__delta_outer_main(ctx->flex, b);
+		*layout__box_size_main_ptr(ctx->horizontal, b) = item->target_main_size - delta_main;
 
 		if (!layout_flex_item(ctx, item, b->width)) {
 			return false;
 		}
 
-		box_size_main = lh__box_size_main(ctx->horizontal, b);
+		box_size_main = layout__box_size_main(ctx->horizontal, b);
 		box_pos_main = ctx->horizontal ? &b->x : &b->y;
 
-		if (!lh__box_is_absolute(b)) {
+		if (!layout__box_is_absolute(b)) {
 			if (b->margin[main_start] == AUTO) {
 				extra_pre = extra + (extra_remainder > 0 ? 1 : 0);
 				if (extra_remainder > 0) extra_remainder--;
@@ -960,20 +960,20 @@ static bool layout_flex__place_line_items_main(
 
 			main_pos += pre_multiplier *
 					(extra_total + box_size_main +
-					 lh__delta_outer_main(ctx->flex, b));
+					 layout__delta_outer_main(ctx->flex, b));
 		}
 
-		*box_pos_main = main_pos + lh__non_auto_margin(b, main_start) +
+		*box_pos_main = main_pos + layout__non_auto_margin(b, main_start) +
 				extra_pre + b->border[main_start].width;
 
-		if (!lh__box_is_absolute(b)) {
+		if (!layout__box_is_absolute(b)) {
 			int cross_size;
-			int box_size_cross = lh__box_size_cross(
+			int box_size_cross = layout__box_size_cross(
 					ctx->horizontal, b);
 
 			main_pos += post_multiplier *
 					(extra_total + box_size_main +
-					 lh__delta_outer_main(ctx->flex, b));
+					 layout__delta_outer_main(ctx->flex, b));
 
 			non_abs_processed++;
 			if (line->main_auto_margin_count == 0 &&
@@ -984,7 +984,7 @@ static bool layout_flex__place_line_items_main(
 				if (jc_extra_remainder > 0) jc_extra_remainder--;
 			}
 
-			cross_size = box_size_cross + lh__delta_outer_cross(
+			cross_size = box_size_cross + layout__delta_outer_cross(
 					ctx->flex, b);
 			if (line->cross_size < cross_size) {
 				line->cross_size = cross_size;
@@ -1059,15 +1059,15 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 		int *box_pos_cross;
 
 		box_pos_cross = ctx->horizontal ? &b->y : &b->x;
-		box_size_cross = lh__box_size_cross_ptr(ctx->horizontal, b);
+		box_size_cross = layout__box_size_cross_ptr(ctx->horizontal, b);
 
 		cross_free_space = line->cross_size + extra - *box_size_cross -
-				lh__delta_outer_cross(ctx->flex, b);
+				layout__delta_outer_cross(ctx->flex, b);
 
-		switch (lh__box_align_self(ctx->flex, b)) {
+		switch (layout__box_align_self(ctx->flex, b)) {
 		default:
 		case CSS_ALIGN_SELF_STRETCH:
-			if (lh__box_size_cross_is_auto(ctx->horizontal, b)) {
+			if (layout__box_size_cross_is_auto(ctx->horizontal, b)) {
 				int size = *box_size_cross + cross_free_space;
 				if (item->max_cross >= 0 && size > item->max_cross) size = item->max_cross;
 				if (item->min_cross > 0 && size < item->min_cross) size = item->min_cross;
@@ -1085,14 +1085,14 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 		case CSS_ALIGN_SELF_FLEX_START:
 			*box_pos_cross = ctx->flex->padding[cross_start] +
 					line->pos +
-					lh__non_auto_margin(b, cross_start) +
+					layout__non_auto_margin(b, cross_start) +
 					b->border[cross_start].width;
 			break;
 
 		case CSS_ALIGN_SELF_FLEX_END:
 			*box_pos_cross = ctx->flex->padding[cross_start] +
 					line->pos + cross_free_space +
-					lh__non_auto_margin(b, cross_start) +
+					layout__non_auto_margin(b, cross_start) +
 					b->border[cross_start].width;
 			break;
 
@@ -1100,7 +1100,7 @@ static void layout_flex__place_line_items_cross(struct flex_ctx *ctx,
 		case CSS_ALIGN_SELF_CENTER:
 			*box_pos_cross = ctx->flex->padding[cross_start] +
 					line->pos + cross_free_space / 2 +
-					lh__non_auto_margin(b, cross_start) +
+					layout__non_auto_margin(b, cross_start) +
 					b->border[cross_start].width;
 			break;
 		}

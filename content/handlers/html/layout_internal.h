@@ -110,14 +110,14 @@ extern const css_border_style_func border_style_funcs[4];
 extern const css_border_color_func border_color_funcs[4];
 
 /** Layout helper: Check whether box is a float. */
-static inline bool lh__box_is_float_box(const struct box *b)
+static inline bool layout__box_is_float_box(const struct box *b)
 {
 	return b->type == BOX_FLOAT_LEFT ||
 	       b->type == BOX_FLOAT_RIGHT;
 }
 
 /** Layout helper: Check whether box takes part in inline flow. */
-static inline bool lh__box_is_inline_flow(const struct box *b)
+static inline bool layout__box_is_inline_flow(const struct box *b)
 {
 	return b->type == BOX_INLINE ||
 	       b->type == BOX_INLINE_FLEX ||
@@ -127,55 +127,55 @@ static inline bool lh__box_is_inline_flow(const struct box *b)
 }
 
 /** Layout helper: Check whether box takes part in inline flow. */
-static inline bool lh__box_is_flex_container(const struct box *b)
+static inline bool layout__box_is_flex_container(const struct box *b)
 {
 	return b->type == BOX_FLEX ||
 	       b->type == BOX_INLINE_FLEX;
 }
 
 /** Layout helper: Check whether box takes part in inline flow. */
-static inline bool lh__box_is_flex_item(const struct box *b)
+static inline bool layout__box_is_flex_item(const struct box *b)
 {
-	return (b->parent != NULL) && lh__box_is_flex_container(b->parent);
+	return (b->parent != NULL) && layout__box_is_flex_container(b->parent);
 }
 
 /** Layout helper: Check whether box is inline level. (Includes BR.) */
-static inline bool lh__box_is_inline_level(const struct box *b)
+static inline bool layout__box_is_inline_level(const struct box *b)
 {
-	return lh__box_is_inline_flow(b) ||
+	return layout__box_is_inline_flow(b) ||
 	       b->type == BOX_BR;
 }
 
 /** Layout helper: Check whether box is inline level. (Includes BR, floats.) */
-static inline bool lh__box_is_inline_content(const struct box *b)
+static inline bool layout__box_is_inline_content(const struct box *b)
 {
-	return lh__box_is_float_box(b) ||
-	       lh__box_is_inline_level(b);
+	return layout__box_is_float_box(b) ||
+	       layout__box_is_inline_level(b);
 }
 
 /** Layout helper: Check whether box is an object. */
-static inline bool lh__box_is_object(const struct box *b)
+static inline bool layout__box_is_object(const struct box *b)
 {
 	return b->object ||
 	       (b->flags & (IFRAME | REPLACE_DIM));
 }
 
 /** Layout helper: Check whether box is replaced. */
-static inline bool lh__box_is_replace(const struct box *b)
+static inline bool layout__box_is_replace(const struct box *b)
 {
 	return b->gadget ||
-	       lh__box_is_object(b);
+	       layout__box_is_object(b);
 }
 
 /** Layout helper: Check for CSS border on given side. */
-static inline bool lh__have_border(
+static inline bool layout__have_border(
 		enum box_side side,
 		const css_computed_style *style)
 {
 	return border_style_funcs[side](style) != CSS_BORDER_STYLE_NONE;
 }
 
-static inline bool lh__box_is_absolute(const struct box *b)
+static inline bool layout__box_is_absolute(const struct box *b)
 {
 	if (b->style == NULL)
 		return false;
@@ -184,7 +184,7 @@ static inline bool lh__box_is_absolute(const struct box *b)
 	       css_computed_position(b->style) == CSS_POSITION_FIXED;
 }
 
-static inline bool lh__flex_main_is_horizontal(const struct box *flex)
+static inline bool layout__flex_main_is_horizontal(const struct box *flex)
 {
 	const css_computed_style *style = flex->style;
 
@@ -202,7 +202,7 @@ static inline bool lh__flex_main_is_horizontal(const struct box *flex)
 	}
 }
 
-static inline bool lh__flex_direction_reversed(const struct box *flex)
+static inline bool layout__flex_direction_reversed(const struct box *flex)
 {
 	if (flex->style == NULL)
 		return false;
@@ -218,82 +218,82 @@ static inline bool lh__flex_direction_reversed(const struct box *flex)
 	}
 }
 
-static inline int lh__non_auto_margin(const struct box *b, enum box_side side)
+static inline int layout__non_auto_margin(const struct box *b, enum box_side side)
 {
 	return (b->margin[side] == AUTO) ? 0 : b->margin[side];
 }
 
-static inline int lh__delta_outer_height(const struct box *b)
+static inline int layout__delta_outer_height(const struct box *b)
 {
 	return b->padding[TOP] +
 	       b->padding[BOTTOM] +
 	       b->border[TOP].width +
 	       b->border[BOTTOM].width +
-	       lh__non_auto_margin(b, TOP) +
-	       lh__non_auto_margin(b, BOTTOM);
+	       layout__non_auto_margin(b, TOP) +
+	       layout__non_auto_margin(b, BOTTOM);
 }
 
-static inline int lh__delta_outer_width(const struct box *b)
+static inline int layout__delta_outer_width(const struct box *b)
 {
 	return b->padding[LEFT] +
 	       b->padding[RIGHT] +
 	       b->border[LEFT].width +
 	       b->border[RIGHT].width +
-	       lh__non_auto_margin(b, LEFT) +
-	       lh__non_auto_margin(b, RIGHT);
+	       layout__non_auto_margin(b, LEFT) +
+	       layout__non_auto_margin(b, RIGHT);
 }
 
-static inline int lh__delta_outer_main(
+static inline int layout__delta_outer_main(
 		const struct box *flex,
 		const struct box *b)
 {
-	if (lh__flex_main_is_horizontal(flex)) {
-		return lh__delta_outer_width(b);
+	if (layout__flex_main_is_horizontal(flex)) {
+		return layout__delta_outer_width(b);
 	} else {
-		return lh__delta_outer_height(b);
+		return layout__delta_outer_height(b);
 	}
 }
 
-static inline int lh__delta_outer_cross(
+static inline int layout__delta_outer_cross(
 		const struct box *flex,
 		const struct box *b)
 {
-	if (lh__flex_main_is_horizontal(flex) == false) {
-		return lh__delta_outer_width(b);
+	if (layout__flex_main_is_horizontal(flex) == false) {
+		return layout__delta_outer_width(b);
 	} else {
-		return lh__delta_outer_height(b);
+		return layout__delta_outer_height(b);
 	}
 }
 
-static inline int *lh__box_size_main_ptr(
+static inline int *layout__box_size_main_ptr(
 		bool horizontal,
 		struct box *b)
 {
 	return horizontal ? &b->width : &b->height;
 }
 
-static inline int *lh__box_size_cross_ptr(
+static inline int *layout__box_size_cross_ptr(
 		bool horizontal,
 		struct box *b)
 {
 	return horizontal ? &b->height : &b->width;
 }
 
-static inline int lh__box_size_main(
+static inline int layout__box_size_main(
 		bool horizontal,
 		const struct box *b)
 {
 	return horizontal ? b->width : b->height;
 }
 
-static inline int lh__box_size_cross(
+static inline int layout__box_size_cross(
 		bool horizontal,
 		const struct box *b)
 {
 	return horizontal ? b->height : b->width;
 }
 
-static inline bool lh__box_size_cross_is_auto(
+static inline bool layout__box_size_cross_is_auto(
 		bool horizontal,
 		struct box *b)
 {
@@ -312,7 +312,7 @@ static inline bool lh__box_size_cross_is_auto(
 	}
 }
 
-static inline enum css_align_self_e lh__box_align_self(
+static inline enum css_align_self_e layout__box_align_self(
 		const struct box *flex,
 		const struct box *item)
 {
@@ -375,7 +375,7 @@ static inline void calculate_mbp_width(
 
 	/* border */
 	if (border) {
-		if (lh__have_border(side, style)) {
+		if (layout__have_border(side, style)) {
 			border_width_funcs[side](style, &value, &unit);
 
 			*fixed += FIXTOINT(css_unit_len2device_px(
