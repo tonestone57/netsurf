@@ -330,7 +330,6 @@ nserror browser_window_invalidate_rect(struct browser_window *bw, struct rect *r
  * \param  bw	 browser window
  * \param  text  new status text (copied)
  */
-void browser_window_set_status(struct browser_window *bw, const char *text);
 
 
 /**

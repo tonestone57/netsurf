@@ -725,7 +725,7 @@ html_css_new_selection_context(html_content *c, css_select_ctx **ret_select_ctx)
 							      origin,
 							      media_s);
 
-			if (media_s != (const char *)"screen") {
+			if (strcmp(media_s, "screen") != 0) {
 				dom_string_unref(media);
 			}
 			if (css_ret != CSS_OK) {
