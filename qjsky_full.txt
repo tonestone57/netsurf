@@ -28,9 +28,6 @@ static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
 	struct dom_node *node = JS_GetOpaque(val, heap->node_class_id);
-	if (!node) node = JS_GetOpaque(val, heap->document_class_id);
-	if (!node) node = JS_GetOpaque(val, heap->element_class_id);
-
 	if (node) {
 		dom_node_unref(node);
 	}
@@ -40,89 +37,36 @@ static void qjsky_event_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
 	struct dom_event *evt = JS_GetOpaque(val, heap->event_class_id);
-	if (!evt) evt = JS_GetOpaque(val, heap->uievent_class_id);
-	if (!evt) evt = JS_GetOpaque(val, heap->mouseevent_class_id);
-	if (!evt) evt = JS_GetOpaque(val, heap->keyboardevent_class_id);
-
 	if (evt) {
 		dom_event_unref(evt);
 	}
 }
 
-static JSClassDef qjsky_node_class = {
-	"Node",
-	.finalizer = qjsky_node_finalizer,
-};
-
-static JSClassDef qjsky_event_class = {
-	"Event",
-	.finalizer = qjsky_event_finalizer,
-};
-
-static JSClassDef qjsky_uievent_class = {
-	"UIEvent",
-	.finalizer = qjsky_event_finalizer,
-};
-
-static JSClassDef qjsky_mouseevent_class = {
-	"MouseEvent",
-	.finalizer = qjsky_event_finalizer,
-};
-
-static JSClassDef qjsky_keyboardevent_class = {
-	"KeyboardEvent",
-	.finalizer = qjsky_event_finalizer,
-};
-
-extern JSClassDef qjsky_xhr_class;
-extern JSClassDef qjsky_location_class;
-extern JSClassDef qjsky_history_class;
-extern JSClassDef qjsky_navigator_class;
-extern JSClassDef qjsky_screen_class;
-extern JSClassDef qjsky_barprop_class;
-
-void qjsky_init_runtime(struct jsheap *heap)
+static void qjsky_uievent_finalizer(JSRuntime *rt, JSValue val)
 {
-	JS_NewClassID(&heap->node_class_id);
-	JS_NewClass(heap->rt, heap->node_class_id, &qjsky_node_class);
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	struct dom_event *evt = JS_GetOpaque(val, heap->uievent_class_id);
+	if (evt) {
+		dom_event_unref(evt);
+	}
+}
 
-	JS_NewClassID(&heap->event_class_id);
-	JS_NewClass(heap->rt, heap->event_class_id, &qjsky_event_class);
+static void qjsky_mouseevent_finalizer(JSRuntime *rt, JSValue val)
+{
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	struct dom_event *evt = JS_GetOpaque(val, heap->mouseevent_class_id);
+	if (evt) {
+		dom_event_unref(evt);
+	}
+}
 
-	JS_NewClassID(&heap->uievent_class_id);
-	JS_NewClass(heap->rt, heap->uievent_class_id, &qjsky_uievent_class);
-
-	JS_NewClassID(&heap->mouseevent_class_id);
-	JS_NewClass(heap->rt, heap->mouseevent_class_id, &qjsky_mouseevent_class);
-
-	JS_NewClassID(&heap->keyboardevent_class_id);
-	JS_NewClass(heap->rt, heap->keyboardevent_class_id, &qjsky_keyboardevent_class);
-
-	JS_NewClassID(&heap->xhr_class_id);
-	JS_NewClass(heap->rt, heap->xhr_class_id, &qjsky_xhr_class);
-
-	JS_NewClassID(&heap->location_class_id);
-	JS_NewClass(heap->rt, heap->location_class_id, &qjsky_location_class);
-
-	JS_NewClassID(&heap->history_class_id);
-	JS_NewClass(heap->rt, heap->history_class_id, &qjsky_history_class);
-
-	JS_NewClassID(&heap->navigator_class_id);
-	JS_NewClass(heap->rt, heap->navigator_class_id, &qjsky_navigator_class);
-
-	JS_NewClassID(&heap->screen_class_id);
-	JS_NewClass(heap->rt, heap->screen_class_id, &qjsky_screen_class);
-
-	JS_NewClassID(&heap->barprop_class_id);
-	JS_NewClass(heap->rt, heap->barprop_class_id, &qjsky_barprop_class);
-
-	JS_NewClassID(&heap->url_class_id);
-	JS_NewClass(heap->rt, heap->url_class_id, &qjsky_url_class);
-
-	JS_NewClassID(&heap->urlsearchparams_class_id);
-	JS_NewClass(heap->rt, heap->urlsearchparams_class_id, &qjsky_usp_class);
-
-	JS_SetRuntimeOpaque(heap->rt, heap);
+static void qjsky_keyboardevent_finalizer(JSRuntime *rt, JSValue val)
+{
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	struct dom_event *evt = JS_GetOpaque(val, heap->keyboardevent_class_id);
+	if (evt) {
+		dom_event_unref(evt);
+	}
 }
 
 static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
@@ -541,27 +485,21 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 	JSValue event_val = qjsky_push_event(ctx, evt);
 
 	/* 1. Handle inline handlers (from the "handlerMap" property) */
-	dom_event_flow_phase phase;
-	dom_event_get_event_phase(evt, &phase);
-
+	JSValue handler_map = JS_GetProperty(ctx, node_val, heap->handler_map_atom);
 	JSAtom prop = JS_NewAtomLen(ctx, (const char *)dom_string_data(name), dom_string_byte_length(name));
+	JSValue handler = JS_GetProperty(ctx, handler_map, prop);
 
-	if (phase != DOM_EVENT_CAPTURING_PHASE) {
-		JSValue handler_map = JS_GetProperty(ctx, node_val, heap->handler_map_atom);
-		JSValue handler = JS_GetProperty(ctx, handler_map, prop);
+	if (JS_IsFunction(ctx, handler)) {
+		JSValue ret = JS_Call(ctx, handler, node_val, 1, &event_val);
+		if (JS_IsException(ret)) qjs_log_exception(ctx, "Inline event handler error");
 
-		if (JS_IsFunction(ctx, handler)) {
-			JSValue ret = JS_Call(ctx, handler, node_val, 1, &event_val);
-			if (JS_IsException(ret)) qjs_log_exception(ctx, "Inline event handler error");
-
-			if (JS_IsBool(ret) && !JS_ToBool(ctx, ret)) {
-				dom_event_prevent_default(evt);
-			}
-			JS_FreeValue(ctx, ret);
+		if (JS_IsBool(ret) && !JS_ToBool(ctx, ret)) {
+			dom_event_prevent_default(evt);
 		}
-		JS_FreeValue(ctx, handler);
-		JS_FreeValue(ctx, handler_map);
+		JS_FreeValue(ctx, ret);
 	}
+	JS_FreeValue(ctx, handler);
+	JS_FreeValue(ctx, handler_map);
 
 	/* 2. Handle programmatic listeners (from the "handlerListenerMap" property) */
 	JSValue listener_map = JS_GetProperty(ctx, node_val, heap->handler_listener_map_atom);
@@ -574,25 +512,13 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 		JS_FreeValue(ctx, js_len);
 
 		for (uint32_t i = 0; i < len; i++) {
-			JSValue entry = JS_GetPropertyUint32(ctx, listeners, i);
-			JSValue js_capture = JS_GetPropertyStr(ctx, entry, "capture");
-			bool capture = JS_ToBool(ctx, js_capture);
-			JS_FreeValue(ctx, js_capture);
-
-			bool run = false;
-			if (capture && phase == DOM_EVENT_CAPTURING_PHASE) run = true;
-			if (!capture && (phase == DOM_EVENT_AT_TARGET || phase == DOM_EVENT_BUBBLING_PHASE)) run = true;
-
-			if (run) {
-				JSValue listener = JS_GetPropertyStr(ctx, entry, "func");
-				if (JS_IsFunction(ctx, listener)) {
-					JSValue ret = JS_Call(ctx, listener, node_val, 1, &event_val);
-					if (JS_IsException(ret)) qjs_log_exception(ctx, "Programmatic event listener error");
-					JS_FreeValue(ctx, ret);
-				}
-				JS_FreeValue(ctx, listener);
+			JSValue listener = JS_GetPropertyUint32(ctx, listeners, i);
+			if (JS_IsFunction(ctx, listener)) {
+				JSValue ret = JS_Call(ctx, listener, node_val, 1, &event_val);
+				if (JS_IsException(ret)) qjs_log_exception(ctx, "Programmatic event listener error");
+				JS_FreeValue(ctx, ret);
 			}
-			JS_FreeValue(ctx, entry);
+			JS_FreeValue(ctx, listener);
 		}
 	}
 	JS_FreeValue(ctx, listeners);
@@ -971,132 +897,6 @@ static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int arg
 	}
 
 	return JS_UNDEFINED;
-}
-
-void qjsky_init_context(JSContext *ctx)
-{
-	JSRuntime *rt = JS_GetRuntime(ctx);
-	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
-	JSValue global = JS_GetGlobalObject(ctx);
-
-	/* Ensure support for necessary intrinsics */
-	JS_AddIntrinsicMapSet(ctx);
-	JS_AddIntrinsicBigInt(ctx);
-
-	/* Initialize atoms */
-	if (heap->node_map_atom == JS_ATOM_NULL) {
-		JSValue node_proto = JS_NewObject(ctx);
-		heap->node_proto_atom = JS_NewAtom(ctx, "__nodeProto");
-		JS_SetProperty(ctx, global, heap->node_proto_atom, JS_DupValue(ctx, node_proto));
-		JS_SetClassProto(ctx, heap->node_class_id, JS_DupValue(ctx, node_proto));
-
-		JSValue document_proto = JS_NewObject(ctx);
-		JS_SetPrototype(ctx, document_proto, JS_DupValue(ctx, node_proto));
-		heap->document_proto_atom = JS_NewAtom(ctx, "__documentProto");
-		JS_SetProperty(ctx, global, heap->document_proto_atom, JS_DupValue(ctx, document_proto));
-		JS_SetClassProto(ctx, heap->document_class_id, JS_DupValue(ctx, document_proto));
-
-		JSValue element_proto = JS_NewObject(ctx);
-		JS_SetPrototype(ctx, element_proto, JS_DupValue(ctx, node_proto));
-		heap->element_proto_atom = JS_NewAtom(ctx, "__elementProto");
-		JS_SetProperty(ctx, global, heap->element_proto_atom, JS_DupValue(ctx, element_proto));
-		JS_SetClassProto(ctx, heap->element_class_id, JS_DupValue(ctx, element_proto));
-
-		JS_FreeValue(ctx, element_proto);
-		JS_FreeValue(ctx, document_proto);
-		JS_FreeValue(ctx, node_proto);
-
-		JSValue sym_ctor = JS_GetPropertyStr(ctx, global, "Symbol");
-		JSValue arg;
-		JSValue sym;
-
-		arg = JS_NewString(ctx, "nodeMap");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "handlerMap");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->handler_map_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "handlerListenerMap");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->handler_listener_map_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "eventProto");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->event_proto_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "uieventProto");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->uievent_proto_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "mouseeventProto");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->mouseevent_proto_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		arg = JS_NewString(ctx, "keyboardeventProto");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->keyboardevent_proto_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
-
-		JS_FreeValue(ctx, sym_ctor);
-	}
-
-	JSValue map_ctor = JS_GetPropertyStr(ctx, global, "Map");
-	JSValue map = JS_CallConstructor(ctx, map_ctor, 0, NULL);
-	JS_FreeValue(ctx, map_ctor);
-
-	JS_SetProperty(ctx, global, heap->node_map_atom, map);
-
-	/* Initialize Event prototypes and inheritance */
-	JSValue event_proto = JS_NewObject(ctx);
-	JS_SetPropertyFunctionList(ctx, event_proto, qjsky_event_proto_funcs, sizeof(qjsky_event_proto_funcs)/sizeof(qjsky_event_proto_funcs[0]));
-	JS_SetClassProto(ctx, heap->event_class_id, JS_DupValue(ctx, event_proto));
-
-	JSValue event_ctor = JS_NewCFunction2(ctx, qjsky_event_ctor, "Event", 1, JS_CFUNC_constructor, 0);
-	JS_SetConstructor(ctx, event_ctor, event_proto);
-	JS_SetPropertyStr(ctx, global, "Event", event_ctor);
-
-	JSValue uievent_proto = JS_NewObject(ctx);
-	JS_SetPropertyFunctionList(ctx, uievent_proto, qjsky_uievent_proto_funcs, sizeof(qjsky_uievent_proto_funcs)/sizeof(qjsky_uievent_proto_funcs[0]));
-	JS_SetPrototype(ctx, uievent_proto, event_proto);
-	JS_SetClassProto(ctx, heap->uievent_class_id, JS_DupValue(ctx, uievent_proto));
-
-	JSValue mouseevent_proto = JS_NewObject(ctx);
-	JS_SetPropertyFunctionList(ctx, mouseevent_proto, qjsky_mouseevent_proto_funcs, sizeof(qjsky_mouseevent_proto_funcs)/sizeof(qjsky_mouseevent_proto_funcs[0]));
-	JS_SetPrototype(ctx, mouseevent_proto, uievent_proto);
-	JS_SetClassProto(ctx, heap->mouseevent_class_id, JS_DupValue(ctx, mouseevent_proto));
-
-	JSValue keyboardevent_proto = JS_NewObject(ctx);
-	JS_SetPropertyFunctionList(ctx, keyboardevent_proto, qjsky_keyboardevent_proto_funcs, sizeof(qjsky_keyboardevent_proto_funcs)/sizeof(qjsky_keyboardevent_proto_funcs[0]));
-	JS_SetPrototype(ctx, keyboardevent_proto, uievent_proto);
-	JS_SetClassProto(ctx, heap->keyboardevent_class_id, JS_DupValue(ctx, keyboardevent_proto));
-
-	/* Attach prototypes to global and consume references */
-	JS_SetProperty(ctx, global, heap->event_proto_atom, JS_DupValue(ctx, event_proto));
-	JS_SetProperty(ctx, global, heap->uievent_proto_atom, JS_DupValue(ctx, uievent_proto));
-	JS_SetProperty(ctx, global, heap->mouseevent_proto_atom, JS_DupValue(ctx, mouseevent_proto));
-	JS_SetProperty(ctx, global, heap->keyboardevent_proto_atom, JS_DupValue(ctx, keyboardevent_proto));
-
-	JS_FreeValue(ctx, keyboardevent_proto);
-	JS_FreeValue(ctx, mouseevent_proto);
-	JS_FreeValue(ctx, uievent_proto);
-	JS_FreeValue(ctx, event_proto);
-
-	JS_FreeValue(ctx, global);
 }
 
 void qjsky_init_window(JSContext *ctx)

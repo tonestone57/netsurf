@@ -65,12 +65,6 @@ void js_destroyheap(struct jsheap *heap)
 		JS_FreeAtomRT(heap->rt, heap->handler_map_atom);
 	if (heap->handler_listener_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
-	if (heap->node_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->node_proto_atom);
-	if (heap->document_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->document_proto_atom);
-	if (heap->element_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->element_proto_atom);
 	if (heap->event_proto_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->event_proto_atom);
 	if (heap->uievent_proto_atom != JS_ATOM_NULL)
@@ -112,9 +106,6 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_urlsearchparams(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
-
-	/* Initialize generated bindings */
-	qjsky_init_bindings(thread->ctx);
 
 	JSValue polyfill_val = JS_Eval(thread->ctx, (const char *)polyfill_js, polyfill_js_len, "polyfill.js", JS_EVAL_TYPE_GLOBAL);
 	if (JS_IsException(polyfill_val)) {
@@ -303,29 +294,11 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 
 void js_event_cleanup(struct jsthread *thread, struct dom_event *evt)
 {
-	if (thread == NULL || evt == NULL) return;
-	/* Remove the event from the memoization map to allow GC of the JS wrapper.
-	 * QuickJS finalizers (e.g. qjsky_event_finalizer) will then handle
-	 * the deallocation of C-level event resources.
+	/* QuickJS uses finalizers (e.g. qjsky_event_finalizer) to handle
+	 * the deallocation of event-related resources when the JS objects
+	 * are garbage collected. No explicit cleanup is required here
+	 * for the current architecture.
 	 */
-	JSContext *ctx = thread->ctx;
-	struct jsheap *heap = thread->heap;
-	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue map = JS_GetProperty(ctx, global, heap->node_map_atom);
-
-	if (JS_IsObject(map)) {
-		JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)evt);
-		JSValue delete_fn = JS_GetPropertyStr(ctx, map, "delete");
-		if (JS_IsFunction(ctx, delete_fn)) {
-			JSValue ret = JS_Call(ctx, delete_fn, map, 1, &key);
-			JS_FreeValue(ctx, ret);
-		}
-		JS_FreeValue(ctx, delete_fn);
-		JS_FreeValue(ctx, key);
-	}
-
-	JS_FreeValue(ctx, map);
-	JS_FreeValue(ctx, global);
 }
 
 bool

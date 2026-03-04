@@ -1,0 +1,20 @@
+--- docs/quickjs_mapping.md
++++ docs/quickjs_mapping.md
+@@ -53,7 +53,16 @@ JS_SetPrototype(ctx, sub_proto, super_proto);
+ ## 5. Return Value Handling
+ Functions must return a `JSValue`. Reference counting (`JS_DupValue` / `JS_FreeValue`) must be strictly followed to prevent memory leaks, especially when returning objects or strings.
+
+-## 6. Support Layer (Qjsky)
++### Reference Counting Rules for Built-ins
++- `JS_SetPrototype(ctx, obj, proto)`: Does **NOT** consume a reference to `proto`.
++- `JS_SetConstructor(ctx, ctor, proto)`: Does **NOT** consume a reference to `proto`.
++- `JS_SetClassProto(ctx, class_id, proto)`: **DOES** consume a reference to `proto`.
++- `JS_SetProperty*(ctx, obj, ...)`: **DOES** consume the reference to the value being set.
++
++## 6. Asynchronous Jobs (Promises)
++To support ES6 Promises and other microtasks, `JS_ExecutePendingJob` must be called at the end of the event loop or after any task that might resolve a promise (e.g., timers, XHR callbacks, event handlers). In NetSurf, this is wrapped in `qjs_run_jobs(ctx)`.
++
++## 7. Support Layer (Qjsky)
+ A support layer will provide common functionality:
+ - `qjsky_push_node(ctx, dom_node)`: Wraps a libdom node in a QuickJS object.
+ - `qjsky_get_node(ctx, js_val)`: Unwraps a QuickJS object to get the libdom node.
