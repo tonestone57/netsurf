@@ -264,7 +264,7 @@ getter Document::contentType()
 	struct html_content *htmlc;
 	dom_exception err;
 
-	err = dom_node_get_user_data(priv->parent.node,
+	err = dom_node_get_user_data(priv->node,
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
 	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
