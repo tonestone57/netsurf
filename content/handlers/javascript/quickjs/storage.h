@@ -6,4 +6,6 @@
 void qjsky_init_storage(JSContext *ctx);
 JSValue qjsky_create_storage(JSContext *ctx);
 
+extern JSClassDef qjsky_storage_class;
+
 #endif

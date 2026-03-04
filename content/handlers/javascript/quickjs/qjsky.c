@@ -17,6 +17,11 @@
 #include "content/content.h"
 #include "content/handlers/html/private.h"
 
+static void qjsky_node_finalizer(JSRuntime *rt, JSValue val);
+static void qjsky_event_finalizer(JSRuntime *rt, JSValue val);
+static JSValue qjsky_event_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+static JSValue qjsky_interface_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+
 static JSClassDef qjsky_node_class = { "Node", .finalizer = qjsky_node_finalizer };
 static JSClassDef qjsky_event_class = { "Event", .finalizer = qjsky_event_finalizer };
 static JSClassDef qjsky_dom_implementation_class = { "DOMImplementation" };
@@ -69,6 +74,14 @@ static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
 	struct dom_node *node = JS_GetOpaque(val, heap->node_class_id);
 	if (node) {
+		if (heap->node_key != NULL) {
+			void *data = NULL;
+			dom_node_get_user_data(node, heap->node_key, &data);
+			/* Only clear if it's actually pointing to this object being finalized */
+			if (data == JS_VALUE_GET_PTR(val)) {
+				dom_node_set_user_data(node, heap->node_key, NULL, NULL, NULL);
+			}
+		}
 		dom_node_unref(node);
 	}
 }
@@ -80,6 +93,22 @@ static void qjsky_event_finalizer(JSRuntime *rt, JSValue val)
 	if (evt) {
 		dom_event_unref(evt);
 	}
+}
+
+dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val)
+{
+	const char *str = JS_ToCString(ctx, val);
+	if (!str) return NULL;
+	dom_string *dstr;
+	dom_exception err = dom_string_create((const uint8_t *)str, strlen(str), &dstr);
+	JS_FreeCString(ctx, str);
+	return (err == DOM_NO_ERR) ? dstr : NULL;
+}
+
+JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str)
+{
+	if (!str) return JS_NULL;
+	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_byte_length(str));
 }
 
 static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
@@ -124,7 +153,16 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	JSValue global = JS_GetGlobalObject(ctx);
-	JSValue map = JS_GetProperty(ctx, global, heap->node_map_atom);
+
+	/* Check for existing wrapper in user data */
+	if (heap->node_key != NULL) {
+		void *data = NULL;
+		dom_node_get_user_data(node, heap->node_key, &data);
+		if (data != NULL) {
+			JS_FreeValue(ctx, global);
+			return JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, data));
+		}
+	}
 
 	/* Determine correct prototype */
 	dom_node_type nodetype;
@@ -163,28 +201,11 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 		}
 	}
 
-	/* Key for the map: use BigUint64 for pointer precision */
-	JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)node);
-
-	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
-	JSValue existing = JS_Call(ctx, get_fn, map, 1, &key);
-	JS_FreeValue(ctx, get_fn);
-
-	if (JS_IsObject(existing) && !JS_IsNull(existing)) {
-		JS_FreeValue(ctx, key);
-		JS_FreeValue(ctx, map);
-		JS_FreeValue(ctx, global);
-		return existing;
-	}
-	JS_FreeValue(ctx, existing);
-
 	JSValue proto = JS_GetProperty(ctx, global, proto_atom);
 	JSValue obj = JS_NewObjectProtoClass(ctx, proto, heap->node_class_id);
 	JS_FreeValue(ctx, proto);
 
 	if (JS_IsException(obj)) {
-		JS_FreeValue(ctx, key);
-		JS_FreeValue(ctx, map);
 		JS_FreeValue(ctx, global);
 		return obj;
 	}
@@ -199,16 +220,10 @@ JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
 	JS_SetProperty(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx));
 	JS_SetProperty(ctx, obj, heap->libdom_registered_atom, JS_NewObject(ctx));
 
-	/* Store in memoization map */
-	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
-	JSValue args[2] = { key, JS_DupValue(ctx, obj) };
-	JSValue ret = JS_Call(ctx, set_fn, map, 2, args);
-	JS_FreeValue(ctx, ret);
-	JS_FreeValue(ctx, args[1]);
-	JS_FreeValue(ctx, set_fn);
-	JS_FreeValue(ctx, key);
-
-	JS_FreeValue(ctx, map);
+	/* Store wrapper in user data (as a raw pointer, weak ref) */
+	if (heap->node_key != NULL) {
+		dom_node_set_user_data(node, heap->node_key, JS_VALUE_GET_PTR(obj), NULL, NULL);
+	}
 
 	return obj;
 }
@@ -557,6 +572,11 @@ static JSValue qjsky_event_ctor(JSContext *ctx, JSValueConst new_target, int arg
 	return obj;
 }
 
+static JSValue qjsky_interface_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv)
+{
+	return JS_ThrowTypeError(ctx, "Illegal constructor");
+}
+
 static JSValue qjsky_get_handler(JSContext *ctx, struct dom_element *ele, dom_string *name)
 {
 	JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)ele);
@@ -621,6 +641,16 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 
 		/* Create a copy to handle listeners added/removed during dispatch */
 		JSValue *listeners_copy = malloc(sizeof(JSValue) * len);
+		if (listeners_copy == NULL) {
+			JS_FreeValue(ctx, listeners);
+			JS_FreeAtom(ctx, prop);
+			JS_FreeValue(ctx, handler_listener_map);
+			JS_FreeValue(ctx, handler_map);
+			JS_FreeValue(ctx, node_val);
+			dom_node_unref((struct dom_node *)targ);
+			dom_string_unref(name);
+			return;
+		}
 		for (uint32_t i = 0; i < len; i++) {
 			listeners_copy[i] = JS_GetPropertyUint32(ctx, listeners, i);
 		}
@@ -1352,6 +1382,7 @@ void qjsky_init_runtime(struct jsheap *heap)
 	JS_NewClassID(&heap->url_class_id);
 	JS_NewClassID(&heap->urlsearchparams_class_id);
 	JS_NewClassID(&heap->storage_class_id);
+	JS_NewClass(heap->rt, heap->storage_class_id, &qjsky_storage_class);
 
 	heap->node_map_atom = JS_ATOM_NULL;
 	heap->handler_map_atom = JS_ATOM_NULL;
@@ -1368,6 +1399,7 @@ void qjsky_init_runtime(struct jsheap *heap)
 	heap->uievent_proto_atom = JS_ATOM_NULL;
 	heap->mouseevent_proto_atom = JS_ATOM_NULL;
 	heap->keyboardevent_proto_atom = JS_ATOM_NULL;
+	heap->storage_proto_atom = JS_ATOM_NULL;
 }
 
 void qjsky_init_context(JSContext *ctx)
@@ -1381,16 +1413,10 @@ void qjsky_init_context(JSContext *ctx)
 	JS_AddIntrinsicBigInt(ctx);
 
 	/* Initialize atoms */
-	if (heap->node_map_atom == JS_ATOM_NULL) {
+	if (heap->handler_map_atom == JS_ATOM_NULL) {
 		JSValue sym_ctor = JS_GetPropertyStr(ctx, global, "Symbol");
 		JSValue arg;
 		JSValue sym;
-
-		arg = JS_NewString(ctx, "nodeMap");
-		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
-		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
-		JS_FreeValue(ctx, sym);
-		JS_FreeValue(ctx, arg);
 
 		arg = JS_NewString(ctx, "handlerMap");
 		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
@@ -1458,6 +1484,12 @@ void qjsky_init_context(JSContext *ctx)
 		JS_FreeValue(ctx, sym);
 		JS_FreeValue(ctx, arg);
 
+		arg = JS_NewString(ctx, "domImplementationCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->dom_implementation_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
 		arg = JS_NewString(ctx, "uieventProto");
 		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
 		heap->uievent_proto_atom = JS_ValueToAtom(ctx, sym);
@@ -1476,14 +1508,68 @@ void qjsky_init_context(JSContext *ctx)
 		JS_FreeValue(ctx, sym);
 		JS_FreeValue(ctx, arg);
 
+		arg = JS_NewString(ctx, "nodeCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->node_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "documentCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->document_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "elementCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->element_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "htmlElementCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->html_element_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "textCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->text_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "commentCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->comment_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "eventCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->event_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "uieventCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->uievent_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "mouseeventCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->mouseevent_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "keyboardeventCtor");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->keyboardevent_ctor_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
 		JS_FreeValue(ctx, sym_ctor);
 	}
-
-	JSValue map_ctor = JS_GetPropertyStr(ctx, global, "Map");
-	JSValue map = JS_CallConstructor(ctx, map_ctor, 0, NULL);
-	JS_FreeValue(ctx, map_ctor);
-
-	JS_SetProperty(ctx, global, heap->node_map_atom, map);
 
 	/* Set up DOM hierarchy prototypes */
 	JSValue node_proto = JS_NewObject(ctx);
@@ -1512,14 +1598,50 @@ void qjsky_init_context(JSContext *ctx)
 	JS_SetPropertyFunctionList(ctx, dom_implementation_proto, qjsky_dom_implementation_proto_funcs, sizeof(qjsky_dom_implementation_proto_funcs)/sizeof(qjsky_dom_implementation_proto_funcs[0]));
 	JS_SetClassProto(ctx, heap->dom_implementation_class_id, JS_DupValue(ctx, dom_implementation_proto));
 
-	/* Attach prototypes to global */
-	JS_SetProperty(ctx, global, heap->node_proto_atom, node_proto);
-	JS_SetProperty(ctx, global, heap->document_proto_atom, document_proto);
-	JS_SetProperty(ctx, global, heap->element_proto_atom, element_proto);
-	JS_SetProperty(ctx, global, heap->html_element_proto_atom, html_element_proto);
-	JS_SetProperty(ctx, global, heap->text_proto_atom, text_proto);
-	JS_SetProperty(ctx, global, heap->comment_proto_atom, comment_proto);
-	JS_SetProperty(ctx, global, heap->dom_implementation_proto_atom, dom_implementation_proto);
+	/* Set up constructors and expose them on global object for instanceof support */
+	JSValue node_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "Node", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, node_ctor, node_proto);
+	JS_SetPropertyStr(ctx, global, "Node", JS_DupValue(ctx, node_ctor));
+	JS_SetProperty(ctx, global, heap->node_ctor_atom, node_ctor);
+
+	JSValue document_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "Document", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, document_ctor, document_proto);
+	JS_SetPropertyStr(ctx, global, "Document", JS_DupValue(ctx, document_ctor));
+	JS_SetProperty(ctx, global, heap->document_ctor_atom, document_ctor);
+
+	JSValue element_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "Element", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, element_ctor, element_proto);
+	JS_SetPropertyStr(ctx, global, "Element", JS_DupValue(ctx, element_ctor));
+	JS_SetProperty(ctx, global, heap->element_ctor_atom, element_ctor);
+
+	JSValue html_element_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "HTMLElement", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, html_element_ctor, html_element_proto);
+	JS_SetPropertyStr(ctx, global, "HTMLElement", JS_DupValue(ctx, html_element_ctor));
+	JS_SetProperty(ctx, global, heap->html_element_ctor_atom, html_element_ctor);
+
+	JSValue text_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "Text", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, text_ctor, text_proto);
+	JS_SetPropertyStr(ctx, global, "Text", JS_DupValue(ctx, text_ctor));
+	JS_SetProperty(ctx, global, heap->text_ctor_atom, text_ctor);
+
+	JSValue comment_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "Comment", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, comment_ctor, comment_proto);
+	JS_SetPropertyStr(ctx, global, "Comment", JS_DupValue(ctx, comment_ctor));
+	JS_SetProperty(ctx, global, heap->comment_ctor_atom, comment_ctor);
+
+	JSValue dom_implementation_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "DOMImplementation", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, dom_implementation_ctor, dom_implementation_proto);
+	JS_SetPropertyStr(ctx, global, "DOMImplementation", JS_DupValue(ctx, dom_implementation_ctor));
+	JS_SetProperty(ctx, global, heap->dom_implementation_ctor_atom, dom_implementation_ctor);
+
+	/* Attach prototypes to global using hidden atoms for internal use */
+	JS_SetProperty(ctx, global, heap->node_proto_atom, JS_DupValue(ctx, node_proto));
+	JS_SetProperty(ctx, global, heap->document_proto_atom, JS_DupValue(ctx, document_proto));
+	JS_SetProperty(ctx, global, heap->element_proto_atom, JS_DupValue(ctx, element_proto));
+	JS_SetProperty(ctx, global, heap->html_element_proto_atom, JS_DupValue(ctx, html_element_proto));
+	JS_SetProperty(ctx, global, heap->text_proto_atom, JS_DupValue(ctx, text_proto));
+	JS_SetProperty(ctx, global, heap->comment_proto_atom, JS_DupValue(ctx, comment_proto));
+	JS_SetProperty(ctx, global, heap->dom_implementation_proto_atom, JS_DupValue(ctx, dom_implementation_proto));
 
 	/* Initialize Event prototypes and inheritance */
 	JSValue event_proto = JS_NewObject(ctx);
@@ -1528,21 +1650,37 @@ void qjsky_init_context(JSContext *ctx)
 
 	JSValue event_ctor = JS_NewCFunction2(ctx, qjsky_event_ctor, "Event", 1, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, event_ctor, event_proto);
-	JS_SetPropertyStr(ctx, global, "Event", event_ctor);
+	JS_SetPropertyStr(ctx, global, "Event", JS_DupValue(ctx, event_ctor));
+	JS_SetProperty(ctx, global, heap->event_ctor_atom, event_ctor);
 
 	JSValue uievent_proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, uievent_proto, qjsky_uievent_proto_funcs, sizeof(qjsky_uievent_proto_funcs)/sizeof(qjsky_uievent_proto_funcs[0]));
 	JS_SetPrototype(ctx, uievent_proto, event_proto);
 
+	JSValue uievent_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "UIEvent", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, uievent_ctor, uievent_proto);
+	JS_SetPropertyStr(ctx, global, "UIEvent", JS_DupValue(ctx, uievent_ctor));
+	JS_SetProperty(ctx, global, heap->uievent_ctor_atom, uievent_ctor);
+
 	JSValue mouseevent_proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, mouseevent_proto, qjsky_mouseevent_proto_funcs, sizeof(qjsky_mouseevent_proto_funcs)/sizeof(qjsky_mouseevent_proto_funcs[0]));
 	JS_SetPrototype(ctx, mouseevent_proto, uievent_proto);
+
+	JSValue mouseevent_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "MouseEvent", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, mouseevent_ctor, mouseevent_proto);
+	JS_SetPropertyStr(ctx, global, "MouseEvent", JS_DupValue(ctx, mouseevent_ctor));
+	JS_SetProperty(ctx, global, heap->mouseevent_ctor_atom, mouseevent_ctor);
 
 	JSValue keyboardevent_proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, keyboardevent_proto, qjsky_keyboardevent_proto_funcs, sizeof(qjsky_keyboardevent_proto_funcs)/sizeof(qjsky_keyboardevent_proto_funcs[0]));
 	JS_SetPrototype(ctx, keyboardevent_proto, uievent_proto);
 
-	/* Attach prototypes to global and consume references */
+	JSValue keyboardevent_ctor = JS_NewCFunction2(ctx, qjsky_interface_ctor, "KeyboardEvent", 0, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, keyboardevent_ctor, keyboardevent_proto);
+	JS_SetPropertyStr(ctx, global, "KeyboardEvent", JS_DupValue(ctx, keyboardevent_ctor));
+	JS_SetProperty(ctx, global, heap->keyboardevent_ctor_atom, keyboardevent_ctor);
+
+	/* Attach prototypes to global using hidden atoms and consume references */
 	JS_SetProperty(ctx, global, heap->event_proto_atom, event_proto);
 	JS_SetProperty(ctx, global, heap->uievent_proto_atom, uievent_proto);
 	JS_SetProperty(ctx, global, heap->mouseevent_proto_atom, mouseevent_proto);

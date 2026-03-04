@@ -50,6 +50,8 @@ nserror js_newheap(int timeout, struct jsheap **heap_out)
 
 	heap->next_timer_handle = 1;
 
+	dom_string_create((const uint8_t *)"qjs_wrapper", 11, &heap->node_key);
+
 	qjsky_init_runtime(heap);
 
 	*heap_out = heap;
@@ -60,12 +62,26 @@ void js_destroyheap(struct jsheap *heap)
 {
 	if (heap == NULL) return;
 
-	if (heap->node_map_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
 	if (heap->handler_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->handler_map_atom);
 	if (heap->handler_listener_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
+	if (heap->libdom_registered_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->libdom_registered_atom);
+	if (heap->node_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->node_proto_atom);
+	if (heap->document_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->document_proto_atom);
+	if (heap->element_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->element_proto_atom);
+	if (heap->html_element_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->html_element_proto_atom);
+	if (heap->text_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->text_proto_atom);
+	if (heap->comment_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->comment_proto_atom);
+	if (heap->dom_implementation_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->dom_implementation_proto_atom);
 	if (heap->event_proto_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->event_proto_atom);
 	if (heap->uievent_proto_atom != JS_ATOM_NULL)
@@ -74,6 +90,34 @@ void js_destroyheap(struct jsheap *heap)
 		JS_FreeAtomRT(heap->rt, heap->mouseevent_proto_atom);
 	if (heap->keyboardevent_proto_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->keyboardevent_proto_atom);
+	if (heap->storage_proto_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->storage_proto_atom);
+
+	if (heap->node_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->node_ctor_atom);
+	if (heap->document_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->document_ctor_atom);
+	if (heap->element_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->element_ctor_atom);
+	if (heap->html_element_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->html_element_ctor_atom);
+	if (heap->text_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->text_ctor_atom);
+	if (heap->comment_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->comment_ctor_atom);
+	if (heap->event_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->event_ctor_atom);
+	if (heap->uievent_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->uievent_ctor_atom);
+	if (heap->mouseevent_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->mouseevent_ctor_atom);
+	if (heap->keyboardevent_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->keyboardevent_ctor_atom);
+	if (heap->dom_implementation_ctor_atom != JS_ATOM_NULL)
+		JS_FreeAtomRT(heap->rt, heap->dom_implementation_ctor_atom);
+
+	if (heap->node_key != NULL)
+		dom_string_unref(heap->node_key);
 
 	JS_FreeRuntime(heap->rt);
 	free(heap);

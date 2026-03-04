@@ -17,7 +17,6 @@ struct jsheap {
 	JSClassID urlsearchparams_class_id;
 	JSClassID storage_class_id;
 	JSClassID dom_implementation_class_id;
-	JSAtom node_map_atom;
 	JSAtom handler_map_atom;
 	JSAtom handler_listener_map_atom;
 	JSAtom libdom_registered_atom;
@@ -32,6 +31,19 @@ struct jsheap {
 	JSAtom uievent_proto_atom;
 	JSAtom mouseevent_proto_atom;
 	JSAtom keyboardevent_proto_atom;
+	JSAtom storage_proto_atom;
+	JSAtom node_ctor_atom;
+	JSAtom document_ctor_atom;
+	JSAtom element_ctor_atom;
+	JSAtom html_element_ctor_atom;
+	JSAtom text_ctor_atom;
+	JSAtom comment_ctor_atom;
+	JSAtom event_ctor_atom;
+	JSAtom uievent_ctor_atom;
+	JSAtom mouseevent_ctor_atom;
+	JSAtom keyboardevent_ctor_atom;
+	JSAtom dom_implementation_ctor_atom;
+	struct dom_string *node_key;
 	void *timer_ring;
 	int next_timer_handle;
 };
