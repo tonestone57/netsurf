@@ -392,8 +392,7 @@ box_construct_generate(dom_node *n,
 				c_item->type == CSS_COMPUTED_CONTENT_ATTR) {
 			char *text = NULL;
 			if (c_item->type == CSS_COMPUTED_CONTENT_STRING) {
-				text = talloc_strdup(content->bctx,
-						lwc_string_data(c_item->data.string));
+				text = strdup(lwc_string_data(c_item->data.string));
 			} else {
 				dom_string *attr_name;
 				dom_string *attr_value = NULL;
@@ -406,8 +405,7 @@ box_construct_generate(dom_node *n,
 					dom_string_unref(attr_name);
 				}
 				if (attr_value != NULL) {
-					text = talloc_strdup(content->bctx,
-							dom_string_data(attr_value));
+					text = strdup(dom_string_data(attr_value));
 					dom_string_unref(attr_value);
 				}
 			}
@@ -419,11 +417,16 @@ box_construct_generate(dom_node *n,
 						content->bctx);
 				if (text_box != NULL) {
 					text_box->type = BOX_TEXT;
-					text_box->text = text;
-					text_box->length = strlen(text);
-					box_add_child(container, text_box);
+					text_box->text = strdup(text);
+					free(text);
+					if (text_box->text != NULL) {
+						text_box->length = strlen(text_box->text);
+						box_add_child(container, text_box);
+					} else {
+						box_free_box(text_box);
+					}
 				} else {
-					talloc_free(text);
+					free(text);
 				}
 			}
 		} else if (c_item->type == CSS_COMPUTED_CONTENT_URI) {
@@ -481,19 +484,19 @@ box_construct_marker(struct box *box,
 	switch (list_style_type) {
 	case CSS_LIST_STYLE_TYPE_DISC:
 		/* 2022 BULLET */
-		marker->text = (char *) "\342\200\242";
+		marker->text = strdup("\342\200\242");
 		marker->length = 3;
 		break;
 
 	case CSS_LIST_STYLE_TYPE_CIRCLE:
 		/* 25CB WHITE CIRCLE */
-		marker->text = (char *) "\342\227\213";
+		marker->text = strdup("\342\227\213");
 		marker->length = 3;
 		break;
 
 	case CSS_LIST_STYLE_TYPE_SQUARE:
 		/* 25AA BLACK SMALL SQUARE */
-		marker->text = (char *) "\342\226\252";
+		marker->text = strdup("\342\226\252");
 		marker->length = 3;
 		break;
 
@@ -1150,7 +1153,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 		box->type = BOX_TEXT;
 
-		box->text = talloc_strdup(ctx->bctx, text);
+		box->text = strdup(text);
 		free(text);
 		if (box->text == NULL)
 			return false;
@@ -1302,7 +1305,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 			box->type = BOX_TEXT;
 
-			box->text = talloc_strdup(ctx->bctx, current);
+			box->text = strdup(current);
 			if (box->text == NULL) {
 				free(text);
 				return false;

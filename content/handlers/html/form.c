@@ -1362,18 +1362,15 @@ form__select_process_selection(html_content *html,
 		}
 	}
 
-	talloc_free(inline_box->text);
+	free(inline_box->text);
 	inline_box->text = 0;
 
 	if (control->data.select.num_selected == 0) {
-		inline_box->text = talloc_strdup(html->bctx,
-				messages_get("Form_None"));
+		inline_box->text = strdup(messages_get("Form_None"));
 	} else if (control->data.select.num_selected == 1) {
-		inline_box->text = talloc_strdup(html->bctx,
-				control->data.select.current->text);
+		inline_box->text = strdup(control->data.select.current->text);
 	} else {
-		inline_box->text = talloc_strdup(html->bctx,
-				messages_get("Form_Many"));
+		inline_box->text = strdup(messages_get("Form_Many"));
 	}
 
 	if (!inline_box->text) {

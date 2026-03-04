@@ -5084,7 +5084,7 @@ layout__set_numerical_marker_text(
 		LIST_MARKER_SIZE = 20,
 	};
 
-	marker->text = talloc_array(content->bctx, char, LIST_MARKER_SIZE);
+	marker->text = malloc(LIST_MARKER_SIZE);
 	if (marker->text == NULL) {
 		return;
 	}
@@ -5095,9 +5095,7 @@ layout__set_numerical_marker_text(
 		if (counter_len > LIST_MARKER_SIZE) {
 			/* Use computed size as marker did not fit in
 			 * default allocation. */
-			marker->text = talloc_realloc(content->bctx,
-					marker->text,
-					char,
+			marker->text = realloc(marker->text,
 					counter_len);
 			if (marker->text == NULL) {
 				return;
