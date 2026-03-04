@@ -122,10 +122,10 @@ static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, heap->event_class_id);
 	if (!evt) return JS_EXCEPTION;
-	dom_string *type;
+	dom_string *type = NULL;
 	dom_event_get_type(evt, &type);
 	JSValue val = qjsky_dom_string_to_js_value(ctx, type);
-	dom_string_unref(type);
+	if (type) dom_string_unref(type);
 	return val;
 }
 
@@ -888,7 +888,9 @@ extern JSClassDef qjsky_usp_class;
 
 void qjsky_init_runtime(struct jsheap *heap)
 {
-	if (dom_string_create((const uint8_t *)"js_wrapper", 10, &heap->node_js_wrapper_key) != DOM_NO_ERR) return;
+	char key_name[64];
+	snprintf(key_name, sizeof(key_name), "qjs_wrapper_%p", (void *)heap);
+	if (dom_string_create((const uint8_t *)key_name, strlen(key_name), &heap->node_js_wrapper_key) != DOM_NO_ERR) return;
 
 	JS_NewClassID(&heap->node_class_id);
 	JS_NewClass(heap->rt, heap->node_class_id, &qjsky_node_class);
@@ -945,6 +947,8 @@ void qjsky_init_context(JSContext *ctx)
 {
 	JSRuntime *rt = JS_GetRuntime(ctx);
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+
+	NSLOG(netsurf, INFO, "Initialising QuickJS context for heap %p", (void *)heap);
 
 	/* Initialize Node prototype */
 	JSValue node_proto = JS_NewObject(ctx);
