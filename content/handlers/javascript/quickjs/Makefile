@@ -2,20 +2,21 @@
 # NetSurf QuickJS source file inclusion
 #
 
-S_JAVASCRIPT += quickjs/quickjs.c quickjs/qjsky.c quickjs/xhr.c quickjs/location.c quickjs/history.c quickjs/navigator.c quickjs/screen.c quickjs/barprop.c quickjs/url.c quickjs/qjs_utils.c
-
 # Rule to invoke nsgenbind with the QuickJS backend.
 # Note: This requires an updated version of nsgenbind that supports -t qjs_libdom.
-# Prototype code for this backend is provided in docs/nsgenbind_prototype/
 $(OBJROOT)/quickjs/binding.h $(OBJROOT)/quickjs/Makefile: content/handlers/javascript/duktape/netsurf.bnd $(BINDINGS)
 	$(Q)$(MKDIR) -p $(OBJROOT)/quickjs
 	$(VQ)echo " GENBIND (QJS): $<"
 	$(Q)nsgenbind -t qjs_libdom $(GBFLAGS) -I content/handlers/javascript/WebIDL $< $(OBJROOT)/quickjs || ( \
-		echo "NOTE: Your nsgenbind tool does not yet support the experimental QuickJS backend (-t qjs_libdom)."; \
-		echo "This is required ONLY if you are explicitly building with NETSURF_USE_QUICKJS=YES."; \
-		echo "To proceed with QuickJS development, please apply the prototype patch provided in docs/nsgenbind_prototype/."; \
+		echo "NOTE: Your nsgenbind tool does not yet support the QuickJS backend (-t qjs_libdom)."; \
 		false; \
 	)
+
+# Include the generated makefile fragment
+-include $(OBJROOT)/quickjs/Makefile
+
+S_JAVASCRIPT += quickjs/quickjs.c quickjs/qjsky.c quickjs/xhr.c quickjs/location.c quickjs/history.c quickjs/navigator.c quickjs/screen.c quickjs/barprop.c quickjs/url.c quickjs/qjs_utils.c
+S_JAVASCRIPT += $(addprefix quickjs/,$(NSGENBIND_SOURCES))
 
 # Generator for the C include representing the generics.js
 $(OBJROOT)/quickjs/generics.js.inc: content/handlers/javascript/duktape/generics.js $(TOOLROOT)/xxd

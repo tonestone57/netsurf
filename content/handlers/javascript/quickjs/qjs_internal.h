@@ -3,6 +3,8 @@
 
 #include <quickjs.h>
 
+#define QJS_STACK_SIZE 32
+
 struct jsheap {
 	JSRuntime *rt;
 	JSClassID node_class_id;
@@ -34,6 +36,11 @@ struct jsthread {
 	struct jsheap *heap;
 	void *win_priv;
 	void *doc_priv;
+
+	/* Duktape emulation stack */
+	JSValue stack[QJS_STACK_SIZE];
+	int stack_top;
+	JSValue this_val;
 };
 
 #endif
