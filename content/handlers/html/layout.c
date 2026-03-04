@@ -219,17 +219,72 @@ static void layout_line_set_positions(struct box *first, struct box *last,
 			/* replaced inlines and inline-blocks */
 			d->x += x0;
 			d->y = *y + d->border[TOP].width + d->margin[TOP];
-			h = d->margin[TOP] + d->border[TOP].width +
-					d->padding[TOP] + d->height +
-					d->padding[BOTTOM] +
-					d->border[BOTTOM].width +
-					d->margin[BOTTOM];
+			h = layout__box_outer_height(d);
 			if (*used_height < h)
 				*used_height = h;
 		}
 	}
 }
 
+
+
+/**
+ * Get the baseline of a box.
+ *
+ * \param[in] box   Box to get baseline of.
+ * \param[in] last  Whether to get the last child baseline (for inline-blocks).
+ * \return the baseline offset from the top of the box content.
+ */
+static int layout__get_box_baseline(struct box *box, bool last)
+{
+	struct box *c;
+
+	if (box->type == BOX_TEXT || box->type == BOX_BR ||
+			box->type == BOX_INLINE_END) {
+		return box->height * 3 / 4;
+	}
+
+	if (layout__box_is_replace(box) ||
+			(box->style != NULL &&
+			css_computed_overflow_y(box->style) !=
+			CSS_OVERFLOW_VISIBLE)) {
+		/* Replaced elements use the bottom of their margin box.
+		 * Elements with non-visible overflow use their margin box bottom too. */
+		return box->height + box->padding[BOTTOM] +
+				box->border[BOTTOM].width + box->margin[BOTTOM];
+	}
+
+	if (box->type == BOX_TABLE_ROW) {
+		/* Row baseline is its ascent. */
+		return box->descendant_y0;
+	}
+
+	if (box->type == BOX_INLINE_BLOCK || box->type == BOX_INLINE_FLEX) {
+		last = true;
+	}
+
+	/* Find first/last child with a baseline. */
+	if (last) {
+		for (c = box->last; c != NULL; c = c->prev) {
+			if (layout__box_is_inline_flow(c) || c->type == BOX_BR) {
+				break;
+			}
+		}
+	} else {
+		for (c = box->children; c != NULL; c = c->next) {
+			if (layout__box_is_inline_flow(c) || c->type == BOX_BR) {
+				break;
+			}
+		}
+	}
+
+	if (c != NULL) {
+		return c->y + layout__get_box_baseline(c, last);
+	}
+
+	/* Fallback: 3/4 of the height. */
+	return box->height * 3 / 4;
+}
 
 /**
  * Handle vertical-align by adjusting box y values.
@@ -240,9 +295,35 @@ static void layout_line_set_positions(struct box *first, struct box *last,
  * \param  used_height  height of line
  */
 static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
-		struct box *first, struct box *last, int used_height)
+		struct box *first, struct box *last, int used_height, int line_top)
 {
 	struct box *d;
+	int line_baseline = -1;
+
+	/* Find the line baseline by finding the maximum ascent of
+	 * baseline-aligned boxes. */
+	for (d = first; d != last; d = d->next) {
+		css_fixed value = 0;
+		css_unit unit = CSS_UNIT_PX;
+		const css_computed_style *style = d->style ? d->style :
+				first->parent->parent->style;
+
+		if (layout__box_is_absolute(d))
+			continue;
+
+		if (css_computed_vertical_align(style, &value, &unit) ==
+				CSS_VERTICAL_ALIGN_BASELINE) {
+			int ascent = (d->y + layout__get_box_baseline(d, false)) - line_top;
+			if (ascent > line_baseline) {
+				line_baseline = ascent;
+			}
+		}
+	}
+
+	if (line_baseline == -1) {
+		/* Fallback: no baseline-aligned elements. */
+		line_baseline = used_height * 3 / 4;
+	}
 
 	for (d = first; d != last; d = d->next) {
 		css_fixed value = 0;
@@ -277,21 +358,8 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		int outer_h = h + margin_top + margin_bottom;
 		int baseline_shift;
 
-		if (d->type != BOX_TEXT && d->type != BOX_BR &&
-				d->type != BOX_INLINE_END &&
-				layout__box_is_replace(d)) {
-			/* Baseline of replaced element is the bottom of its
-			 * margin box. We align this with the baseline of the
-			 * line, which we estimate at 3/4 of the line height.
-			 */
-			baseline_shift = used_height * 3 / 4 - outer_h;
-		} else {
-			/* Baseline of non-replaced element is assumed to be
-			 * at 3/4 of its height. We align this with the
-			 * baseline of the line.
-			 */
-			baseline_shift = (used_height - d->height) * 3 / 4;
-		}
+		/* The shift needed to align this box baseline with the line's. */
+		baseline_shift = line_baseline - (d->y + layout__get_box_baseline(d, false) - line_top);
 
 		switch (css_computed_vertical_align(style, &value, &unit)) {
 		case CSS_VERTICAL_ALIGN_SUPER:
@@ -842,7 +910,7 @@ layout_minmax_line(struct box *first,
 
 		assert(layout__box_is_inline_content(b));
 
-		NSLOG(layout, DEBUG, "%p: min %i, max %i", b, min, max);
+		NSLOG(layout, DEBUG, "%p: min %i, max %i", (void *)b, min, max);
 
 		if (b->type == BOX_BR) {
 			b = b->next;
@@ -1709,7 +1777,7 @@ find_sides(struct box *fl,
 	}
 
 	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, left %p, right %p", *x0, *x1,
-	      *left, *right);
+	      (void *)*left, (void *)*right);
 }
 
 
@@ -2173,7 +2241,7 @@ bool layout_table(
 
 		NSLOG(layout, DEBUG,
 		      "table %p, column %u: type %s, width %i, min %i, max %i",
-		      table,
+		      (void *)table,
 		      i,
 		      ((const char *[]){
 			      "UNKNOWN",
@@ -2751,8 +2819,8 @@ static bool layout_block_object(struct box *block)
 			block->type == BOX_TABLE_CELL);
 	assert(block->object);
 
-	NSLOG(layout, DEBUG,  "block %p, object %p, width %i", block,
-	      hlcache_handle_get_url(block->object), block->width);
+	NSLOG(layout, DEBUG,  "block %p, object %p, width %i", (void *)block,
+	      (void *)hlcache_handle_get_url(block->object), block->width);
 
 	layout_block_object_reformat(block, block->width);
 
@@ -3384,11 +3452,7 @@ layout_float_find_dimensions(
 
 		/* width includes margin, borders and padding */
 		if (width == available_width) {
-			width -= box->margin[LEFT] + box->border[LEFT].width +
-					box->padding[LEFT] +
-					box->padding[RIGHT] +
-					box->border[RIGHT].width +
-					box->margin[RIGHT];
+			width -= layout__box_outer_width(box) - box->width;
 		} else {
 			/* width was obtained from a min_width or max_width
 			 * value, so need to use the same method for calculating
@@ -3483,8 +3547,8 @@ place_float_below(struct box *c, int width, int cx, int y, struct box *cont)
 			y : cont->cached_place_below_level;
 
 	NSLOG(layout, DEBUG,
-	      "c %p, width %i, cx %i, y %i, cont %p", c,
-	      width, cx, y, cont);
+	      "c %p, width %i, cx %i, y %i, cont %p", (void *)c,
+	      width, cx, y, (void *)cont);
 
 	do {
 		y = yy;
@@ -3588,7 +3652,7 @@ layout_line(struct box *first,
 	int height, used_height;
 	int x0 = 0;
 	int x1 = *width;
-	int x, h, x_previous;
+	int x, h, x_previous, line_top;
 	int fy = cy;
 	struct box *left;
 	struct box *right;
@@ -3606,7 +3670,7 @@ layout_line(struct box *first,
 
 	NSLOG(layout, DEBUG,
 	      "first %p, first->text '%.*s', width %i, y %i, cx %i, cy %i",
-	      first,
+	      (void *)first,
 	      (int)first->length,
 	      first->text,
 	      *width,
@@ -3641,6 +3705,7 @@ layout_line(struct box *first,
 
 	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
 
+	line_top = *y;
 	int text_indent = 0;
 	if (indent)
 		text_indent = layout_text_indent(&content->unit_len_ctx,
@@ -3655,7 +3720,7 @@ layout_line(struct box *first,
 
 		assert(layout__box_is_inline_content(b));
 
-		NSLOG(layout, DEBUG,  "pass 1: b %p, x %i", b, x);
+		NSLOG(layout, DEBUG,  "pass 1: b %p, x %i", (void *)b, x);
 
 		if (b->type == BOX_BR)
 			break;
@@ -3892,7 +3957,7 @@ layout_line(struct box *first,
 			text_indent = 0;
 		}
 
-		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
+		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", (void *)b, x);
 
 		if (layout__box_is_absolute(b)) {
 			b->x = x + space_after;
@@ -3955,7 +4020,7 @@ layout_line(struct box *first,
 
 		} else {
 			/* float */
-			NSLOG(layout, DEBUG,  "float %p", b);
+			NSLOG(layout, DEBUG,  "float %p", (void *)b);
 
 			d = b->children;
 			d->float_children = 0;
@@ -3967,7 +4032,7 @@ layout_line(struct box *first,
 
 			NSLOG(layout, DEBUG,
 			      "%p : %d %d",
-			      d,
+			      (void *)d,
 			      d->margin[TOP],
 			      d->border[TOP].width);
 
@@ -3978,11 +4043,7 @@ layout_line(struct box *first,
 					d->padding[RIGHT] +
 					d->border[RIGHT].width +
 					d->margin[RIGHT];
-			b->height = d->margin[TOP] + d->border[TOP].width +
-					d->padding[TOP] + d->height +
-					d->padding[BOTTOM] +
-					d->border[BOTTOM].width +
-					d->margin[BOTTOM];
+			b->height = layout__box_outer_height(d);
 
 			if (b->width > (x1 - x0) - x)
 				place_below = true;
@@ -4230,7 +4291,7 @@ layout_line(struct box *first,
 	assert(b != first || (move_y && 0 < used_height && (left || right)));
 
 	/* handle vertical-align by adjusting box y values */
-	layout_line_vertical_align(&content->unit_len_ctx, first, b, used_height);
+	layout_line_vertical_align(&content->unit_len_ctx, first, b, used_height, line_top);
 
 	/* handle clearance for br */
 	if (br_box && css_computed_clear(br_box->style) != CSS_CLEAR_NONE) {
@@ -4272,9 +4333,9 @@ static bool layout_inline_container(struct box *inline_container, int width,
 
 	NSLOG(layout, DEBUG,
 	      "inline_container %p, width %i, cont %p, cx %i, cy %i",
-	      inline_container,
+	      (void *)inline_container,
 	      width,
-	      cont,
+	      (void *)cont,
 	      cx,
 	      cy);
 
@@ -4305,7 +4366,7 @@ static bool layout_inline_container(struct box *inline_container, int width,
 	 */
 	for (c = inline_container->children; c; ) {
 
-		NSLOG(layout, DEBUG, "c %p", c);
+		NSLOG(layout, DEBUG, "c %p", (void *)c);
 
 		curwidth = inline_container->width;
 		if (!layout_line(c, &curwidth, &y, cx, cy + y, cont, first_line,
@@ -4569,7 +4630,7 @@ bool layout__block_context(
 		}
 
 		NSLOG(layout, DEBUG,  "box %p, cx %i, cy %i, width %i",
-				box, cx, cy, box->width);
+				(void *)box, cx, cy, box->width);
 
 		/* Layout (except tables). */
 		if (box->object || box->type == BOX_INLINE_CONTAINER) {
@@ -5948,10 +6009,8 @@ layout_get_box_bbox(
 {
 	*desc_x0 = -box->border[LEFT].width;
 	*desc_y0 = -box->border[TOP].width;
-	*desc_x1 = box->padding[LEFT] + box->width + box->padding[RIGHT] +
-			box->border[RIGHT].width;
-	*desc_y1 = box->padding[TOP] + box->height + box->padding[BOTTOM] +
-			box->border[BOTTOM].width;
+	*desc_x1 = layout__box_border_width(box) - box->border[LEFT].width;
+	*desc_y1 = layout__box_border_height(box) - box->border[TOP].width;
 
 	/* To stop the top of text getting clipped when css line-height is
 	 * reduced, we increase the top of the descendant bbox. */
@@ -6157,9 +6216,7 @@ bool layout__document(html_content *content, int width, int height)
 			width, height, 0, 0, doc);
 	doc->x = doc->margin[LEFT] + doc->border[LEFT].width;
 	doc->y = doc->margin[TOP] + doc->border[TOP].width;
-	width -= doc->margin[LEFT] + doc->border[LEFT].width +
-			doc->padding[LEFT] + doc->padding[RIGHT] +
-			doc->border[RIGHT].width + doc->margin[RIGHT];
+	width -= layout__box_outer_width(doc) - doc->width;
 	if (width < 0) {
 		width = 0;
 	}
@@ -6168,21 +6225,12 @@ bool layout__document(html_content *content, int width, int height)
 	ret = layout__block_context(doc, height, content);
 
 	/* make <html> and <body> fill available height */
-	if (doc->y + doc->padding[TOP] + doc->height + doc->padding[BOTTOM] +
-			doc->border[BOTTOM].width + doc->margin[BOTTOM] <
-			height) {
-		doc->height = height - (doc->y + doc->padding[TOP] +
-				doc->padding[BOTTOM] +
-				doc->border[BOTTOM].width +
-				doc->margin[BOTTOM]);
+	if (doc->y + layout__box_outer_height(doc) < height) {
+		doc->height = height - (doc->y + layout__box_outer_height(doc) - doc->height);
 		if (doc->children)
 			doc->children->height = doc->height -
-					(doc->children->margin[TOP] +
-					 doc->children->border[TOP].width +
-					 doc->children->padding[TOP] +
-					 doc->children->padding[BOTTOM] +
-					 doc->children->border[BOTTOM].width +
-					 doc->children->margin[BOTTOM]);
+					(layout__box_outer_height(doc->children) -
+					 doc->children->height);
 	}
 
 	layout_lists(content, doc);

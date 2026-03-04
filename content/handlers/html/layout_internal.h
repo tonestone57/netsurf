@@ -329,6 +329,54 @@ static inline enum css_align_self_e layout__box_align_self(
 	return align_self;
 }
 
+
+/**
+ * Calculate the border-box width of a box.
+ *
+ * \param[in] b  Box to calculate border-box width for.
+ * \return the border-box width.
+ */
+static inline int layout__box_border_width(const struct box *b)
+{
+	return b->padding[LEFT] + b->width + b->padding[RIGHT] +
+			b->border[LEFT].width + b->border[RIGHT].width;
+}
+
+/**
+ * Calculate the border-box height of a box.
+ *
+ * \param[in] b  Box to calculate border-box height for.
+ * \return the border-box height.
+ */
+static inline int layout__box_border_height(const struct box *b)
+{
+	return b->padding[TOP] + b->height + b->padding[BOTTOM] +
+			b->border[TOP].width + b->border[BOTTOM].width;
+}
+
+/**
+ * Calculate the margin-box width of a box.
+ *
+ * \param[in] b  Box to calculate margin-box width for.
+ * \return the margin-box width.
+ */
+static inline int layout__box_outer_width(const struct box *b)
+{
+	return layout__box_border_width(b) +
+			b->margin[LEFT] + b->margin[RIGHT];
+}
+
+/**
+ * Calculate the margin-box height of a box.
+ *
+ * \param[in] b  Box to calculate margin-box height for.
+ * \return the margin-box height.
+ */
+static inline int layout__box_outer_height(const struct box *b)
+{
+	return layout__box_border_height(b) +
+			b->margin[TOP] + b->margin[BOTTOM];
+}
 /**
  * Determine width of margin, borders, and padding on one side of a box.
  *
