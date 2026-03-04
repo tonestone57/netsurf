@@ -1,32 +1,26 @@
-#include <stdlib.h>
 #include <quickjs.h>
 #include "content/handlers/javascript/quickjs/screen.h"
 #include "content/handlers/javascript/quickjs/qjs_internal.h"
 #include "desktop/browser_private.h"
 
-JSClassDef qjsky_screen_class = {
-	"Screen",
-	.finalizer = NULL,
-};
-
 static JSValue qjsky_screen_get_width(JSContext *ctx, JSValueConst this_val)
 {
 	struct jsthread *thread = JS_GetContextOpaque(ctx);
-	int width = 800;
+	int w = 0;
 	if (thread && thread->win_priv) {
-		width = ((struct browser_window *)thread->win_priv)->width;
+		w = ((struct browser_window *)thread->win_priv)->width;
 	}
-	return JS_NewInt32(ctx, width);
+	return JS_NewInt32(ctx, w);
 }
 
 static JSValue qjsky_screen_get_height(JSContext *ctx, JSValueConst this_val)
 {
 	struct jsthread *thread = JS_GetContextOpaque(ctx);
-	int height = 600;
+	int h = 0;
 	if (thread && thread->win_priv) {
-		height = ((struct browser_window *)thread->win_priv)->height;
+		h = ((struct browser_window *)thread->win_priv)->height;
 	}
-	return JS_NewInt32(ctx, height);
+	return JS_NewInt32(ctx, h);
 }
 
 static JSValue qjsky_screen_get_availWidth(JSContext *ctx, JSValueConst this_val)
@@ -60,15 +54,19 @@ static const JSCFunctionListEntry qjsky_screen_proto_funcs[] = {
 
 void qjsky_init_screen(JSContext *ctx)
 {
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-
+	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_screen_proto_funcs, sizeof(qjsky_screen_proto_funcs)/sizeof(qjsky_screen_proto_funcs[0]));
-	JS_SetClassProto(ctx, heap->screen_class_id, proto);
+	JS_SetPropertyStr(ctx, global, "Screen", proto);
+	JS_FreeValue(ctx, global);
 }
 
 JSValue qjsky_create_screen(JSContext *ctx)
 {
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-	return JS_NewObjectClass(ctx, heap->screen_class_id);
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue proto = JS_GetPropertyStr(ctx, global, "Screen");
+	JSValue obj = JS_NewObjectProto(ctx, proto);
+	JS_FreeValue(ctx, proto);
+	JS_FreeValue(ctx, global);
+	return obj;
 }

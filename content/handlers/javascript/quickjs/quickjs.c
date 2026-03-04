@@ -15,7 +15,6 @@
 #include "content/handlers/javascript/quickjs/url.h"
 #include "content/handlers/javascript/quickjs/screen.h"
 #include "content/handlers/javascript/quickjs/barprop.h"
-#include "content/handlers/html/html.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 

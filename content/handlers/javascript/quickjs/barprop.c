@@ -1,12 +1,5 @@
-#include <stdlib.h>
 #include <quickjs.h>
 #include "content/handlers/javascript/quickjs/barprop.h"
-#include "content/handlers/javascript/quickjs/qjs_internal.h"
-
-JSClassDef qjsky_barprop_class = {
-	"BarProp",
-	.finalizer = NULL,
-};
 
 static JSValue qjsky_barprop_get_visible(JSContext *ctx, JSValueConst this_val)
 {
@@ -19,15 +12,19 @@ static const JSCFunctionListEntry qjsky_barprop_proto_funcs[] = {
 
 void qjsky_init_barprop(JSContext *ctx)
 {
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-
+	JSValue global = JS_GetGlobalObject(ctx);
 	JSValue proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, proto, qjsky_barprop_proto_funcs, sizeof(qjsky_barprop_proto_funcs)/sizeof(qjsky_barprop_proto_funcs[0]));
-	JS_SetClassProto(ctx, heap->barprop_class_id, proto);
+	JS_SetPropertyStr(ctx, global, "BarProp", proto);
+	JS_FreeValue(ctx, global);
 }
 
 JSValue qjsky_create_barprop(JSContext *ctx)
 {
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-	return JS_NewObjectClass(ctx, heap->barprop_class_id);
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue proto = JS_GetPropertyStr(ctx, global, "BarProp");
+	JSValue obj = JS_NewObjectProto(ctx, proto);
+	JS_FreeValue(ctx, proto);
+	JS_FreeValue(ctx, global);
+	return obj;
 }
