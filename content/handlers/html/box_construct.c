@@ -417,7 +417,7 @@ box_construct_generate(dom_node *n,
 						content->bctx);
 				if (text_box != NULL) {
 					text_box->type = BOX_TEXT;
-					text_box->text = strdup(text);
+					text_box->text = talloc_strdup(text_box, text);
 					free(text);
 					if (text_box->text != NULL) {
 						text_box->length = strlen(text_box->text);
@@ -484,19 +484,19 @@ box_construct_marker(struct box *box,
 	switch (list_style_type) {
 	case CSS_LIST_STYLE_TYPE_DISC:
 		/* 2022 BULLET */
-		marker->text = strdup("\342\200\242");
+		marker->text = talloc_strdup(marker, "\342\200\242");
 		marker->length = 3;
 		break;
 
 	case CSS_LIST_STYLE_TYPE_CIRCLE:
 		/* 25CB WHITE CIRCLE */
-		marker->text = strdup("\342\227\213");
+		marker->text = talloc_strdup(marker, "\342\227\213");
 		marker->length = 3;
 		break;
 
 	case CSS_LIST_STYLE_TYPE_SQUARE:
 		/* 25AA BLACK SMALL SQUARE */
-		marker->text = strdup("\342\226\252");
+		marker->text = talloc_strdup(marker, "\342\226\252");
 		marker->length = 3;
 		break;
 
@@ -1153,7 +1153,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 		box->type = BOX_TEXT;
 
-		box->text = strdup(text);
+		box->text = talloc_strdup(box, text);
 		free(text);
 		if (box->text == NULL)
 			return false;
@@ -1305,7 +1305,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 			box->type = BOX_TEXT;
 
-			box->text = strdup(current);
+			box->text = talloc_strdup(box, current);
 			if (box->text == NULL) {
 				free(text);
 				return false;

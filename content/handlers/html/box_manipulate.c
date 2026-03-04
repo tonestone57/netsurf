@@ -60,8 +60,6 @@ static int box_talloc_destructor(struct box *b)
 		b->styles = NULL;
 	}
 
-	free(b->text);
-
 	if (b->href != NULL)
 		nsurl_unref(b->href);
 

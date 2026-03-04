@@ -582,7 +582,7 @@ box_input_text(html_content *html, struct box *box, struct dom_node *node)
 	if (!inline_box)
 		return false;
 	inline_box->type = BOX_TEXT;
-	inline_box->text = strdup("");
+	inline_box->text = talloc_strdup(inline_box, "");
 
 	box_add_child(inline_container, inline_box);
 	box_add_child(box, inline_container);
@@ -1166,7 +1166,7 @@ box_image(dom_node *n,
 		dom_string_unref(s);
 		if (alt == NULL)
 			return false;
-		box->text = strdup(alt);
+		box->text = talloc_strdup(box, alt);
 		free(alt);
 		if (box->text == NULL)
 			return false;
@@ -1298,13 +1298,13 @@ box_input(dom_node *n,
 		inline_box->type = BOX_TEXT;
 
 		if (box->gadget->value != NULL)
-			inline_box->text = strdup(box->gadget->value);
+			inline_box->text = talloc_strdup(inline_box, box->gadget->value);
 		else if (box->gadget->type == GADGET_SUBMIT)
-			inline_box->text = strdup(messages_get("Form_Submit"));
+			inline_box->text = talloc_strdup(inline_box, messages_get("Form_Submit"));
 		else if (box->gadget->type == GADGET_RESET)
-			inline_box->text = strdup(messages_get("Form_Reset"));
+			inline_box->text = talloc_strdup(inline_box, messages_get("Form_Reset"));
 		else
-			inline_box->text = strdup("Button");
+			inline_box->text = talloc_strdup(inline_box, "Button");
 
 		if (inline_box->text == NULL)
 			goto no_memory;
@@ -1786,11 +1786,11 @@ box_select(dom_node *n,
 	}
 
 	if (gadget->data.select.num_selected == 0)
-		inline_box->text = strdup(messages_get("Form_None"));
+		inline_box->text = talloc_strdup(inline_box, messages_get("Form_None"));
 	else if (gadget->data.select.num_selected == 1)
-		inline_box->text = strdup(gadget->data.select.current->text);
+		inline_box->text = talloc_strdup(inline_box, gadget->data.select.current->text);
 	else
-		inline_box->text = strdup(messages_get("Form_Many"));
+		inline_box->text = talloc_strdup(inline_box, messages_get("Form_Many"));
 	if (inline_box->text == NULL)
 		goto no_memory;
 
