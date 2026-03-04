@@ -1839,10 +1839,12 @@ nserror browser_window_destroy_internal(struct browser_window *bw)
 	/* Destroy scrollbars */
 	if (bw->scroll_x != NULL) {
 		scrollbar_destroy(bw->scroll_x);
+		bw->scroll_x = NULL;
 	}
 
 	if (bw->scroll_y != NULL) {
 		scrollbar_destroy(bw->scroll_y);
+		bw->scroll_y = NULL;
 	}
 
 	/* clear any pending callbacks */
