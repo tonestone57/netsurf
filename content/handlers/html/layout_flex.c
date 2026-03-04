@@ -34,6 +34,7 @@
 #include <string.h>
 #include <dom/dom.h>
 
+#include "netsurf/inttypes.h"
 #include "utils/log.h"
 #include "utils/utils.h"
 
@@ -771,8 +772,8 @@ static bool layout_flex__resolve_line(
 	grow = (line->main_size < available_main);
 	initial_free_main = available_main;
 
-	NSLOG(flex, DEEPDEBUG, "box %p: line %zu: first: %zu, count: %zu",
-			ctx->flex, line - ctx->line.data,
+	NSLOG(flex, DEEPDEBUG, "box %p: line %" PRIsizet ": first: %" PRIsizet ", count: %" PRIsizet "",
+			ctx->flex, (size_t)(line - ctx->line.data),
 			line->first, line->count);
 	NSLOG(flex, DEEPDEBUG, "Line main_size: %i, available_main: %i",
 			line->main_size, available_main);
@@ -1017,7 +1018,7 @@ static bool layout_flex__collect_items_into_lines(
 		pos += line->count;
 
 		NSLOG(flex, DEEPDEBUG, "flex-container: %p: "
-				"fitted: %zu (total: %zu/%zu)",
+					"fitted: %" PRIsizet " (total: %" PRIsizet "/%" PRIsizet ")",
 				ctx->flex, line->count,
 				pos, ctx->item.count);
 
