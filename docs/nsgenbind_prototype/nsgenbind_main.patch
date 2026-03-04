@@ -1,5 +1,21 @@
---- nsgenbind/src/nsgenbind.c
-+++ nsgenbind/src/nsgenbind.c
+diff --git a/src/Makefile b/src/Makefile
+index fa1ddc8..74bc4b3 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -4,7 +4,8 @@ CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g -DYYENABLE_NLS=0
+ DIR_SOURCES := nsgenbind.c utils.c output.c \
+	webidl-ast.c nsgenbind-ast.c ir.c \
+	duk-libdom.c duk-libdom-interface.c duk-libdom-dictionary.c \
+-	duk-libdom-common.c duk-libdom-generated.c
++	duk-libdom-common.c duk-libdom-generated.c \
++	qjs-libdom.c
+
+ SOURCES := $(SOURCES) $(BUILDDIR)/nsgenbind-parser.c $(BUILDDIR)/nsgenbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
+
+diff --git a/src/nsgenbind.c b/src/nsgenbind.c
+index 73b9673..0bde071 100644
+--- a/src/nsgenbind.c
++++ b/src/nsgenbind.c
 @@ -21,6 +21,7 @@
  #include "output.h"
  #include "jsapi-libdom.h"
@@ -8,25 +24,97 @@
 
  struct options *options;
 
-@@ -28,6 +29,7 @@
+@@ -28,11 +29,13 @@ enum bindingtype_e {
      BINDINGTYPE_UNKNOWN,
      BINDINGTYPE_JSAPI_LIBDOM,
      BINDINGTYPE_DUK_LIBDOM,
 +    BINDINGTYPE_QJS_LIBDOM,
  };
 
-@@ -185,6 +187,10 @@
-         if (strcmp(binding_type, "duk_libdom") == 0) {
+ static struct options* process_cmdline(int argc, char **argv)
+ {
+         int opt;
++        char *binding_type = NULL;
+
+         options = calloc(1,sizeof(struct options));
+         if (options == NULL) {
+@@ -40,7 +43,7 @@ static struct options* process_cmdline(int argc, char **argv)
+                 return NULL;
+         }
+
+-        while ((opt = getopt(argc, argv, "vngDW::I:")) != -1) {
++        while ((opt = getopt(argc, argv, "vngDW::I:t:")) != -1) {
+                 switch (opt) {
+                 case 'I':
+                         options->idlpath = strdup(optarg);
+@@ -61,6 +64,10 @@ static struct options* process_cmdline(int argc, char **argv)
+                 case 'g':
+                         options->dbglog = true;
+                         break;
++
++                case 't':
++                        binding_type = strdup(optarg);
++                        break;
+
+                 case 'W':
+                         if ((optarg == NULL) ||
+@@ -86,7 +93,7 @@ static struct options* process_cmdline(int argc, char **argv)
+
+                 default: /* '?' */
+                         fprintf(stderr,
+-                             "Usage: %s [-v] [-g] [-D] [-W] [-I idlpath] inputfile outputdir\n",
++                             "Usage: %s [-v] [-g] [-D] [-W] [-I idlpath] [-t type] inputfile outputdir\n",
+                                 argv[0]);
+                         free(options);
+                         return NULL;
+@@ -101,9 +108,23 @@ static struct options* process_cmdline(int argc, char **argv)
+         }
+
+         options->infilename = strdup(argv[optind]);
+-
+         options->outdirname = strdup(argv[optind + 1]);
+
++        if (binding_type != NULL) {
++                if (strcmp(binding_type, "jsapi_libdom") == 0) {
++                        options->bindingtype = BINDINGTYPE_JSAPI_LIBDOM;
++                } else if (strcmp(binding_type, "duk_libdom") == 0) {
++                        options->bindingtype = BINDINGTYPE_DUK_LIBDOM;
++                } else if (strcmp(binding_type, "qjs_libdom") == 0) {
++                        options->bindingtype = BINDINGTYPE_QJS_LIBDOM;
++                } else {
++                        fprintf(stderr, "Error: unsupported binding type \"%s\"\n", binding_type);
++                        free(options);
++                        return NULL;
++                }
++                free(binding_type);
++        }
++
+         return options;
+
+ }
+@@ -160,6 +181,10 @@ static enum bindingtype_e genbind_get_type(struct genbind_node *node)
+         struct genbind_node *binding_node;
+         const char *binding_type;
+
++        if (options->bindingtype != BINDINGTYPE_UNKNOWN) {
++                return options->bindingtype;
++        }
++
+         binding_node = genbind_node_find_type(node,
+                                               NULL,
+                                               GENBIND_NODE_TYPE_BINDING);
+@@ -186,6 +211,10 @@ static enum bindingtype_e genbind_get_type(struct genbind_node *node)
                  return BINDINGTYPE_DUK_LIBDOM;
          }
-+
+
 +        if (strcmp(binding_type, "qjs_libdom") == 0) {
 +                return BINDINGTYPE_QJS_LIBDOM;
 +        }
-
++
          fprintf(stderr, "Error: unsupported binding type \"%s\"\n", binding_type);
 
-@@ -245,6 +251,10 @@
+         return BINDINGTYPE_UNKNOWN;
+@@ -245,6 +274,10 @@ int main(int argc, char **argv)
                  res = duk_libdom_output(ir);
                  break;
 
@@ -37,3 +125,16 @@
          default:
                  fprintf(stderr, "Unable to generate binding of this type\n");
                  res = 7;
+diff --git a/src/options.h b/src/options.h
+index ebd8466..7884667 100644
+--- a/src/options.h
++++ b/src/options.h
+@@ -21,6 +21,8 @@ struct options {
+         bool dryrun; /**< output is not generated */
+
+	unsigned int warnings; /**< warning flags */
++
++	int bindingtype; /**< override binding type */
+ };
+
+ extern struct options *options;

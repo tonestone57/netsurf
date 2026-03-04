@@ -107,6 +107,9 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
+	/* Initialize generated bindings */
+	qjsky_init_bindings(thread->ctx);
+
 	JSValue polyfill_val = JS_Eval(thread->ctx, (const char *)polyfill_js, polyfill_js_len, "polyfill.js", JS_EVAL_TYPE_GLOBAL);
 	if (JS_IsException(polyfill_val)) {
 		qjs_log_exception(thread->ctx, "Failed to load polyfill.js");
