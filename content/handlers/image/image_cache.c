@@ -427,7 +427,7 @@ image_cache_init(const struct image_cache_parameters *image_cache_parameters)
 				image_cache);
 
 	NSLOG(netsurf, INFO,
-	      "Image cache initialised with a limit of %"PRIsizet" hysteresis of %"PRIsizet,
+	      "Image cache initialised with a limit of %" PRIsizet " hysteresis of %" PRIsizet ,
 	      image_cache->params.limit,
 	      image_cache->params.hysteresis);
 
@@ -442,7 +442,7 @@ nserror image_cache_fini(void)
 
 	guit->misc->schedule(-1, image_cache__background_update, image_cache);
 
-	NSLOG(netsurf, INFO, "Size at finish %"PRIsizet" (in %d)",
+	NSLOG(netsurf, INFO, "Size at finish %" PRIsizet " (in %d)",
 	      image_cache->total_bitmap_size, image_cache->bitmap_count);
 
 	while (image_cache->entries != NULL) {
@@ -458,10 +458,10 @@ nserror image_cache_fini(void)
 		image_cache->fail_size;
 
 	NSLOG(netsurf, INFO, "Age %ds", image_cache->current_age / 1000);
-	NSLOG(netsurf, INFO, "Peak size %"PRIsizet" (in %d)",
+	NSLOG(netsurf, INFO, "Peak size %" PRIsizet " (in %d)",
 	      image_cache->max_bitmap_size,
 	      image_cache->max_bitmap_size_count);
-	NSLOG(netsurf, INFO, "Peak image count %d (size %"PRIsizet")",
+	NSLOG(netsurf, INFO, "Peak image count %d (size %" PRIsizet ")",
 	      image_cache->max_bitmap_count,
 	      image_cache->max_bitmap_count_size);
 
@@ -610,19 +610,18 @@ int image_cache_snsummaryf(char *string, size_t size, const char *fmt)
 				pct = false;
 			}
 
-#define FMTCHR(chr,fmt,var) case chr : \
-slen += snprintf(string + slen, size - slen, "%"fmt, image_cache->var); break
+#define FMTCHR(chr,fmt,var) case chr : slen += snprintf(string + slen, size - slen, "%" fmt, (size_t)image_cache->var); break
 
 #define FMTPCHR(chr,fmt,var,div) \
 case chr :					\
 	if (pct) {							\
 		if (div > 0) {						\
-			slen += snprintf(string + slen, size - slen, "%"PRId64, (uint64_t)((image_cache->var * 100) / div)); \
+			slen += snprintf(string + slen, size - slen, "%" PRId64, (uint64_t)((image_cache->var * 100) / div)); \
 		} else {						\
 			slen += snprintf(string + slen, size - slen, "100"); \
 		}							\
 	} else {							\
-		slen += snprintf(string + slen, size - slen, "%"fmt, image_cache->var); \
+		slen += snprintf(string + slen, size - slen, "%" fmt, (size_t)image_cache->var); \
 	} break
 
 
@@ -632,15 +631,15 @@ case chr :					\
 				slen++;
 				break;
 
-			FMTCHR('a', PRIsizet, params.limit);
-			FMTCHR('b', PRIsizet, params.hysteresis);
-			FMTCHR('c', PRIsizet, total_bitmap_size);
+			FMTCHR('a', PRIsizet , params.limit);
+			FMTCHR('b', PRIsizet , params.hysteresis);
+			FMTCHR('c', PRIsizet , total_bitmap_size);
 			FMTCHR('d', "d", bitmap_count);
 			FMTCHR('e', "u", current_age / 1000);
-			FMTCHR('f', PRIsizet, max_bitmap_size);
+			FMTCHR('f', PRIsizet , max_bitmap_size);
 			FMTCHR('g', "d", max_bitmap_size_count);
 			FMTCHR('h', "d", max_bitmap_count);
-			FMTCHR('i', PRIsizet, max_bitmap_count_size);
+			FMTCHR('i', PRIsizet , max_bitmap_count_size);
 
 
 			case 'j':
@@ -770,7 +769,7 @@ image_cache_snentryf(char *string,
 				if (centry->bitmap != NULL) {
 					slen += snprintf(string + slen,
 							 size - slen,
-							 "%" PRIsizet,
+							 "%" PRIsizet ,
 							 centry->bitmap_size);
 				} else {
 					slen += snprintf(string + slen,

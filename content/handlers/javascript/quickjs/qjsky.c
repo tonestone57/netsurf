@@ -879,7 +879,10 @@ void qjsky_init_runtime(struct jsheap *heap)
 {
 	char key_name[64];
 	snprintf(key_name, sizeof(key_name), "qjs_wrapper_%p", (void *)heap);
-	if (dom_string_create((const uint8_t *)key_name, strlen(key_name), &heap->node_js_wrapper_key) != DOM_NO_ERR) return;
+	if (dom_string_create((const uint8_t *)key_name, strlen(key_name), &heap->node_js_wrapper_key) != DOM_NO_ERR) {
+		NSLOG(netsurf, ERROR, "Failed to create node wrapper key for QuickJS");
+		heap->node_js_wrapper_key = NULL;
+	}
 
 	JS_NewClassID(&heap->node_class_id);
 	JS_NewClass(heap->rt, heap->node_class_id, &qjsky_node_class);

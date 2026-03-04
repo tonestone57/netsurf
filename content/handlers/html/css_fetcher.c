@@ -223,8 +223,8 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 
 			if (c->aborted == false) {
 				snprintf(header, sizeof header,
-					"Content-Length: %"PRIsizet,
-					dom_string_byte_length(c->item->data));
+					"Content-Length: %" PRIsizet ,
+					(size_t) dom_string_byte_length(c->item->data));
 				msg.type = FETCH_HEADER;
 				msg.data.header_or_data.buf =
 						(const uint8_t *) header;
