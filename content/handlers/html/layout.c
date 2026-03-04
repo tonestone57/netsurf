@@ -457,7 +457,7 @@ static void layout__block_context_position_table(
 		int *y, int *x0)
 {
 	int x1;
-	struct box (void *)left, (void *)right;
+	struct box *left, *right;
 
 	*y = cy;
 	while (1) {
@@ -515,7 +515,7 @@ static void layout__block_context_bfc_margins(
 		int *lm, int *rm)
 {
 	int x0, x1, top;
-	struct box (void *)left, (void *)right;
+	struct box *left, *right;
 
 	top = cy + max_pos_margin - max_neg_margin;
 	top = (top > y) ? top : y;
@@ -4123,16 +4123,15 @@ layout__line(struct box *first,
 		if (split == 0)
 			w = split_box->width;
 
-
-			NSLOG(layout, DEBUG, "splitting: split_box %p \"%.*s\", split %" PRIsizet
-			      ", w %i, left %p, right %p, inline_count %u",
+		NSLOG(layout, DEBUG, "splitting: split_box %p \"%.*s\", split %" PRIsizet
+		      ", w %i, left %p, right %p, inline_count %u",
 		      (void *)split_box,
 		      (int)split_box->length,
 		      split_box->text,
 		      split,
 		      w,
-			      (void *)left,
-			      (void *)right,
+		      (void *)left,
+		      (void *)right,
 		      inline_count);
 
 		if ((split == 0 || x1 - x0 <= x + space_before + w) &&
