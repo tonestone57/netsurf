@@ -28,7 +28,7 @@ static JSValue qjsky_navigator_get_appCodeName(JSContext *ctx, JSValueConst this
 
 static JSValue qjsky_navigator_get_platform(JSContext *ctx, JSValueConst this_val)
 {
-	return JS_NULL;
+	return JS_NewString(ctx, "");
 }
 
 static JSValue qjsky_navigator_get_appVersion(JSContext *ctx, JSValueConst this_val)
@@ -48,12 +48,12 @@ static JSValue qjsky_navigator_get_productSub(JSContext *ctx, JSValueConst this_
 
 static JSValue qjsky_navigator_get_vendor(JSContext *ctx, JSValueConst this_val)
 {
-	return JS_NULL;
+	return JS_NewString(ctx, "");
 }
 
 static JSValue qjsky_navigator_get_vendorSub(JSContext *ctx, JSValueConst this_val)
 {
-	return JS_NULL;
+	return JS_NewString(ctx, "");
 }
 
 static JSValue qjsky_navigator_get_cookieEnabled(JSContext *ctx, JSValueConst this_val)

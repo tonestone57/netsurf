@@ -672,10 +672,24 @@ static JSValue qjsky_window_atob(JSContext *ctx, JSValueConst this_val, int argc
 	const char *str = JS_ToCString(ctx, argv[0]);
 	if (!str) return JS_EXCEPTION;
 
+	/* Strip ASCII whitespace as per spec */
+	size_t len = strlen(str);
+	char *clean = malloc(len + 1);
+	size_t clean_len = 0;
+	if (clean) {
+		for (size_t i = 0; i < len; i++) {
+			if (str[i] != ' ' && str[i] != '\t' && str[i] != '\n' && str[i] != '\r' && str[i] != '\f') {
+				clean[clean_len++] = str[i];
+			}
+		}
+		clean[clean_len] = '\0';
+	}
+
 	uint8_t *out;
 	size_t out_len;
-	nsuerror res = nsu_base64_decode_alloc((const uint8_t *)str, strlen(str), &out, &out_len);
+	nsuerror res = nsu_base64_decode_alloc((const uint8_t *)(clean ? clean : str), clean ? clean_len : len, &out, &out_len);
 	JS_FreeCString(ctx, str);
+	if (clean) free(clean);
 
 	if (res != NSUERROR_OK) {
 		return JS_ThrowTypeError(ctx, "Invalid base64 string");
@@ -692,11 +706,18 @@ static JSValue qjsky_window_btoa(JSContext *ctx, JSValueConst this_val, int argc
 	const char *str = JS_ToCString(ctx, argv[0]);
 	if (!str) return JS_EXCEPTION;
 
+	/* Input must be within U+0000 to U+00FF range */
+	size_t len = strlen(str);
+	for (size_t i = 0; i < len; i++) {
+		if ((unsigned char)str[i] > 0xFF) {
+			JS_FreeCString(ctx, str);
+			return JS_ThrowTypeError(ctx, "Input contains characters outside U+0000 to U+00FF");
+		}
+	}
+
 	uint8_t *out;
 	size_t out_len;
-	/* Base64 encoding can't fail for memory reasons usually, but nsu_base64_encode_alloc returns error if it does */
-	/* We need a version that does NOT wrap lines if it's following the spec strictly, but NetSurf's nsu_base64_encode seems standard */
-	nsuerror res = nsu_base64_encode_alloc((const uint8_t *)str, strlen(str), &out, &out_len);
+	nsuerror res = nsu_base64_encode_alloc((const uint8_t *)str, len, &out, &out_len);
 	JS_FreeCString(ctx, str);
 
 	if (res != NSUERROR_OK) {
@@ -820,6 +841,17 @@ static JSValue qjsky_window_get_top(JSContext *ctx, JSValueConst this_val)
 			return JS_GetGlobalObject(ctx);
 		}
 	}
+	/* TODO: Proper cross-window support for non-root windows */
+	return JS_NULL;
+}
+
+static JSValue qjsky_window_get_self(JSContext *ctx, JSValueConst this_val)
+{
+	return JS_GetGlobalObject(ctx);
+}
+
+static JSValue qjsky_window_get_opener(JSContext *ctx, JSValueConst this_val)
+{
 	return JS_NULL;
 }
 
@@ -832,6 +864,7 @@ static JSValue qjsky_window_get_parent(JSContext *ctx, JSValueConst this_val)
 			return JS_GetGlobalObject(ctx);
 		}
 	}
+	/* TODO: Proper cross-window support for parent windows */
 	return JS_NULL;
 }
 
@@ -1234,6 +1267,8 @@ JSValue qjsky_push_event(JSContext *ctx, dom_event *evt)
 void qjsky_init_window(JSContext *ctx)
 {
 	JSValue global = JS_GetGlobalObject(ctx);
+	JSAtom atom;
+
 	JS_SetPropertyStr(ctx, global, "alert", JS_NewCFunction(ctx, qjsky_window_alert, "alert", 1));
 	JS_SetPropertyStr(ctx, global, "confirm", JS_NewCFunction(ctx, qjsky_window_confirm, "confirm", 1));
 	JS_SetPropertyStr(ctx, global, "prompt", JS_NewCFunction(ctx, qjsky_window_prompt, "prompt", 2));
@@ -1242,41 +1277,90 @@ void qjsky_init_window(JSContext *ctx)
 	JS_SetPropertyStr(ctx, global, "requestAnimationFrame", JS_NewCFunction(ctx, qjsky_window_requestAnimationFrame, "requestAnimationFrame", 1));
 	JS_SetPropertyStr(ctx, global, "cancelAnimationFrame", JS_NewCFunction(ctx, qjsky_window_cancelAnimationFrame, "cancelAnimationFrame", 1));
 
-	JS_SetPropertyStr(ctx, global, "self", JS_DupValue(ctx, global));
-	JS_SetPropertyStr(ctx, global, "frames", JS_DupValue(ctx, global));
-	JS_SetPropertyStr(ctx, global, "opener", JS_NULL);
-
 	/* Window properties */
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "scrollX"),
+	atom = JS_NewAtom(ctx, "window");
+	JS_DefinePropertyGetSet(ctx, global, atom,
+				JS_NewCFunction(ctx, qjsky_window_get_self, "get_window", 0),
+				JS_UNDEFINED, 0);
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "self");
+	JS_DefinePropertyGetSet(ctx, global, atom,
+				JS_NewCFunction(ctx, qjsky_window_get_self, "get_self", 0),
+				JS_UNDEFINED, 0);
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "frames");
+	JS_DefinePropertyGetSet(ctx, global, atom,
+				JS_NewCFunction(ctx, qjsky_window_get_self, "get_frames", 0),
+				JS_UNDEFINED, 0);
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "opener");
+	JS_DefinePropertyGetSet(ctx, global, atom,
+				JS_NewCFunction(ctx, qjsky_window_get_opener, "get_opener", 0),
+				JS_UNDEFINED, 0);
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "scrollX");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_scrollX, "get_scrollX", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "scrollY"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "scrollY");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_scrollY, "get_scrollY", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "pageXOffset"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "pageXOffset");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_scrollX, "get_scrollX", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "pageYOffset"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "pageYOffset");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_scrollY, "get_scrollY", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "innerWidth"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "innerWidth");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_innerWidth, "get_innerWidth", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "innerHeight"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "innerHeight");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_innerHeight, "get_innerHeight", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "devicePixelRatio"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "devicePixelRatio");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_devicePixelRatio, "get_devicePixelRatio", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "length"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "length");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_length, "get_length", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "top"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "top");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_top, "get_top", 0),
 				JS_UNDEFINED, 0);
-	JS_DefinePropertyGetSet(ctx, global, JS_NewAtom(ctx, "parent"),
+	JS_FreeAtom(ctx, atom);
+
+	atom = JS_NewAtom(ctx, "parent");
+	JS_DefinePropertyGetSet(ctx, global, atom,
 				JS_NewCFunction(ctx, qjsky_window_get_parent, "get_parent", 0),
 				JS_UNDEFINED, 0);
+	JS_FreeAtom(ctx, atom);
 
 	JS_FreeValue(ctx, global);
 }

@@ -145,9 +145,6 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	JSValue hist_obj = qjsky_create_history(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "history", hist_obj);
 
-	/* window self-reference */
-	JS_SetPropertyStr(thread->ctx, global, "window", JS_DupValue(thread->ctx, global));
-
 	/* window.navigator */
 	JSValue nav_obj = qjsky_create_navigator(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "navigator", nav_obj);
