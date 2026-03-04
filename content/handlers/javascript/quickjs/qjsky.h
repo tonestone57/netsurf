@@ -37,6 +37,7 @@ void qjsky_timer_cleanup(JSContext *ctx);
 /* URL Classes */
 extern JSClassDef qjsky_url_class;
 extern JSClassDef qjsky_usp_class;
+extern JSClassDef qjsky_storage_class;
 
 JSValue qjsky_url_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
 JSValue qjsky_usp_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);

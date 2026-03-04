@@ -40,6 +40,7 @@
 #include <time.h>
 #include <libwapcaplet/libwapcaplet.h>
 
+#include "netsurf/inttypes.h"
 #include "utils/config.h"
 #include "utils/corestrings.h"
 #include "utils/nsoption.h"
@@ -149,8 +150,8 @@ static bool fetch_dispatch_job(struct fetch *fetch)
 {
 	RING_REMOVE(queue_ring, fetch);
 	NSLOG(fetch, DEBUG,
-	      "Attempting to start fetch %p, fetcher %p, url %s", fetch,
-	      fetch->fetcher_handle,
+	      "Attempting to start fetch %p, fetcher %p, url %s", (void *)fetch,
+	      (void *)fetch->fetcher_handle,
 	      nsurl_access(fetch->url));
 
 	if (!fetchers[fetch->fetcherd].ops.start(fetch->fetcher_handle)) {

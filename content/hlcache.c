@@ -625,11 +625,11 @@ void hlcache_finalise(void)
 
 		if (entry->content != NULL) {
 			NSLOG(netsurf, INFO, "	%p : %s (%"PRIu32" users)",
-			      entry,
+			      (void *)entry,
 			      nsurl_access(hlcache_handle_get_url(&entry_handle)),
 			      content_count_users(entry->content));
 		} else {
-			NSLOG(netsurf, INFO, "	%p", entry);
+			NSLOG(netsurf, INFO, "	%p", (void *)entry);
 		}
 	}
 

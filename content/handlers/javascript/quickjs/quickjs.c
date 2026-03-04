@@ -15,6 +15,7 @@
 #include "content/handlers/javascript/quickjs/url.h"
 #include "content/handlers/javascript/quickjs/screen.h"
 #include "content/handlers/javascript/quickjs/barprop.h"
+#include "content/handlers/javascript/quickjs/storage.h"
 #include "content/handlers/html/html.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
@@ -59,21 +60,7 @@ void js_destroyheap(struct jsheap *heap)
 {
 	if (heap == NULL) return;
 
-	if (heap->node_map_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
-	if (heap->handler_map_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->handler_map_atom);
-	if (heap->handler_listener_map_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->handler_listener_map_atom);
-	if (heap->event_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->event_proto_atom);
-	if (heap->uievent_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->uievent_proto_atom);
-	if (heap->mouseevent_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->mouseevent_proto_atom);
-	if (heap->keyboardevent_proto_atom != JS_ATOM_NULL)
-		JS_FreeAtomRT(heap->rt, heap->keyboardevent_proto_atom);
-
+	qjsky_fini_runtime(heap);
 	JS_FreeRuntime(heap->rt);
 	free(heap);
 }
@@ -104,6 +91,7 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_barprop(thread->ctx);
 	qjsky_init_url(thread->ctx);
 	qjsky_init_urlsearchparams(thread->ctx);
+	qjsky_init_storage(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -143,6 +131,12 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 
 	JSValue screen_obj = qjsky_create_screen(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
+
+	JSValue local_storage = qjsky_create_storage(thread->ctx, false);
+	JS_SetPropertyStr(thread->ctx, global, "localStorage", local_storage);
+
+	JSValue session_storage = qjsky_create_storage(thread->ctx, true);
+	JS_SetPropertyStr(thread->ctx, global, "sessionStorage", session_storage);
 
 	if (thread->doc_priv) {
 		struct dom_document *doc = ((struct html_content *)thread->doc_priv)->document;

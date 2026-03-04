@@ -18,7 +18,9 @@ struct jsheap {
 	JSClassID barprop_class_id;
 	JSClassID url_class_id;
 	JSClassID urlsearchparams_class_id;
+	JSClassID storage_class_id;
 	JSAtom node_map_atom;
+	JSAtom event_map_atom;
 	JSAtom handler_map_atom;
 	JSAtom handler_listener_map_atom;
 	JSAtom event_proto_atom;

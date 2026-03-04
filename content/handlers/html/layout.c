@@ -3335,14 +3335,14 @@ layout_text_box_split(html_content *content,
 
 	NSLOG(layout, DEBUG,
 	      "split_box %p len: %" PRIsizet " \"%.*s\"",
-	      split_box,
-	      split_box->length,
+	      (void *)split_box,
+	      (size_t)split_box->length,
 	      (int)split_box->length,
 	      split_box->text);
 	NSLOG(layout, DEBUG,
 	      "  new_box %p len: %" PRIsizet " \"%.*s\"",
-	      c2,
-	      c2->length,
+	      (void *)c2,
+	      (size_t)c2->length,
 	      (int)c2->length,
 	      c2->text);
 
@@ -4167,13 +4167,13 @@ layout_line(struct box *first,
 		NSLOG(layout, DEBUG,
 		      "splitting: split_box %p \"%.*s\", spilt %"PRIsizet
 		      ", w %i, left %p, right %p, inline_count %u",
-		      split_box,
+		      (void *)split_box,
 		      (int)split_box->length,
 		      split_box->text,
-		      split,
+		      (size_t)split,
 		      w,
-		      left,
-		      right,
+		      (void *)left,
+		      (void *)right,
 		      inline_count);
 
 		if ((split == 0 || x1 - x0 <= x + space_before + w) &&
@@ -4240,7 +4240,7 @@ layout_line(struct box *first,
 			NSLOG(layout, DEBUG,
 			      "'%.*s' %i %"PRIsizet" %i",
 			      (int)split_box->length, split_box->text,
-			      x1 - x0, split, w);
+			      x1 - x0, (size_t)split, w);
 
 			if (split != split_box->length) {
 				if (!layout_text_box_split(content, &fstyle,
