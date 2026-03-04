@@ -67,15 +67,13 @@ static html_css_fetcher_context *ring = NULL;
 
 static bool html_css_fetcher_initialise(lwc_string *scheme)
 {
-	NSLOG(netsurf, INFO, "html_css_fetcher_initialise called for %s",
-	      lwc_string_data(scheme));
+	NSLOG(netsurf, INFO, "html_css_fetcher_initialise called for %s", lwc_string_data(scheme));
 	return true;
 }
 
 static void html_css_fetcher_finalise(lwc_string *scheme)
 {
-	NSLOG(netsurf, INFO, "html_css_fetcher_finalise called for %s",
-	      lwc_string_data(scheme));
+	NSLOG(netsurf, INFO, "html_css_fetcher_finalise called for %s", lwc_string_data(scheme));
 }
 
 static bool html_css_fetcher_can_fetch(const nsurl *url)
@@ -223,8 +221,8 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 
 			if (c->aborted == false) {
 				snprintf(header, sizeof header,
-					"Content-Length: %"PRIsizet,
-					dom_string_byte_length(c->item->data));
+					"Content-Length: %" PRIsizet,
+					(size_t)dom_string_byte_length(c->item->data));
 				msg.type = FETCH_HEADER;
 				msg.data.header_or_data.buf =
 						(const uint8_t *) header;
@@ -259,8 +257,7 @@ static void html_css_fetcher_poll(lwc_string *scheme)
 				html_css_fetcher_send_callback(&msg, c);
 			}
 		} else {
-			NSLOG(netsurf, INFO, "Processing of %s failed!",
-			      nsurl_access(c->url));
+			NSLOG(netsurf, INFO, "Processing of %s failed!", nsurl_access(c->url));
 
 			/* Ensure that we're unlocked here. If we aren't,
 			 * then html_css_fetcher_process() is broken.
