@@ -951,6 +951,10 @@ void qjsky_init_context(JSContext *ctx)
 	/* In a full implementation, we would add Node methods here.
 	 * For now, we at least set the class prototype. */
 	JS_SetClassProto(ctx, heap->node_class_id, node_proto);
+
+	/* Ensure Map is available */
+	JS_AddIntrinsicMapSet(ctx);
+
 	JSValue global = JS_GetGlobalObject(ctx);
 
 	/* Initialize atoms */
