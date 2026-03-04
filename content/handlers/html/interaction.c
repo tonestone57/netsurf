@@ -170,7 +170,7 @@ static void html_box_drag_start(struct box *box, int x, int y)
 	int box_x, box_y;
 	int scroll_mouse_x, scroll_mouse_y;
 
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 
 	if (box->scroll_x != NULL) {
 		scroll_mouse_x = x - box_x ;
@@ -212,7 +212,7 @@ static size_t html_selection_drag_end(struct html_content *html,
 	if (box) {
 		plot_font_style_t fstyle;
 
-		font_plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
+		font__plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
 
 		guit->layout->position(&fstyle, box->text, box->length,
 				       dx, &idx, &pixel_offset);
@@ -301,7 +301,7 @@ html_overflow_scroll_drag_end(struct scrollbar *scrollbar,
 	struct box *box;
 
 	box = data->box;
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 
 	if (scrollbar_is_horizontal(scrollbar)) {
 		scroll_mouse_x = x - box_x;
@@ -348,7 +348,7 @@ mouse_action_select_menu(html_content *html,
 	}
 
 	box = html->visible_select_menu->box;
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 
 	box_x -= box->border[LEFT].width;
 	box_y += box->height + box->border[BOTTOM].width +
@@ -425,7 +425,7 @@ mouse_action_drag_selection(html_content *html,
 
 	box = box_pick_text_box(html, x, y, dir, &dx, &dy);
 	if (box != NULL) {
-		font_plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
+		font__plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
 
 		guit->layout->position(&fstyle,
 				       box->text,
@@ -470,7 +470,7 @@ mouse_action_drag_scrollbar(html_content *html,
 
 	box = data->box;
 
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 
 	if (scrollbar_is_horizontal(scr)) {
 		scroll_mouse_x = x - box_x ;
@@ -527,7 +527,7 @@ mouse_action_drag_textarea(html_content *html,
 	       box->gadget->type == GADGET_PASSWORD ||
 	       box->gadget->type == GADGET_TEXTBOX);
 
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 	textarea_mouse_action(box->gadget->data.text.ta,
 			      mouse,
 			      x - box_x,
@@ -556,7 +556,7 @@ mouse_action_drag_content(html_content *html,
 	box = html->drag_owner.content;
 	assert(box->object != NULL);
 
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 	content_mouse_track(box->object,
 			    bw, mouse,
 			    x - box_x,
@@ -1223,7 +1223,7 @@ default_mouse_action(html_content *html,
 		size_t idx;
 		plot_font_style_t fstyle;
 
-		font_plot_style_from_css(&html->unit_len_ctx,
+		font__plot_style_from_css(&html->unit_len_ctx,
 					 mas->text.box->style,
 					 &fstyle);
 
@@ -1435,7 +1435,7 @@ mouse_action_drag_none(html_content *html,
 	case ACTION_JS:
 		path = nsurl_get_component(mas.link.url, NSURL_PATH);
 		if (path != NULL) {
-			html_exec(c,
+			html__exec(c,
 				  lwc_string_data(path),
 				  lwc_string_length(path));
 			lwc_string_unref(path);
@@ -1717,11 +1717,11 @@ void html_set_focus(html_content *html, html_focus_type focus_type,
 		break;
 
 	case HTML_FOCUS_CONTENT:
-		box_coords(focus_owner.content, &x_off, &y_off);
+		box__coords(focus_owner.content, &x_off, &y_off);
 		break;
 
 	case HTML_FOCUS_TEXTAREA:
-		box_coords(focus_owner.textarea, &x_off, &y_off);
+		box__coords(focus_owner.textarea, &x_off, &y_off);
 		break;
 	}
 

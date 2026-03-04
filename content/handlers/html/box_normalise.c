@@ -215,7 +215,7 @@ box_normalise_table_row(struct box *row,
 					child->type == BOX_TABLE ||
 					child->type == BOX_TABLE_ROW_GROUP ||
 					child->type == BOX_TABLE_ROW)) {
-				box_add_child(cell, child);
+				box__add_child(cell, child);
 
 				next_child = child->next;
 				child->next = NULL;
@@ -362,7 +362,7 @@ box_normalise_table_row_group(struct box *row_group,
 					child->type == BOX_TABLE ||
 					child->type == BOX_TABLE_ROW_GROUP ||
 					child->type == BOX_TABLE_CELL)) {
-				box_add_child(row, child);
+				box__add_child(row, child);
 
 				next_child = child->next;
 				child->next = NULL;
@@ -706,7 +706,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 					child->type == BOX_TABLE ||
 					child->type == BOX_TABLE_ROW ||
 					child->type == BOX_TABLE_CELL)) {
-				box_add_child(row_group, child);
+				box__add_child(row_group, child);
 
 				next_child = child->next;
 				child->next = NULL;
@@ -784,7 +784,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 		style = nscss_get_blank_style(&ctx, &c->unit_len_ctx,
 				row_group->style);
 		if (style == NULL) {
-			box_free(row_group);
+			box__free(row_group);
 			free(col_info.spans);
 			return false;
 		}
@@ -793,7 +793,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 				row_group->target, NULL, NULL, c->bctx);
 		if (row == NULL) {
 			css_computed_style_destroy(style);
-			box_free(row_group);
+			box__free(row_group);
 			free(col_info.spans);
 			return false;
 		}
@@ -898,7 +898,7 @@ static bool box_normalise_flex(
 
 			while (child != NULL &&
 					child->type == BOX_INLINE_CONTAINER) {
-				box_add_child(implied_flex_item, child);
+				box__add_child(implied_flex_item, child);
 
 				next_child = child->next;
 				child->next = NULL;
@@ -971,7 +971,7 @@ static bool box_normalise_flex(
 					child->type == BOX_TABLE_ROW_GROUP ||
 					child->type == BOX_TABLE_ROW ||
 					child->type == BOX_TABLE_CELL)) {
-				box_add_child(implied_flex_item, child);
+				box__add_child(implied_flex_item, child);
 
 				next_child = child->next;
 				child->next = NULL;
@@ -1068,7 +1068,7 @@ box_normalise_inline_container(struct box *cont,
 				else
 					child->parent->last = child->prev;
 
-				box_free(child);
+				box__free(child);
 			}
 			break;
 		case BOX_FLEX:
@@ -1186,7 +1186,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 					child->type == BOX_TABLE_ROW_GROUP ||
 					child->type == BOX_TABLE_ROW ||
 					child->type == BOX_TABLE_CELL)) {
-				box_add_child(table, child);
+				box__add_child(table, child);
 
 				next_child = child->next;
 				child->next = NULL;

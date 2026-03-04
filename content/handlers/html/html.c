@@ -239,7 +239,7 @@ static void html_box_convert_done(html_content *c, bool success)
 
 
 #if ALWAYS_DUMP_BOX
-	box_dump(stderr, c->layout->children, 0, true);
+	box__dump(stderr, c->layout->children, 0, true);
 #endif
 #if ALWAYS_DUMP_FRAMESET
 	if (c->frameset)
@@ -258,7 +258,7 @@ static void html_box_convert_done(html_content *c, bool success)
 	}
 
 	/* extract image maps - can't do this sensibly in dom_to_box */
-	err = imagemap_extract(c);
+	err = imagemap__extract(c);
 	if (err != NSERROR_OK) {
 		NSLOG(netsurf, INFO, "imagemap extraction failed");
 		html_object_free_objects(c);
@@ -267,7 +267,7 @@ static void html_box_convert_done(html_content *c, bool success)
 		dom_node_unref(html);
 		return;
 	}
-	/*imagemap_dump(c);*/
+	/*imagemap__dump(c);*/
 
 	/* Destroy the parser binding */
 	dom_hubbub_parser_destroy(c->parser);
@@ -275,14 +275,14 @@ static void html_box_convert_done(html_content *c, bool success)
 
 	content_set_ready(&c->base);
 
-	html_proceed_to_done(c);
+	html__proceed_to_done(c);
 
 	dom_node_unref(html);
 }
 
 /* Documented in html_internal.h */
 nserror
-html_proceed_to_done(html_content *html)
+html__proceed_to_done(html_content *html)
 {
 	switch (content__get_status(&html->base)) {
 	case CONTENT_STATUS_READY:
@@ -338,7 +338,7 @@ static void html_get_dimensions(html_content *htmlc)
 }
 
 /* exported function documented in html/html_internal.h */
-void html_finish_conversion(html_content *htmlc)
+void html__finish_conversion(html_content *htmlc)
 {
 	union content_msg_data msg_data;
 	dom_exception exc; /* returned by libdom functions */
@@ -538,7 +538,7 @@ html_create_html_data(html_content *c, const http_parameter *params)
 	parse_params.fix_enc = true;
 	parse_params.enable_script = c->enable_scripting;
 	parse_params.msg = NULL;
-	parse_params.script = html_process_script;
+	parse_params.script = html__process_script;
 	parse_params.ctx = c;
 	parse_params.daf = html_dom_event_fetcher;
 
@@ -686,7 +686,7 @@ html_process_encoding_change(struct content *c,
 	parse_params.fix_enc = true;
 	parse_params.enable_script = html->enable_scripting;
 	parse_params.msg = NULL;
-	parse_params.script = html_process_script;
+	parse_params.script = html__process_script;
 	parse_params.ctx = html;
 	parse_params.daf = html_dom_event_fetcher;
 
@@ -804,14 +804,14 @@ static bool html_convert(struct content *c)
 	/* if there are no active fetches in progress no scripts are
 	 * being fetched or they completed already.
 	 */
-	if (html_can_begin_conversion(htmlc)) {
-		return html_begin_conversion(htmlc);
+	if (html__can_begin_conversion(htmlc)) {
+		return html__begin_conversion(htmlc);
 	}
 	return true;
 }
 
 /* Exported interface documented in html_internal.h */
-bool html_can_begin_conversion(html_content *htmlc)
+bool html__can_begin_conversion(html_content *htmlc)
 {
 	unsigned int i;
 
@@ -830,7 +830,7 @@ bool html_can_begin_conversion(html_content *htmlc)
 }
 
 bool
-html_begin_conversion(html_content *htmlc)
+html__begin_conversion(html_content *htmlc)
 {
 	dom_node *html;
 	nserror ns_error;
@@ -873,7 +873,7 @@ html_begin_conversion(html_content *htmlc)
 		htmlc->parse_completed = true;
 	}
 
-	if (html_can_begin_conversion(htmlc) == false) {
+	if (html__can_begin_conversion(htmlc) == false) {
 		NSLOG(netsurf, INFO, "Can't begin conversion (%p)", htmlc);
 		/* We can't proceed (see commentary above) */
 		return true;
@@ -892,7 +892,7 @@ html_begin_conversion(html_content *htmlc)
 	htmlc->conversion_begun = true;
 
 	/* complete script execution, including deferred scripts */
-	html_script_exec(htmlc, true);
+	html__script_exec(htmlc, true);
 
 	/* fire a simple event that bubbles named DOMContentLoaded at
 	 * the Document.
@@ -994,7 +994,7 @@ html_begin_conversion(html_content *htmlc)
 	dom_node_unref(html);
 
 	if (htmlc->base.active == 0) {
-		html_finish_conversion(htmlc);
+		html__finish_conversion(htmlc);
 	}
 
 	return true;
@@ -1015,7 +1015,7 @@ static void html_stop(struct content *c)
 	switch (c->status) {
 	case CONTENT_STATUS_LOADING:
 		/* Still loading; simply flag that we've been aborted
-		 * html_convert/html_finish_conversion will do the rest */
+		 * html_convert/html__finish_conversion will do the rest */
 		htmlc->aborted = true;
 		if (htmlc->jsthread != NULL) {
 			/* Close the JS thread to cancel out any callbacks */
@@ -1068,7 +1068,7 @@ static void html_reformat(struct content *c, int width, int height)
 			INTTOFIX(height), htmlc->unit_len_ctx.device_dpi);
 	htmlc->unit_len_ctx.root_style = htmlc->layout->style;
 
-	layout_document(htmlc, width, height);
+	layout__document(htmlc, width, height);
 	layout = htmlc->layout;
 
 	/* width and height are at least margin box of document */
@@ -1112,7 +1112,7 @@ void html_redraw_a_box(hlcache_handle *h, struct box *box)
 {
 	int x, y;
 
-	box_coords(box, &x, &y);
+	box__coords(box, &x, &y);
 
 	content_request_redraw(h, x, y,
 			box->padding[LEFT] + box->width + box->padding[RIGHT],
@@ -1131,7 +1131,7 @@ void html__redraw_a_box(struct html_content *html, struct box *box)
 {
 	int x, y;
 
-	box_coords(box, &x, &y);
+	box__coords(box, &x, &y);
 
 	content__request_redraw((struct content *)html, x, y,
 			box->padding[LEFT] + box->width + box->padding[RIGHT],
@@ -1208,7 +1208,7 @@ static void html_destroy(struct content *c)
 
 	/* If we're still converting a layout, cancel it */
 	if (html->box_conversion_context != NULL) {
-		if (cancel_dom_to_box(html->box_conversion_context) != NSERROR_OK) {
+		if (box_construct__cancel(html->box_conversion_context) != NSERROR_OK) {
 			NSLOG(netsurf, CRITICAL, "WARNING, Unable to cancel conversion context, browser may crash");
 		}
 	}
@@ -1222,7 +1222,7 @@ static void html_destroy(struct content *c)
 		form_free(f);
 	}
 
-	imagemap_destroy(html);
+	imagemap__destroy(html);
 
 	if (c->refresh)
 		nsurl_unref(c->refresh);
@@ -1294,7 +1294,7 @@ static void html_destroy(struct content *c)
 	html_css_free_stylesheets(html);
 
 	/* Free scripts */
-	html_script_free(html);
+	html__script_free(html);
 
 	/* Free objects */
 	html_object_free_objects(html);
@@ -1831,7 +1831,7 @@ static bool html_drop_file_at_point(struct content *c, int x, int y, char *file)
 		size = strlen(utf8_buff);
 
 		/* Simulate a click over the input box, to place caret */
-		box_coords(text_box, &bx, &by);
+		box__coords(text_box, &bx, &by);
 		textarea_mouse_action(text_box->gadget->data.text.ta,
 				BROWSER_MOUSE_PRESS_1, x - bx, y - by);
 
@@ -1880,7 +1880,7 @@ html_debug_dump(struct content *c, FILE *f, enum content_debug op)
 
 	if (op == CONTENT_DEBUG_RENDER) {
 		assert(htmlc->layout != NULL);
-		box_dump(f, htmlc->layout, 0, true);
+		box__dump(f, htmlc->layout, 0, true);
 		ret = NSERROR_OK;
 	} else {
 		if (htmlc->document == NULL) {
@@ -2096,13 +2096,13 @@ bool html_get_id_offset(hlcache_handle *h, lwc_string *frag_id, int *x, int *y)
 	layout = html_get_box_tree(h);
 
 	if ((pos = box_find_by_id(layout, frag_id)) != 0) {
-		box_coords(pos, x, y);
+		box__coords(pos, x, y);
 		return true;
 	}
 	return false;
 }
 
-bool html_exec(struct content *c, const char *src, size_t srclen)
+bool html__exec(struct content *c, const char *src, size_t srclen)
 {
 	html_content *htmlc = (html_content *)c;
 	bool result = false;
@@ -2203,7 +2203,7 @@ html_saw_insecure_objects(struct content *c)
 	}
 
 	/* Now check the script list */
-	if (html_saw_insecure_scripts(htmlc)) {
+	if (html__saw_insecure_scripts(htmlc)) {
 		return true;
 	}
 
@@ -2344,9 +2344,9 @@ html_textsearch_bounds(struct content *c,
 		       struct rect *bounds)
 {
 	/* get box position and jump to it */
-	box_coords(start_box, &bounds->x0, &bounds->y0);
+	box__coords(start_box, &bounds->x0, &bounds->y0);
 	/* \todo: move x0 in by correct idx */
-	box_coords(end_box, &bounds->x1, &bounds->y1);
+	box__coords(end_box, &bounds->x1, &bounds->y1);
 	/* \todo: move x1 in by correct idx */
 	bounds->x1 += end_box->width;
 	bounds->y1 += end_box->height;
@@ -2369,7 +2369,7 @@ static const content_handler html_content_handler = {
 	.mouse_track = html_mouse_track,
 	.mouse_action = html_mouse_action,
 	.keypress = html_keypress,
-	.redraw = html_redraw,
+	.redraw = html__redraw,
 	.open = html_open,
 	.close = html_close,
 	.get_selection = html_get_selection,
@@ -2382,7 +2382,7 @@ static const content_handler html_content_handler = {
 	.clone = html_clone,
 	.get_encoding = html_encoding,
 	.type = html_content_type,
-	.exec = html_exec,
+	.exec = html__exec,
 	.saw_insecure_objects = html_saw_insecure_objects,
 	.textsearch_find = html_textsearch_find,
 	.textsearch_bounds = html_textsearch_bounds,

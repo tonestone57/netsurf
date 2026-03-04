@@ -1595,7 +1595,7 @@ form_open_select_menu(void *client_data,
 			box->border[RIGHT].width + box->padding[RIGHT] +
 			box->border[LEFT].width + box->padding[LEFT];
 
-		font_plot_style_from_css(&html->unit_len_ctx,
+		font__plot_style_from_css(&html->unit_len_ctx,
 				control->box->style, &fstyle);
 		menu->f_size = fstyle.size;
 
@@ -1933,7 +1933,7 @@ form_select_mouse_drag_end(struct form_control *control,
 	box = control->box;
 
 	/* Get global coords of scrollbar */
-	box_coords(box, &box_x, &box_y);
+	box__coords(box, &box_x, &box_y);
 	box_x -= box->border[LEFT].width;
 	box_y += box->height + box->border[BOTTOM].width +
 			box->padding[BOTTOM] + box->padding[TOP];
@@ -1979,7 +1979,7 @@ void form_select_menu_callback(void *client_data,
 	struct box *box;
 
 	box = html->visible_select_menu->box;
-	box_coords(box, &menu_x, &menu_y);
+	box__coords(box, &menu_x, &menu_y);
 
 	menu_x -= box->border[LEFT].width;
 	menu_y += box->height + box->border[BOTTOM].width +

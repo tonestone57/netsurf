@@ -119,7 +119,7 @@ html_object_done(struct box *box,
 
 		/* delete any clones of this box */
 		while (box->next && (box->next->flags & CLONE)) {
-			/* box_free_box(box->next); */
+			/* box__free_box(box->next); */
 			box->next = box->next->next;
 		}
 	}
@@ -207,10 +207,10 @@ html_object_callback(hlcache_handle *object,
 				break;
 			}
 
-			if (!box_visible(box))
+			if (!box__visible(box))
 				break;
 
-			box_coords(box, &x, &y);
+			box__coords(box, &x, &y);
 
 			data.redraw.x = x + box->padding[LEFT];
 			data.redraw.y = y + box->padding[TOP];
@@ -241,10 +241,10 @@ html_object_callback(hlcache_handle *object,
 				break;
 			}
 
-			if (!box_visible(box))
+			if (!box__visible(box))
 				break;
 
-			box_coords(box, &x, &y);
+			box__coords(box, &x, &y);
 
 			if (object == box->background) {
 				/* Redraw request is for background */

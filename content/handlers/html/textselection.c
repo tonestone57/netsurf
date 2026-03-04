@@ -167,7 +167,7 @@ coords_from_range(struct box *box,
 			 * \todo it should be possible to reduce the redrawn
 			 *        area using the offsets
 			 */
-			box_coords(box, &x, &y);
+			box__coords(box, &x, &y);
 
 			width = box->padding[LEFT] + box->width + box->padding[RIGHT];
 			height = box->padding[TOP] + box->height + box->padding[BOTTOM];
@@ -278,7 +278,7 @@ selection_copy_box(const char *text,
 
 		if (box->style != NULL) {
 			/* Override default font style */
-			font_plot_style_from_css(unit_len_ctx, box->style, &style);
+			font__plot_style_from_css(unit_len_ctx, box->style, &style);
 			pstyle = &style;
 		} else {
 			/* If there's no style, there must be no text */

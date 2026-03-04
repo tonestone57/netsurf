@@ -546,7 +546,7 @@ box_nearest_text_box(struct box *box,
 
 
 /* Exported function documented in html/box.h */
-void box_coords(struct box *box, int *x, int *y)
+void box__coords(struct box *box, int *x, int *y)
 {
 	*x = box->x;
 	*y = box->y;
@@ -568,7 +568,7 @@ void box_bounds(struct box *box, struct rect *r)
 {
 	int width, height;
 
-	box_coords(box, &r->x0, &r->y0);
+	box__coords(box, &r->x0, &r->y0);
 
 	width = box->padding[LEFT] + box->width + box->padding[RIGHT];
 	height = box->padding[TOP] + box->height + box->padding[BOTTOM];
@@ -633,7 +633,7 @@ struct box *box_find_by_id(struct box *box, lwc_string *id)
 
 
 /* Exported function documented in html/box.h */
-bool box_visible(struct box *box)
+bool box__visible(struct box *box)
 {
 	/* visibility: hidden */
 	if (box->style &&
@@ -646,7 +646,7 @@ bool box_visible(struct box *box)
 
 
 /* Exported function documented in html/box.h */
-void box_dump(FILE *stream, struct box *box, unsigned int depth, bool style)
+void box__dump(FILE *stream, struct box *box, unsigned int depth, bool style)
 {
 	unsigned int i;
 	struct box *c, *prev;
@@ -803,7 +803,7 @@ void box_dump(FILE *stream, struct box *box, unsigned int depth, bool style)
 		for (i = 0; i != depth; i++)
 			fprintf(stream, "  ");
 		fprintf(stream, "list_marker:\n");
-		box_dump(stream, box->list_marker, depth + 1, style);
+		box__dump(stream, box->list_marker, depth + 1, style);
 	}
 
 	for (c = box->children; c && c->next; c = c->next)
@@ -820,13 +820,13 @@ void box_dump(FILE *stream, struct box *box, unsigned int depth, bool style)
 			fprintf(stream, "warning: box->prev %p (should be "
 				"%p) (box on next line)\n",
 				c->prev, prev);
-		box_dump(stream, c, depth + 1, style);
+		box__dump(stream, c, depth + 1, style);
 	}
 }
 
 
 /* exported interface documented in html/box.h */
-bool box_vscrollbar_present(const struct box * const box)
+bool box__vscrollbar_present(const struct box * const box)
 {
 	return box->padding[TOP] +
 		box->height +
@@ -836,7 +836,7 @@ bool box_vscrollbar_present(const struct box * const box)
 
 
 /* exported interface documented in html/box.h */
-bool box_hscrollbar_present(const struct box * const box)
+bool box__hscrollbar_present(const struct box * const box)
 {
 	return box->padding[LEFT] +
 		box->width +

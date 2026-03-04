@@ -735,7 +735,7 @@ static void layout_minmax_table(struct box *table,
 
 	for (i = 0; i != table->columns; i++) {
 		if (col[i].max < col[i].min) {
-			box_dump(stderr, table, 0, true);
+			box__dump(stderr, table, 0, true);
 			assert(0);
 		}
 		table_min += col[i].min;
@@ -878,7 +878,7 @@ layout_minmax_line(struct box *first,
 
 		if (b->style == NULL)
 			continue;
-		font_plot_style_from_css(&content->unit_len_ctx, b->style, &fstyle);
+		font__plot_style_from_css(&content->unit_len_ctx, b->style, &fstyle);
 
 		if (b->type == BOX_INLINE && !b->object &&
 				!(b->flags & REPLACE_DIM) &&
@@ -1402,7 +1402,7 @@ static void layout_minmax_block(
 	}
 
 	if (max < min) {
-		box_dump(stderr, block, 0, true);
+		box__dump(stderr, block, 0, true);
 		assert(0);
 	}
 
@@ -1935,7 +1935,7 @@ static void layout_block_add_scrollbar(struct box *box, int which)
 		/* make space for scrollbar, unless height is AUTO */
 		if (box->height != AUTO &&
 				(overflow_x == CSS_OVERFLOW_SCROLL ||
-				box_hscrollbar_present(box))) {
+				box__hscrollbar_present(box))) {
 			box->padding[BOTTOM] += SCROLLBAR_WIDTH;
 		}
 
@@ -1953,7 +1953,7 @@ static void layout_block_add_scrollbar(struct box *box, int which)
 		if (which == RIGHT && box->width != AUTO &&
 				htype == CSS_HEIGHT_SET &&
 				(overflow_y == CSS_OVERFLOW_SCROLL ||
-				box_vscrollbar_present(box))) {
+				box__vscrollbar_present(box))) {
 			box->width -= SCROLLBAR_WIDTH;
 			box->padding[RIGHT] += SCROLLBAR_WIDTH;
 		}
@@ -2046,7 +2046,7 @@ bool layout_table(
 				enum css_overflow_e overflow_y;
 
 				assert(c->style);
-				table_used_border_for_cell(
+				table__used_border_for_cell(
 						&content->unit_len_ctx, c);
 				layout_find_dimensions(&content->unit_len_ctx,
 						available_width, -1, c,
@@ -2372,7 +2372,7 @@ bool layout_table(
 				c->cached_place_below_level = 0;
 
 				c->height = AUTO;
-				if (!layout_block_context(c, -1, content)) {
+				if (!layout__block_context(c, -1, content)) {
 					free(col);
 					free(excess_y);
 					free(row_span);
@@ -2763,7 +2763,7 @@ static bool layout_block_object(struct box *block)
 /**
  * Internal dimension calculation function for full cache population.
  */
-void layout_find_dimensions_internal(
+void layout__find_dimensions_internal(
 		const css_unit_ctx *unit_len_ctx,
 		int available_width,
 		int viewport_height,
@@ -3457,7 +3457,7 @@ static bool layout_float(struct box *b, int width, html_content *content)
 		if (b->margin[BOTTOM] == AUTO)
 			b->margin[BOTTOM] = 0;
 	} else {
-		return layout_block_context(b, -1, content);
+		return layout__block_context(b, -1, content);
 	}
 	return true;
 }
@@ -3670,7 +3670,7 @@ layout_line(struct box *first,
 			continue;
 
 		assert(b->style != NULL);
-		font_plot_style_from_css(&content->unit_len_ctx, b->style, &fstyle);
+		font__plot_style_from_css(&content->unit_len_ctx, b->style, &fstyle);
 
 		x += space_after;
 
@@ -3929,7 +3929,7 @@ layout_line(struct box *first,
 				space_after = 0;
 			else if (b->text || b->type == BOX_INLINE_END) {
 				if (b->space == UNKNOWN_WIDTH) {
-					font_plot_style_from_css(
+					font__plot_style_from_css(
 							&content->unit_len_ctx,
 							b->style, &fstyle);
 					if (font_func->width(&fstyle, " ", 1,
@@ -4085,7 +4085,7 @@ layout_line(struct box *first,
 		    !(split_box->flags & IFRAME) &&
 		    !split_box->gadget && split_box->text) {
 
-			font_plot_style_from_css(&content->unit_len_ctx,
+			font__plot_style_from_css(&content->unit_len_ctx,
 					split_box->style, &fstyle);
 			if (font_func->split(&fstyle,
 					 split_box->text,
@@ -4324,7 +4324,7 @@ static bool layout_inline_container(struct box *inline_container, int width,
 
 
 /* Documented in layout_intertnal.h */
-bool layout_block_context(
+bool layout__block_context(
 		struct box *block,
 		int viewport_height,
 		html_content *content)
@@ -4545,7 +4545,7 @@ bool layout_block_context(
 					return false;
 				}
 			} else {
-				layout_block_context(box,
+				layout__block_context(box,
 						viewport_height, content);
 			}
 
@@ -4740,7 +4740,7 @@ bool layout_block_context(
 				block->padding[RIGHT];
 		int ta_height = block->padding[TOP] + block->height +
 				block->padding[BOTTOM];
-		font_plot_style_from_css(&content->unit_len_ctx,
+		font__plot_style_from_css(&content->unit_len_ctx,
 				block->style, &fstyle);
 		fstyle.background = NS_TRANSPARENT;
 		textarea_set_layout(block->gadget->data.text.ta,
@@ -5167,7 +5167,7 @@ layout_lists(const html_content *content, struct box *box)
 			} else if (marker->text) {
 				if (marker->width == UNKNOWN_WIDTH) {
 					plot_font_style_t fstyle;
-					font_plot_style_from_css(
+					font__plot_style_from_css(
 							&content->unit_len_ctx,
 							marker->style,
 							&fstyle);
@@ -5324,7 +5324,7 @@ layout_absolute(struct box *box,
 
 	/* The static position is where the box would be if it was not
 	 * absolutely positioned. The x and y are filled in by
-	 * layout_block_context(). */
+	 * layout__block_context(). */
 	static_left = cx + box->x;
 	static_top = cy + box->y;
 
@@ -5543,7 +5543,7 @@ layout_absolute(struct box *box,
 
 	if (box->type == BOX_BLOCK || box->type == BOX_INLINE_BLOCK ||
 			box->object || box->flags & IFRAME) {
-		if (!layout_block_context(box, -1, content))
+		if (!layout__block_context(box, -1, content))
 			return false;
 	} else if (box->type == BOX_TABLE) {
 		/* layout_table also expects the containing block to be
@@ -6073,7 +6073,7 @@ static void layout_calculate_descendant_bboxes(
 
 	if (box->iframe != NULL) {
 		int x, y;
-		box_coords(box, &x, &y);
+		box__coords(box, &x, &y);
 
 		browser_window_set_position(box->iframe, x, y);
 		browser_window_set_dimensions(box->iframe,
@@ -6141,7 +6141,7 @@ static void layout_calculate_descendant_bboxes(
 
 
 /* exported function documented in html/layout.h */
-bool layout_document(html_content *content, int width, int height)
+bool layout__document(html_content *content, int width, int height)
 {
 	bool ret;
 	struct box *doc = content->layout;
@@ -6165,7 +6165,7 @@ bool layout_document(html_content *content, int width, int height)
 	}
 	doc->width = width;
 
-	ret = layout_block_context(doc, height, content);
+	ret = layout__block_context(doc, height, content);
 
 	/* make <html> and <body> fill available height */
 	if (doc->y + doc->padding[TOP] + doc->height + doc->padding[BOTTOM] +

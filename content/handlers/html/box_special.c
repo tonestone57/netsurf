@@ -386,7 +386,7 @@ box_create_frameset(struct content_html_frames *f,
 			url = NULL;
 			err = dom_element_get_attribute(c, corestring_dom_src, &s);
 			if (err == DOM_NO_ERR && s != NULL) {
-				box_extract_link(content, s, content->base_url,
+				box_construct__extract_link(content, s, content->base_url,
 						 &url);
 				dom_string_unref(s);
 			}
@@ -584,8 +584,8 @@ box_input_text(html_content *html, struct box *box, struct dom_node *node)
 	inline_box->type = BOX_TEXT;
 	inline_box->text = talloc_strdup(html->bctx, "");
 
-	box_add_child(inline_container, inline_box);
-	box_add_child(box, inline_container);
+	box__add_child(inline_container, inline_box);
+	box__add_child(box, inline_container);
 
 	return box_textarea_create_textarea(html, box, node);
 }
@@ -692,7 +692,7 @@ box_a(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_href, &s);
 	if (err == DOM_NO_ERR && s != NULL) {
-		ok = box_extract_link(content, s, content->base_url, &url);
+		ok = box_construct__extract_link(content, s, content->base_url, &url);
 		dom_string_unref(s);
 		if (!ok)
 			return false;
@@ -883,7 +883,7 @@ box_embed(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &src);
 	if (err != DOM_NO_ERR || src == NULL)
 		return true;
-	if (box_extract_link(content, src, content->base_url,
+	if (box_construct__extract_link(content, src, content->base_url,
 			     &params->data) == false) {
 		dom_string_unref(src);
 		return false;
@@ -1049,7 +1049,7 @@ box_iframe(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &s);
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
-	if (box_extract_link(content, s, content->base_url, &url) == false) {
+	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1195,7 +1195,7 @@ box_image(dom_node *n,
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
 
-	if (box_extract_link(content, s, content->base_url, &url) == false) {
+	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1322,9 +1322,9 @@ box_input(dom_node *n,
 
 		inline_box->length = strlen(inline_box->text);
 
-		box_add_child(inline_container, inline_box);
+		box__add_child(inline_container, inline_box);
 
-		box_add_child(box, inline_container);
+		box__add_child(box, inline_container);
 
 	} else if (dom_string_caseless_lwc_isequal(type,
 						   corestring_lwc_image)) {
@@ -1439,7 +1439,7 @@ box_object(dom_node *n,
 	 * (codebase is the base for the other two) */
 	err = dom_element_get_attribute(n, corestring_dom_codebase, &codebase);
 	if (err == DOM_NO_ERR && codebase != NULL) {
-		if (box_extract_link(content, codebase,	content->base_url,
+		if (box_construct__extract_link(content, codebase,	content->base_url,
 				&params->codebase) == false) {
 			dom_string_unref(codebase);
 			return false;
@@ -1451,7 +1451,7 @@ box_object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_classid, &classid);
 	if (err == DOM_NO_ERR && classid != NULL) {
-		if (box_extract_link(content, classid,
+		if (box_construct__extract_link(content, classid,
 				params->codebase, &params->classid) == false) {
 			dom_string_unref(classid);
 			return false;
@@ -1461,7 +1461,7 @@ box_object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_data, &data);
 	if (err == DOM_NO_ERR && data != NULL) {
-		if (box_extract_link(content, data,
+		if (box_construct__extract_link(content, data,
 				params->codebase, &params->data) == false) {
 			dom_string_unref(data);
 			return false;
@@ -1783,8 +1783,8 @@ box_select(dom_node *n,
 	if (inline_box == NULL)
 		goto no_memory;
 	inline_box->type = BOX_TEXT;
-	box_add_child(inline_container, inline_box);
-	box_add_child(box, inline_container);
+	box__add_child(inline_container, inline_box);
+	box__add_child(box, inline_container);
 
 	if (gadget->data.select.multiple == false &&
 			gadget->data.select.num_selected == 0) {

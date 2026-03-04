@@ -232,7 +232,7 @@ static bool layout_flex_item(
 
 	switch (b->type) {
 	case BOX_BLOCK:
-		success = layout_block_context(b, -1, ctx->content);
+		success = layout__block_context(b, -1, ctx->content);
 		break;
 	case BOX_TABLE:
 		b->float_container = b->parent;
