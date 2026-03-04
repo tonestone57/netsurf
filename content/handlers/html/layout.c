@@ -129,18 +129,25 @@ find_sides(struct box *fl,
 /**
  * Calculate the baseline of a box relative to its content top.
  *
- * \param  box  box to find baseline of
- * \return  distance from top of content box to baseline
+ * \param  box   box to find baseline of
+ * \param  last  whether to use the last child's baseline (inline-block)
+ *               or the first child's (table-cell)
+ * \return  distance from top of content box to baseline, or -1 if none found
  */
-static int layout__get_box_baseline(struct box *box)
+static int layout__get_box_baseline(struct box *box, bool last)
 {
 	struct box *c;
+	int b;
 
 	if (box->type == BOX_TEXT || box->type == BOX_BR) {
 		return box->height * 3 / 4;
 	}
 
-	if (layout__box_is_replace(box)) {
+	/* Boxes with non-visible overflow behave as replaced elements for
+	 * baseline calculation. (CSS 2.1 Section 10.8.1) */
+	if (layout__box_is_replace(box) ||
+			(box->style && css_computed_overflow_y(box->style) !=
+					CSS_OVERFLOW_VISIBLE)) {
 		return box->height + box->padding[BOTTOM] +
 				box->border[BOTTOM].width + box->margin[BOTTOM];
 	}
@@ -149,17 +156,31 @@ static int layout__get_box_baseline(struct box *box)
 		return box->descendant_y0;
 	}
 
-	for (c = box->children; c; c = c->next) {
-		if (layout__box_is_absolute(c))
-			continue;
-		/* c->y is distance from box border-top to c padding-top.
-		 * Subtract box->padding[TOP] and add c->padding[TOP] to get
-		 * distance from box content-top to c content-top. */
-		return (c->y - box->padding[TOP]) + c->padding[TOP] +
-				layout__get_box_baseline(c);
+	if (last) {
+		for (c = box->last; c; c = c->prev) {
+			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
+				continue;
+			b = layout__get_box_baseline(c, last);
+			if (b != -1) {
+				/* In NetSurf layout, child y (c->y) is distance from
+				 * parent origin (typically padding top) to child origin
+				 * (padding top). b is baseline from child content top.
+				 * Parent content top from its origin is padding[TOP]. */
+				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
+			}
+		}
+	} else {
+		for (c = box->children; c; c = c->next) {
+			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
+				continue;
+			b = layout__get_box_baseline(c, last);
+			if (b != -1) {
+				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
+			}
+		}
 	}
 
-	return box->height;
+	return -1;
 }
 
 /**
@@ -300,12 +321,19 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		if (d->type == BOX_TEXT || d->type == BOX_BR ||
 				d->type == BOX_INLINE_END ||
 				(d->type == BOX_INLINE && !layout__box_is_replace(d))) {
-			element_ascent = layout__get_box_baseline(d);
+			element_ascent = layout__get_box_baseline(d, true);
+			if (element_ascent == -1)
+				element_ascent = d->height;
 		} else if (d->type == BOX_INLINE ||
 				d->type == BOX_INLINE_BLOCK ||
 				d->type == BOX_INLINE_FLEX) {
+			int b = layout__get_box_baseline(d, true);
+			if (b == -1)
+				b = d->height + d->padding[BOTTOM] +
+						d->border[BOTTOM].width +
+						d->margin[BOTTOM];
 			element_ascent = d->margin[TOP] + d->border[TOP].width +
-					d->padding[TOP] + layout__get_box_baseline(d);
+					d->padding[TOP] + b;
 		} else {
 			continue;
 		}
@@ -357,10 +385,17 @@ static void layout_line_vertical_align(const css_unit_ctx *unit_len_ctx,
 		if ((d->type == BOX_INLINE && !layout__box_is_replace(d)) ||
 				d->type == BOX_BR || d->type == BOX_TEXT ||
 				d->type == BOX_INLINE_END) {
-			element_ascent = layout__get_box_baseline(d);
+			element_ascent = layout__get_box_baseline(d, true);
+			if (element_ascent == -1)
+				element_ascent = d->height;
 		} else {
+			int b = layout__get_box_baseline(d, true);
+			if (b == -1)
+				b = d->height + d->padding[BOTTOM] +
+						d->border[BOTTOM].width +
+						d->margin[BOTTOM];
 			element_ascent = d->margin[TOP] + d->border[TOP].width +
-					d->padding[TOP] + layout__get_box_baseline(d);
+					d->padding[TOP] + b;
 		}
 		baseline_shift = line_baseline - element_ascent;
 
@@ -2480,13 +2515,17 @@ bool layout_table(
 					free(xs);
 					return false;
 				}
-				/* warning: c->descendant_y0 and
-				 * c->descendant_y1 used as temporary storage
-				 * until after vertical alignment is complete */
+				/* c->descendant_y0, descendant_y1 and descendant_x0
+				 * are used as temporary storage for unextended height,
+				 * padding and ascent until vertical alignment is
+				 * complete. This is safe as bounding boxes are
+				 * calculated later in
+				 * layout_calculate_descendant_bboxes. */
 				c->descendant_y0 = c->height;
 				c->descendant_y1 = c->padding[BOTTOM];
 
-				int cell_ascent = layout__get_box_baseline(c);
+				int b = layout__get_box_baseline(c, false);
+				int cell_ascent = (b == -1) ? c->height : b;
 				c->descendant_x0 = cell_ascent;
 
 				enum css_vertical_align_e va = css_computed_vertical_align(
