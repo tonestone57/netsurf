@@ -817,6 +817,7 @@ method Window::setTimeout()
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
 
+
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);
 	}
@@ -833,6 +834,7 @@ method Window::setInterval()
 	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
+
 
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);
