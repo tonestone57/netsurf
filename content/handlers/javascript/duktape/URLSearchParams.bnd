@@ -52,7 +52,7 @@ static void parse_params(param_list_t *list, const char *s)
 	char *pair = strtok_r(copy, "&", &saveptr);
 	while (pair) {
 		char *sep = strchr(pair, '=');
-		char *key_enc, *val_enc;
+		const char *key_enc, *val_enc;
 		if (sep) {
 			*sep = '\0';
 			key_enc = pair;
