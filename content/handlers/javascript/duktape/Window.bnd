@@ -234,6 +234,8 @@ static duk_ret_t dukky_window_closedown_thread(duk_context *ctx)
 	}
 
 	priv->closed_down = true;
+	priv->win = NULL;
+	priv->htmlc = NULL;
 
 	NSLOG(dukky, DEEPDEBUG, "Closing down thread");
 	while (priv->schedule_ring != NULL) {
@@ -414,6 +416,7 @@ prototype Window()
 
 getter Window::document()
 %{
+	if (priv == NULL || priv->htmlc == NULL || priv->closed_down) { duk_push_null(ctx); return 1; }
 	NSLOG(netsurf, DEBUG, "priv=%p", priv);
 	dom_document *doc = priv->htmlc->document;
 	dukky_push_node(ctx, (struct dom_node *)doc);
@@ -422,24 +425,28 @@ getter Window::document()
 
 getter Window::window()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	return 1;
 %}
 
 getter Window::self()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	return 1;
 %}
 
 getter Window::frames()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	return 1;
 %}
 
 getter Window::top()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_null(ctx); return 1; }
 	struct browser_window *top = browser_window_get_root(priv->win);
 	/* We need to push the Window object for this browser_window.
 	 * Currently our infrastructure doesn't easily map back from
@@ -457,6 +464,7 @@ getter Window::top()
 
 getter Window::parent()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_null(ctx); return 1; }
 	struct browser_window *parent = priv->win->parent;
 	if (parent == NULL || parent == priv->win) {
 		duk_push_this(ctx);
@@ -469,6 +477,7 @@ getter Window::parent()
 
 getter Window::opener()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	/* NetSurf doesn't currently track the opener window */
 	duk_push_null(ctx);
 	return 1;
@@ -476,6 +485,7 @@ getter Window::opener()
 
 getter Window::length()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	/* total number of frames + iframes */
 	int count = priv->win->iframe_count;
 	if (priv->win->browser_window_type == BROWSER_WINDOW_FRAMESET) {
@@ -487,6 +497,7 @@ getter Window::length()
 
 getter Window::console()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(Console));
 	if (duk_is_undefined(ctx, -1)) {
@@ -502,6 +513,7 @@ getter Window::console()
 
 getter Window::locationbar()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(locationbar));
 	if (duk_is_undefined(ctx, -1)) {
@@ -517,6 +529,7 @@ getter Window::locationbar()
 
 getter Window::menubar()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(menubar));
 	if (duk_is_undefined(ctx, -1)) {
@@ -532,6 +545,7 @@ getter Window::menubar()
 
 getter Window::personalbar()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(personalbar));
 	if (duk_is_undefined(ctx, -1)) {
@@ -547,6 +561,7 @@ getter Window::personalbar()
 
 getter Window::scrollbars()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(scrollbars));
 	if (duk_is_undefined(ctx, -1)) {
@@ -562,6 +577,7 @@ getter Window::scrollbars()
 
 getter Window::statusbar()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(statusbar));
 	if (duk_is_undefined(ctx, -1)) {
@@ -577,6 +593,7 @@ getter Window::statusbar()
 
 getter Window::toolbar()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(toolbar));
 	if (duk_is_undefined(ctx, -1)) {
@@ -592,6 +609,7 @@ getter Window::toolbar()
 
 getter Window::screen()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(Screen));
 	if (duk_is_undefined(ctx, -1)) {
@@ -612,6 +630,7 @@ getter Window::screen()
 
 getter Window::history()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(History));
 	if (duk_is_undefined(ctx, -1)) {
@@ -627,6 +646,7 @@ getter Window::history()
 
 getter Window::location()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	/* obtain location object for this window (if it exists) */
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(Location));
@@ -647,6 +667,7 @@ getter Window::location()
 
 getter Window::navigator()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, -1, MAGIC(Navigator));
 	if (duk_is_undefined(ctx, -1)) {
@@ -667,6 +688,7 @@ getter Window::navigator()
 
 getter Window::name()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_string(ctx, ""); return 1; }
 	const char *name;
 	browser_window_get_name(priv->win, &name);
 	duk_push_string(ctx, name);
@@ -675,18 +697,21 @@ getter Window::name()
 
 getter Window::innerWidth()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	duk_push_int(ctx, priv->win->width);
 	return 1;
 %}
 
 getter Window::innerHeight()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	duk_push_int(ctx, priv->win->height);
 	return 1;
 %}
 
 getter Window::scrollX()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	int sx = 0;
 	if (priv->win->scroll_x != NULL) {
 		sx = scrollbar_get_offset(priv->win->scroll_x);
@@ -697,6 +722,7 @@ getter Window::scrollX()
 
 getter Window::pageXOffset()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	int sx = 0;
 	if (priv->win->scroll_x != NULL) {
 		sx = scrollbar_get_offset(priv->win->scroll_x);
@@ -707,6 +733,7 @@ getter Window::pageXOffset()
 
 getter Window::scrollY()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	int sy = 0;
 	if (priv->win->scroll_y != NULL) {
 		sy = scrollbar_get_offset(priv->win->scroll_y);
@@ -717,6 +744,7 @@ getter Window::scrollY()
 
 getter Window::pageYOffset()
 %{
+	if (priv == NULL || priv->win == NULL || priv->closed_down) { duk_push_int(ctx, 0); return 1; }
 	int sy = 0;
 	if (priv->win->scroll_y != NULL) {
 		sy = scrollbar_get_offset(priv->win->scroll_y);
@@ -727,12 +755,14 @@ getter Window::pageYOffset()
 
 getter Window::devicePixelRatio()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_undefined(ctx); return 1; }
 	duk_push_number(ctx, 1.0);
 	return 1;
 %}
 
 setter Window::name()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	const char *name;
 	name = duk_to_string(ctx, -1);
 	browser_window_set_name(priv->win, name);
@@ -741,6 +771,7 @@ setter Window::name()
 
 method Window::alert()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t dukky_argc = duk_get_top(ctx);
 	if (dukky_argc == 0) {
 		NSLOG(netsurf, INFO, "JS ALERT");
@@ -759,6 +790,7 @@ method Window::alert()
 
 method Window::confirm()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_boolean(ctx, true); return 1; }
 	/* confirm always returns true for now as we don't have a UI popup */
 	duk_push_boolean(ctx, true);
 	return 1;
@@ -766,6 +798,7 @@ method Window::confirm()
 
 method Window::prompt()
 %{
+	if (priv == NULL || priv->closed_down) { duk_push_null(ctx); return 1; }
 	/* prompt returns null for now */
 	duk_push_null(ctx);
 	return 1;
@@ -773,18 +806,17 @@ method Window::prompt()
 
 method Window::print()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	/* print is a no-op */
 	return 0;
 %}
 
 method Window::setTimeout()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
 
-	if (priv->closed_down == true) {
-		return 0; /* coerced to undefined */
-	}
 
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);
@@ -799,12 +831,10 @@ method Window::setTimeout()
 
 method Window::setInterval()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
 
-	if (priv->closed_down == true) {
-		return 0; /* coerced to undefined */
-	}
 
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);
@@ -819,6 +849,7 @@ method Window::setInterval()
 
 method Window::clearTimeout()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_int_t handle = duk_get_int(ctx, 0);
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 
@@ -827,6 +858,7 @@ method Window::clearTimeout()
 
 method Window::requestAnimationFrame()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	/* Simplistic fallback to setTimeout */
 
 	/* stack: callback */
@@ -850,6 +882,7 @@ method Window::requestAnimationFrame()
 
 method Window::cancelAnimationFrame()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	/* Simplistic fallback to clearTimeout */
 	duk_push_global_object(ctx);
 	duk_get_prop_string(ctx, -1, "clearTimeout");
@@ -861,6 +894,7 @@ method Window::cancelAnimationFrame()
 
 method Window::clearInterval()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_int_t handle = duk_get_int(ctx, 0);
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 
@@ -869,6 +903,7 @@ method Window::clearInterval()
 
 method Window::btoa()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t nargs = duk_get_top(ctx);
 	if (nargs < 1) return 0;
 	duk_to_string(ctx, 0);
@@ -878,6 +913,7 @@ method Window::btoa()
 
 method Window::atob()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	duk_idx_t nargs = duk_get_top(ctx);
 	if (nargs < 1) return 0;
 	/* atob is supposed to throw if the input contains non-latin1 characters
@@ -1045,6 +1081,7 @@ setter Window::onwheel();
 
 method Window::getComputedStyle()
 %{
+	if (priv == NULL || priv->closed_down) return 0;
 	/* Return a stub CSSStyleDeclaration for compatibility */
 	if (dukky_create_object(ctx, PROTO_NAME(CSSSTYLEDECLARATION), 0) != DUK_EXEC_SUCCESS) {
 		return 0;

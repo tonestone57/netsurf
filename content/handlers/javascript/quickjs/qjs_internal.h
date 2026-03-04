@@ -18,13 +18,13 @@ struct jsheap {
 	JSClassID barprop_class_id;
 	JSClassID url_class_id;
 	JSClassID urlsearchparams_class_id;
-	JSAtom node_map_atom;
 	JSAtom handler_map_atom;
 	JSAtom handler_listener_map_atom;
 	JSAtom event_proto_atom;
 	JSAtom uievent_proto_atom;
 	JSAtom mouseevent_proto_atom;
 	JSAtom keyboardevent_proto_atom;
+	struct dom_string *node_js_wrapper_key;
 	void *timer_ring;
 	int next_timer_handle;
 };
