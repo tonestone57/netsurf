@@ -772,9 +772,9 @@ static bool layout_flex__resolve_line(
 	grow = (line->main_size < available_main);
 	initial_free_main = available_main;
 
-	NSLOG(flex, DEEPDEBUG, "box %p: line %" PRIsizet ": first: %" PRIsizet ", count: %" PRIsizet "",
+	NSLOG(flex, DEEPDEBUG, "box %p: line %"PRIsizet": first: %"PRIsizet", count: %"PRIsizet"",
 			(void *)ctx->flex, (size_t)(line - ctx->line.data),
-			(size_t)line->first, (size_t)line->count);
+			line->first, line->count);
 	NSLOG(flex, DEEPDEBUG, "Line main_size: %i, available_main: %i",
 			line->main_size, available_main);
 
@@ -1018,9 +1018,9 @@ static bool layout_flex__collect_items_into_lines(
 		pos += line->count;
 
 		NSLOG(flex, DEEPDEBUG, "flex-container: %p: "
-				"fitted: %" PRIsizet " (total: %" PRIsizet "/%" PRIsizet ")",
-				(void *)ctx->flex, (size_t)line->count,
-				(size_t)pos, (size_t)ctx->item.count);
+				"fitted: %"PRIsizet" (total: %"PRIsizet"/%"PRIsizet")",
+				(void *)ctx->flex, line->count,
+				pos, ctx->item.count);
 
 		if (!layout_flex__resolve_line(ctx, line)) {
 			return false;

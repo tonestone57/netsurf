@@ -13,6 +13,49 @@
 #include "desktop/browser_private.h"
 #include "desktop/scrollbar.h"
 
+/* Forward declarations */
+static void qjsky_node_finalizer(JSRuntime *rt, JSValue val);
+static void qjsky_event_finalizer(JSRuntime *rt, JSValue val);
+static void qjsky_uievent_finalizer(JSRuntime *rt, JSValue val);
+static void qjsky_mouseevent_finalizer(JSRuntime *rt, JSValue val);
+static void qjsky_keyboardevent_finalizer(JSRuntime *rt, JSValue val);
+static JSValue qjsky_event_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+
+/* Class Definitions */
+static JSClassDef qjsky_node_class = {
+	"Node",
+	.finalizer = qjsky_node_finalizer,
+};
+
+static JSClassDef qjsky_event_class = {
+	"Event",
+	.finalizer = qjsky_event_finalizer,
+};
+
+static JSClassDef qjsky_uievent_class = {
+	"UIEvent",
+	.finalizer = qjsky_uievent_finalizer,
+};
+
+static JSClassDef qjsky_mouseevent_class = {
+	"MouseEvent",
+	.finalizer = qjsky_mouseevent_finalizer,
+};
+
+static JSClassDef qjsky_keyboardevent_class = {
+	"KeyboardEvent",
+	.finalizer = qjsky_keyboardevent_finalizer,
+};
+
+extern JSClassDef qjsky_xhr_class;
+extern JSClassDef qjsky_location_class;
+extern JSClassDef qjsky_history_class;
+extern JSClassDef qjsky_navigator_class;
+extern JSClassDef qjsky_screen_class;
+extern JSClassDef qjsky_barprop_class;
+extern JSClassDef qjsky_url_class;
+extern JSClassDef qjsky_urlsearchparams_class;
+
 /* Timer tracking */
 typedef struct qjsky_timer_s {
 	JSContext *ctx;
@@ -23,6 +66,148 @@ typedef struct qjsky_timer_s {
 	struct qjsky_timer_s *r_next;
 	struct qjsky_timer_s *r_prev;
 } qjsky_timer_t;
+
+static void qjsky_timer_cb(void *p)
+{
+	qjsky_timer_t *timer = (qjsky_timer_t *)p;
+	JSContext *ctx = timer->ctx;
+	int handle = timer->handle;
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+
+	JSValue ret = JS_Call(ctx, timer->func, JS_UNDEFINED, 0, NULL);
+	if (JS_IsException(ret)) qjs_log_exception(ctx, "JS Timer Error");
+	JS_FreeValue(ctx, ret);
+
+	/* Run pending jobs (Promises) after timer callback */
+	qjs_run_jobs(ctx);
+
+	/* Check if timer is still in the ring (might have been cleared by JS) */
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+	qjsky_timer_t *curr = timer_ring;
+	qjsky_timer_t *found = NULL;
+	if (curr) {
+		do {
+			if (curr->handle == handle) {
+				found = curr;
+				break;
+			}
+			curr = curr->r_next;
+		} while (curr != timer_ring);
+	}
+
+	if (found == NULL) return;
+
+	if (found->repeating) {
+		guit->misc->schedule(found->ms, qjsky_timer_cb, found);
+	} else {
+		RING_REMOVE(timer_ring, found);
+		heap->timer_ring = timer_ring;
+		JS_FreeValue(ctx, found->func);
+		free(found);
+	}
+}
+
+static JSValue qjsky_set_timer(JSContext *ctx, int argc, JSValueConst *argv, bool repeating)
+{
+	if (argc < 1) return JS_EXCEPTION;
+
+	int32_t ms = 0;
+	if (argc > 1) {
+		if (JS_ToInt32(ctx, &ms, argv[1]) < 0) ms = 0;
+	}
+	if (ms < 0) ms = 0;
+
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_timer_t *timer = malloc(sizeof(*timer));
+	if (!timer) return JS_EXCEPTION;
+
+	timer->ctx = ctx;
+	timer->func = JS_DupValue(ctx, argv[0]);
+	timer->repeating = repeating;
+	timer->ms = ms;
+	timer->handle = heap->next_timer_handle++;
+
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+	RING_INSERT(timer_ring, timer);
+	heap->timer_ring = timer_ring;
+	guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
+
+	return JS_NewInt32(ctx, timer->handle);
+}
+
+static JSValue qjsky_window_setTimeout(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	return qjsky_set_timer(ctx, argc, argv, false);
+}
+
+static JSValue qjsky_window_setInterval(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	return qjsky_set_timer(ctx, argc, argv, true);
+}
+
+static JSValue qjsky_window_clearTimeout(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_UNDEFINED;
+	int32_t handle;
+	if (JS_ToInt32(ctx, &handle, argv[0]) < 0) return JS_UNDEFINED;
+
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+	qjsky_timer_t *timer = timer_ring;
+	if (timer) {
+		do {
+			if (timer->handle == handle) {
+				guit->misc->schedule(-1, qjsky_timer_cb, timer);
+				RING_REMOVE(timer_ring, timer);
+				heap->timer_ring = timer_ring;
+				JS_FreeValue(ctx, timer->func);
+				free(timer);
+				break;
+			}
+			timer = timer->r_next;
+		} while (timer != timer_ring);
+	}
+	return JS_UNDEFINED;
+}
+
+void qjsky_timer_init(JSContext *ctx)
+{
+	JSValue global = JS_GetGlobalObject(ctx);
+	JS_SetPropertyStr(ctx, global, "setTimeout", JS_NewCFunction(ctx, qjsky_window_setTimeout, "setTimeout", 2));
+	JS_SetPropertyStr(ctx, global, "setInterval", JS_NewCFunction(ctx, qjsky_window_setInterval, "setInterval", 2));
+	JS_SetPropertyStr(ctx, global, "clearTimeout", JS_NewCFunction(ctx, qjsky_window_clearTimeout, "clearTimeout", 1));
+	JS_SetPropertyStr(ctx, global, "clearInterval", JS_NewCFunction(ctx, qjsky_window_clearTimeout, "clearInterval", 1));
+	JS_FreeValue(ctx, global);
+}
+
+void qjsky_timer_cleanup(JSContext *ctx)
+{
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
+	qjsky_timer_t *timer;
+	qjsky_timer_t *next;
+	bool again;
+
+	do {
+		again = false;
+		timer = timer_ring;
+		if (timer == NULL) break;
+
+		do {
+			next = timer->r_next;
+			if (timer->ctx == ctx) {
+				guit->misc->schedule(-1, qjsky_timer_cb, timer);
+				JS_FreeValue(ctx, timer->func);
+				RING_REMOVE(timer_ring, timer);
+				free(timer);
+				again = true;
+				break;
+			}
+			timer = next;
+		} while (timer != timer_ring);
+	} while (again);
+	heap->timer_ring = timer_ring;
+}
 
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -120,7 +305,7 @@ void qjsky_init_runtime(struct jsheap *heap)
 	JS_NewClass(heap->rt, heap->url_class_id, &qjsky_url_class);
 
 	JS_NewClassID(&heap->urlsearchparams_class_id);
-	JS_NewClass(heap->rt, heap->urlsearchparams_class_id, &qjsky_usp_class);
+	JS_NewClass(heap->rt, heap->urlsearchparams_class_id, &qjsky_urlsearchparams_class);
 
 	JS_SetRuntimeOpaque(heap->rt, heap);
 }
@@ -390,10 +575,13 @@ static JSValue qjsky_keyboardevent_get_key(JSContext *ctx, JSValueConst this_val
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	struct dom_keyboard_event *evt = JS_GetOpaque2(ctx, this_val, heap->keyboardevent_class_id);
 	if (!evt) return JS_EXCEPTION;
-	dom_string *key;
+	dom_string *key = NULL;
 	dom_keyboard_event_get_key(evt, &key);
-	JSValue val = qjsky_dom_string_to_js_value(ctx, key);
-	dom_string_unref(key);
+	JSValue val = JS_NULL;
+	if (key) {
+		val = qjsky_dom_string_to_js_value(ctx, key);
+		dom_string_unref(key);
+	}
 	return val;
 }
 
@@ -505,6 +693,206 @@ static JSValue qjsky_event_ctor(JSContext *ctx, JSValueConst new_target, int arg
 	return obj;
 }
 
+void qjsky_init_context(JSContext *ctx)
+{
+	JSRuntime *rt = JS_GetRuntime(ctx);
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	JSValue global = JS_GetGlobalObject(ctx);
+
+	/* Ensure support for necessary intrinsics */
+	JS_AddIntrinsicMapSet(ctx);
+	JS_AddIntrinsicBigInt(ctx);
+
+	/* Initialize atoms */
+	if (heap->node_map_atom == JS_ATOM_NULL) {
+		JSValue sym_ctor = JS_GetPropertyStr(ctx, global, "Symbol");
+		JSValue arg;
+		JSValue sym;
+
+		arg = JS_NewString(ctx, "nodeMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->node_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "handlerMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->handler_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "handlerListenerMap");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->handler_listener_map_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "eventProto");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->event_proto_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "uieventProto");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->uievent_proto_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "mouseeventProto");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->mouseevent_proto_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		arg = JS_NewString(ctx, "keyboardeventProto");
+		sym = JS_Call(ctx, sym_ctor, JS_UNDEFINED, 1, &arg);
+		heap->keyboardevent_proto_atom = JS_ValueToAtom(ctx, sym);
+		JS_FreeValue(ctx, sym);
+		JS_FreeValue(ctx, arg);
+
+		JS_FreeValue(ctx, sym_ctor);
+	}
+
+	JSValue map_ctor = JS_GetPropertyStr(ctx, global, "Map");
+	JSValue map = JS_CallConstructor(ctx, map_ctor, 0, NULL);
+	JS_FreeValue(ctx, map_ctor);
+
+	JS_SetProperty(ctx, global, heap->node_map_atom, map);
+
+	/* Initialize Event prototypes and inheritance */
+	JSValue event_proto = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, event_proto, qjsky_event_proto_funcs, sizeof(qjsky_event_proto_funcs)/sizeof(qjsky_event_proto_funcs[0]));
+	JS_SetClassProto(ctx, heap->event_class_id, JS_DupValue(ctx, event_proto));
+
+	JSValue event_ctor = JS_NewCFunction2(ctx, qjsky_event_ctor, "Event", 1, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(ctx, event_ctor, event_proto);
+	JS_SetPropertyStr(ctx, global, "Event", event_ctor);
+
+	JSValue uievent_proto = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, uievent_proto, qjsky_uievent_proto_funcs, sizeof(qjsky_uievent_proto_funcs)/sizeof(qjsky_uievent_proto_funcs[0]));
+	JS_SetPrototype(ctx, uievent_proto, event_proto);
+	JS_SetClassProto(ctx, heap->uievent_class_id, JS_DupValue(ctx, uievent_proto));
+
+	JSValue mouseevent_proto = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, mouseevent_proto, qjsky_mouseevent_proto_funcs, sizeof(qjsky_mouseevent_proto_funcs)/sizeof(qjsky_mouseevent_proto_funcs[0]));
+	JS_SetPrototype(ctx, mouseevent_proto, uievent_proto);
+	JS_SetClassProto(ctx, heap->mouseevent_class_id, JS_DupValue(ctx, mouseevent_proto));
+
+	JSValue keyboardevent_proto = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, keyboardevent_proto, qjsky_keyboardevent_proto_funcs, sizeof(qjsky_keyboardevent_proto_funcs)/sizeof(qjsky_keyboardevent_proto_funcs[0]));
+	JS_SetPrototype(ctx, keyboardevent_proto, uievent_proto);
+	JS_SetClassProto(ctx, heap->keyboardevent_class_id, JS_DupValue(ctx, keyboardevent_proto));
+
+	/* Attach prototypes to global and consume references */
+	JS_SetProperty(ctx, global, heap->event_proto_atom, event_proto);
+	JS_SetProperty(ctx, global, heap->uievent_proto_atom, uievent_proto);
+	JS_SetProperty(ctx, global, heap->mouseevent_proto_atom, mouseevent_proto);
+	JS_SetProperty(ctx, global, heap->keyboardevent_proto_atom, keyboardevent_proto);
+
+	JS_FreeValue(ctx, global);
+}
+
+JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
+{
+	if (!node) return JS_NULL;
+
+	JSRuntime *rt = JS_GetRuntime(ctx);
+	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue map = JS_GetProperty(ctx, global, heap->node_map_atom);
+	JS_FreeValue(ctx, global);
+
+	/* Key for the map: use BigUint64 for pointer precision */
+	JSValue key = JS_NewBigUint64(ctx, (uint64_t)(uintptr_t)node);
+
+	JSValue get_fn = JS_GetPropertyStr(ctx, map, "get");
+	JSValue existing = JS_Call(ctx, get_fn, map, 1, &key);
+	JS_FreeValue(ctx, get_fn);
+
+	if (!JS_IsUndefined(existing)) {
+		JS_FreeValue(ctx, key);
+		JS_FreeValue(ctx, map);
+		return existing;
+	}
+
+	JSValue obj = JS_NewObjectClass(ctx, heap->node_class_id);
+	if (JS_IsException(obj)) {
+		JS_FreeValue(ctx, key);
+		JS_FreeValue(ctx, map);
+		return obj;
+	}
+	JS_SetOpaque(obj, node);
+	dom_node_ref(node);
+
+	/* Attach private maps for handlers and listeners */
+	JS_SetProperty(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx));
+	JS_SetProperty(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx));
+
+	/* Store in memoization map */
+	JSValue set_fn = JS_GetPropertyStr(ctx, map, "set");
+	JSValue args[2] = { key, JS_DupValue(ctx, obj) };
+	JSValue ret = JS_Call(ctx, set_fn, map, 2, args);
+	JS_FreeValue(ctx, ret);
+	JS_FreeValue(ctx, args[1]);
+	JS_FreeValue(ctx, set_fn);
+	JS_FreeValue(ctx, key);
+
+	JS_FreeValue(ctx, map);
+
+	return obj;
+}
+
+static void qjsky_log_at_level(JSContext *ctx, int argc, JSValueConst *argv, nslog_level level)
+{
+	for (int i = 0; i < argc; i++) {
+		const char *str = JS_ToCString(ctx, argv[i]);
+		if (str) {
+			/* NetSurf NSLOG expects a literal for the level, so we dispatch based on our own switch */
+			switch(level) {
+				case NSLOG_LEVEL_WARNING: NSLOG(jserrors, WARNING, "%s", str); break;
+				case NSLOG_LEVEL_ERROR: NSLOG(jserrors, ERROR, "%s", str); break;
+				case NSLOG_LEVEL_INFO:
+				default: NSLOG(jserrors, INFO, "%s", str); break;
+			}
+			JS_FreeCString(ctx, str);
+		}
+	}
+}
+
+static JSValue qjsky_console_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_INFO);
+	return JS_UNDEFINED;
+}
+
+static JSValue qjsky_console_warn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_WARNING);
+	return JS_UNDEFINED;
+}
+
+static JSValue qjsky_console_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	qjsky_log_at_level(ctx, argc, argv, NSLOG_LEVEL_ERROR);
+	return JS_UNDEFINED;
+}
+
+void qjsky_init_console(JSContext *ctx)
+{
+	static const JSCFunctionListEntry qjsky_console_funcs[] = {
+		JS_CFUNC_DEF("log", 1, qjsky_console_log),
+		JS_CFUNC_DEF("info", 1, qjsky_console_log),
+		JS_CFUNC_DEF("warn", 1, qjsky_console_warn),
+		JS_CFUNC_DEF("error", 1, qjsky_console_error),
+	};
+	JSValue global = JS_GetGlobalObject(ctx);
+	JSValue console = JS_NewObject(ctx);
+	JS_SetPropertyFunctionList(ctx, console, qjsky_console_funcs, sizeof(qjsky_console_funcs)/sizeof(qjsky_console_funcs[0]));
+	JS_SetPropertyStr(ctx, global, "console", console);
+	JS_FreeValue(ctx, global);
+}
+
 static JSValue qjsky_get_handler(JSContext *ctx, struct dom_element *ele, dom_string *name)
 {
 	JSValue node_val = qjsky_push_node(ctx, (struct dom_node *)ele);
@@ -602,8 +990,7 @@ static void qjsky_generic_event_handler(dom_event *evt, void *pw)
 	JS_FreeValue(ctx, event_val);
 	JS_FreeValue(ctx, node_val);
 
-	JSContext *ctx1;
-	while (JS_ExecutePendingJob(JS_GetRuntime(ctx), &ctx1) > 0);
+	qjs_run_jobs(ctx);
 
 	dom_node_unref((struct dom_node *)targ);
 	dom_string_unref(name);

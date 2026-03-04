@@ -11,3 +11,14 @@ void qjs_log_exception(JSContext *ctx, const char *prefix)
 	}
 	JS_FreeValue(ctx, exception);
 }
+
+void qjs_run_jobs(JSContext *ctx)
+{
+	JSContext *ctx1;
+	int ret;
+	while ((ret = JS_ExecutePendingJob(JS_GetRuntime(ctx), &ctx1)) != 0) {
+		if (ret < 0) {
+			qjs_log_exception(ctx1, "Promise job error");
+		}
+	}
+}
