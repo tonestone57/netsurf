@@ -122,6 +122,34 @@ getter Location::href()
 	return 1;
 %}
 
+setter Location::protocol()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (slen > 0 && s[slen-1] == ':') slen--;
+
+	lwc_string *scheme;
+	if (lwc_intern_string(s, slen, &scheme) != lwc_error_ok) return 0;
+
+	nsurl *new_url;
+	nsurl_replace_scheme(priv->url, scheme, &new_url);
+	lwc_string_unref(scheme);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+	return 0;
+%}
+
 setter Location::href()
 %{
 	/* retrieve the private data from the root object (window) */
@@ -235,7 +263,7 @@ getter Location::host()
 	char *url_s = NULL;
 	size_t url_l;
 
-	nsurl_get(priv->url, NSURL_HOST, &url_s, &url_l);
+	nsurl_get(priv->url, NSURL_HOST | NSURL_PORT, &url_s, &url_l);
 
 	/* if url_s is NULL duk_push_lstring pushes an empty string
 	 * which is correct for this API
@@ -249,6 +277,36 @@ getter Location::host()
 	return 1;
 %}
 
+setter Location::host()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+
+	const char *new_host = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s%s", new_host, (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+
+	duk_pop(ctx);
+	free(path_s);
+	return 0;
+%}
 
 getter Location::hostname()
 %{
@@ -269,7 +327,41 @@ getter Location::hostname()
 	return 1;
 %}
 
+setter Location::hostname()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
 
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	char *port_s = NULL;
+	size_t port_l = 0;
+	nsurl_get(priv->url, NSURL_PORT, &port_s, &port_l);
+
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+
+	const char *new_hostname = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s%s%s%s", new_hostname, (port_s != NULL ? ":" : ""), (port_s != NULL ? port_s : ""), (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+
+	duk_pop(ctx);
+	free(port_s);
+	free(path_s);
+	return 0;
+%}
 
 getter Location::port()
 %{
@@ -290,6 +382,41 @@ getter Location::port()
 	return 1;
 %}
 
+setter Location::port()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	char *host_s = NULL;
+	size_t host_l = 0;
+	nsurl_get(priv->url, NSURL_HOST, &host_s, &host_l);
+
+	char *path_s = NULL;
+	size_t path_l = 0;
+	nsurl_get(priv->url, NSURL_PATH | NSURL_QUERY | NSURL_FRAGMENT, &path_s, &path_l);
+
+	const char *new_port = duk_safe_to_string(ctx, 0);
+	duk_push_sprintf(ctx, "//%s:%s%s", (host_s != NULL ? host_s : ""), new_port, (path_s != NULL ? path_s : "/"));
+	const char *rel = duk_get_string(ctx, -1);
+
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+
+	duk_pop(ctx);
+	free(host_s);
+	free(path_s);
+	return 0;
+%}
 
 getter Location::pathname()
 %{
@@ -308,6 +435,41 @@ getter Location::pathname()
 	}
 
 	return 1;
+%}
+
+setter Location::pathname()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	char *query_s = NULL;
+	size_t query_l = 0;
+	nsurl_get(priv->url, NSURL_QUERY | NSURL_FRAGMENT, &query_s, &query_l);
+
+	const char *new_path = duk_safe_to_string(ctx, 0);
+	if (new_path[0] == '/') {
+		duk_push_sprintf(ctx, "%s%s", new_path, (query_s != NULL ? query_s : ""));
+	} else {
+		duk_push_sprintf(ctx, "/%s%s", new_path, (query_s != NULL ? query_s : ""));
+	}
+	const char *rel = duk_get_string(ctx, -1);
+
+	nsurl *new_url;
+	nsurl_join(priv->url, rel, &new_url);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+
+	duk_pop(ctx);
+	free(query_s);
+	return 0;
 %}
 
 
@@ -330,6 +492,28 @@ getter Location::search()
 	return 1;
 %}
 
+setter Location::search()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	const char *s = duk_safe_to_string(ctx, 0);
+	if (s[0] == '?') s++;
+
+	nsurl *new_url;
+	nsurl_replace_query(priv->url, s, &new_url);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+	return 0;
+%}
 
 getter Location::hash()
 %{
@@ -350,4 +534,31 @@ getter Location::hash()
 	return 1;
 %}
 
+setter Location::hash()
+%{
+	/* retrieve the private data from the root object (window) */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	if (priv_win == NULL || priv_win->win == NULL) {
+		return 0;
+	}
+
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (slen > 0 && s[0] == '#') { s++; slen--; }
+
+	lwc_string *frag;
+	if (lwc_intern_string(s, slen, &frag) != lwc_error_ok) return 0;
+
+	nsurl *new_url;
+	nsurl_refragment(priv->url, frag, &new_url);
+	lwc_string_unref(frag);
+
+	browser_window_navigate(priv_win->win, new_url, NULL, BW_NAVIGATE_HISTORY, NULL, NULL, NULL);
+	nsurl_unref(new_url);
+	return 0;
+%}
 

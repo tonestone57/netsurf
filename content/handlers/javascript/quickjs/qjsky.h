@@ -30,6 +30,13 @@ void qjsky_init_window(JSContext *ctx);
 void qjsky_timer_init(JSContext *ctx);
 void qjsky_timer_cleanup(JSContext *ctx);
 
+/* URL Classes */
+extern JSClassDef qjsky_url_class;
+extern JSClassDef qjsky_usp_class;
+
+JSValue qjsky_url_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+JSValue qjsky_usp_ctor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv);
+
 /* Event Support */
 void qjsky_register_event_listener_for(JSContext *ctx, struct dom_element *ele, dom_string *name, dom_string *value, bool capture);
 JSValue qjsky_push_event(JSContext *ctx, dom_event *evt);

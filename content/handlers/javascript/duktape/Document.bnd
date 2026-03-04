@@ -228,6 +228,70 @@ method Document::createAttribute()
 %}
 
 
+getter Document::characterSet()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
+%}
+
+getter Document::charset()
+%{
+	dom_exception err;
+	struct html_content *htmlc;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
+%}
+
+getter Document::inputEncoding()
+%{
+	dom_exception err;
+	struct html_content *htmlc;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
+%}
+
+getter Document::contentType()
+%{
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, "text/html"); /* NetSurf HTML content is always text/html */
+		return 1;
+	}
+	duk_push_string(ctx, "application/xml");
+	return 1;
+%}
+
 getter Document::title()
 %{
 	struct html_content *htmlc;
@@ -385,6 +449,18 @@ setter Document::domain()
 	 * Any value passed is currently ignored.
 	 */
 	return 0;
+%}
+
+getter Document::hidden()
+%{
+	duk_push_boolean(ctx, false); /* NetSurf doesn't really support page visibility yet */
+	return 1;
+%}
+
+getter Document::visibilityState()
+%{
+	duk_push_string(ctx, "visible");
+	return 1;
 %}
 
 getter Document::lastModified()

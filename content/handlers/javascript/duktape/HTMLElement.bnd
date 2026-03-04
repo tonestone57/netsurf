@@ -80,6 +80,61 @@ setter HTMLElement::lang()
 	return 0;
 %}
 
+getter HTMLElement::hidden()
+%{
+	dom_string *val = NULL;
+	dom_exception exc;
+	exc = dom_element_get_attribute(priv->parent.parent.node, corestring_dom_hidden, &val);
+	if (exc == DOM_NO_ERR && val != NULL) {
+		dom_string_unref(val);
+		duk_push_boolean(ctx, true);
+	} else {
+		duk_push_boolean(ctx, false);
+	}
+	return 1;
+%}
+
+setter HTMLElement::hidden()
+%{
+	dom_exception exc;
+	bool hidden = duk_to_boolean(ctx, 0);
+	if (hidden) {
+		exc = dom_element_set_attribute(priv->parent.parent.node, corestring_dom_hidden, corestring_dom_hidden);
+	} else {
+		exc = dom_element_remove_attribute(priv->parent.parent.node, corestring_dom_hidden);
+	}
+	return 0;
+%}
+
+getter HTMLElement::tabIndex()
+%{
+	dom_string *val = NULL;
+	dom_exception exc;
+	exc = dom_element_get_attribute(priv->parent.parent.node, corestring_dom_tabIndex, &val);
+	if (exc == DOM_NO_ERR && val != NULL) {
+		duk_push_int(ctx, atoi((const char *)dom_string_data(val)));
+		dom_string_unref(val);
+	} else {
+		duk_push_int(ctx, -1);
+	}
+	return 1;
+%}
+
+setter HTMLElement::tabIndex()
+%{
+	dom_exception exc;
+	int idx = duk_to_int(ctx, 0);
+	char buf[16];
+	snprintf(buf, sizeof(buf), "%d", idx);
+	dom_string *s;
+	exc = dom_string_create((const uint8_t *)buf, strlen(buf), &s);
+	if (exc == DOM_NO_ERR) {
+		exc = dom_element_set_attribute(priv->parent.parent.node, corestring_dom_tabIndex, s);
+		dom_string_unref(s);
+	}
+	return 0;
+%}
+
 getter HTMLElement::title()
 %{
 	dom_exception err;
@@ -108,6 +163,19 @@ setter HTMLElement::title()
 
 	err = dom_html_element_set_title((dom_html_element *)priv->parent.parent.node, str);
 	dom_string_unref(str);
+	return 0;
+%}
+
+method HTMLElement::click()
+%{
+	/* Simple implementation of click() - fire a click event */
+	dom_event *evt;
+	if (dom_event_create(&evt) == DOM_NO_ERR) {
+		dom_event_init(evt, corestring_dom_click, true, true);
+		bool status;
+		dom_event_target_dispatch_event(priv->parent.parent.node, evt, &status);
+		dom_event_unref(evt);
+	}
 	return 0;
 %}
 

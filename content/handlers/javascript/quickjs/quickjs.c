@@ -12,6 +12,7 @@
 #include "content/handlers/javascript/quickjs/location.h"
 #include "content/handlers/javascript/quickjs/history.h"
 #include "content/handlers/javascript/quickjs/navigator.h"
+#include "content/handlers/javascript/quickjs/url.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -58,6 +59,9 @@ void js_destroyheap(struct jsheap *heap)
 {
 	if (heap == NULL) return;
 
+	JS_FreeClassID(heap->rt, heap->url_class_id);
+	JS_FreeClassID(heap->rt, heap->urlsearchparams_class_id);
+
 	if (heap->node_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
 	if (heap->handler_map_atom != JS_ATOM_NULL)
@@ -100,6 +104,8 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_location(thread->ctx);
 	qjsky_init_history(thread->ctx);
 	qjsky_init_navigator(thread->ctx);
+	qjsky_init_url(thread->ctx);
+	qjsky_init_urlsearchparams(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -146,6 +152,19 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	/* window.navigator */
 	JSValue nav_obj = qjsky_create_navigator(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "navigator", nav_obj);
+
+	/* URL and URLSearchParams constructors */
+	JSValue url_proto = JS_GetClassProto(thread->ctx, heap->url_class_id);
+	JSValue url_ctor = JS_NewCFunction2(thread->ctx, qjsky_url_ctor, "URL", 1, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(thread->ctx, url_ctor, url_proto);
+	JS_SetPropertyStr(thread->ctx, global, "URL", url_ctor);
+	JS_FreeValue(thread->ctx, url_proto);
+
+	JSValue usp_proto = JS_GetClassProto(thread->ctx, heap->urlsearchparams_class_id);
+	JSValue usp_ctor = JS_NewCFunction2(thread->ctx, qjsky_usp_ctor, "URLSearchParams", 1, JS_CFUNC_constructor, 0);
+	JS_SetConstructor(thread->ctx, usp_ctor, usp_proto);
+	JS_SetPropertyStr(thread->ctx, global, "URLSearchParams", usp_ctor);
+	JS_FreeValue(thread->ctx, usp_proto);
 
 	JS_FreeValue(thread->ctx, global);
 
