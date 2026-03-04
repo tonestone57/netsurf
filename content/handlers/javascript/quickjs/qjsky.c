@@ -71,6 +71,7 @@ static void qjsky_timer_cb(void *p)
 {
 	qjsky_timer_t *timer = (qjsky_timer_t *)p;
 	JSContext *ctx = timer->ctx;
+	int handle = timer->handle;
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 
 	JSValue ret = JS_Call(ctx, timer->func, JS_UNDEFINED, 0, NULL);
@@ -83,26 +84,26 @@ static void qjsky_timer_cb(void *p)
 	/* Check if timer is still in the ring (might have been cleared by JS) */
 	qjsky_timer_t *timer_ring = (qjsky_timer_t *)heap->timer_ring;
 	qjsky_timer_t *curr = timer_ring;
-	bool alive = false;
+	qjsky_timer_t *found = NULL;
 	if (curr) {
 		do {
-			if (curr == timer) {
-				alive = true;
+			if (curr->handle == handle) {
+				found = curr;
 				break;
 			}
 			curr = curr->r_next;
 		} while (curr != timer_ring);
 	}
 
-	if (!alive) return;
+	if (found == NULL) return;
 
-	if (timer->repeating) {
-		guit->misc->schedule(timer->ms, qjsky_timer_cb, timer);
+	if (found->repeating) {
+		guit->misc->schedule(found->ms, qjsky_timer_cb, found);
 	} else {
-		RING_REMOVE(timer_ring, timer);
+		RING_REMOVE(timer_ring, found);
 		heap->timer_ring = timer_ring;
-		JS_FreeValue(ctx, timer->func);
-		free(timer);
+		JS_FreeValue(ctx, found->func);
+		free(found);
 	}
 }
 
