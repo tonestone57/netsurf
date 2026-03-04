@@ -136,8 +136,8 @@ html_convert_css_callback(hlcache_handle *css,
 		break;
 	}
 
-	if (html_can_begin_conversion(parent)) {
-		html_begin_conversion(parent);
+	if (html__can_begin_conversion(parent)) {
+		html__begin_conversion(parent);
 	}
 
 	return NSERROR_OK;

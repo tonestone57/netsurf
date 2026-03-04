@@ -197,7 +197,7 @@ static void imagemap_freelist(struct mapentry *list)
  *
  * \param c The containing content
  */
-void imagemap_destroy(html_content *c)
+void imagemap__destroy(html_content *c)
 {
 	unsigned int i;
 
@@ -228,7 +228,7 @@ void imagemap_destroy(html_content *c)
  *
  * \param c The containing content
  */
-void imagemap_dump(html_content *c)
+void imagemap__dump(html_content *c)
 {
 	unsigned int i;
 
@@ -368,7 +368,7 @@ imagemap_addtolist(const struct html_content *c,
 	else
 		goto bad_out;
 
-	if (box_extract_link(c, href, base_url, &new_map->url) == false)
+	if (box_construct__extract_link(c, href, base_url, &new_map->url) == false)
 		goto bad_out;
 
 	if (new_map->url == NULL) {
@@ -600,7 +600,7 @@ static bool imagemap_extract_map(dom_node *node, html_content *c,
  * \return false on memory exhaustion, true otherwise
  */
 nserror
-imagemap_extract(html_content *c)
+imagemap__extract(html_content *c)
 {
 	dom_nodelist *nlist;
 	dom_exception exc;

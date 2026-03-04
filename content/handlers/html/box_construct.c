@@ -172,7 +172,7 @@ box_extract_properties(dom_node *n, struct box_construct_props *props)
 			if (err != DOM_NO_ERR || parent_node == NULL)
 				break;
 
-			parent_box = box_for_node(parent_node);
+			parent_box = box_construct__box_for_node(parent_node);
 
 			if (parent_box != NULL) {
 				props->parent_style = parent_box->style;
@@ -205,7 +205,7 @@ box_extract_properties(dom_node *n, struct box_construct_props *props)
 			if (current_node != n)
 				dom_node_unref(current_node);
 
-			b = box_for_node(parent_node);
+			b = box_construct__box_for_node(parent_node);
 
 			/* Children of nodes that created an inline box
 			 * will generate boxes which are attached as
@@ -350,7 +350,7 @@ box_construct_generate(dom_node *n,
 		gen->type = box_map[ns_computed_display(
 				style, box_is_root(n))];
 
-		box_add_child(box, gen);
+		box__add_child(box, gen);
 	}
 }
 
@@ -638,7 +638,7 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 		/* Can't do this, because the lifetimes of boxes and gadgets
 		 * are inextricably linked. Fortunately, talloc will save us
 		 * (for now) */
-		/* box_free_box(box); */
+		/* box__free_box(box); */
 
 		*convert_children = false;
 
@@ -676,7 +676,7 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 
 		props.inline_container->type = BOX_INLINE_CONTAINER;
 
-		box_add_child(props.containing_block, props.inline_container);
+		box__add_child(props.containing_block, props.inline_container);
 	}
 
 	/* Kick off fetch for any background image */
@@ -711,7 +711,7 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 		 * created it above if it didn't */
 		assert(props.inline_container != NULL);
 
-		box_add_child(props.inline_container, box);
+		box__add_child(props.inline_container, box);
 	} else {
 		if (ns_computed_display(box->style, props.node_is_root) ==
 				CSS_DISPLAY_LIST_ITEM) {
@@ -739,14 +739,14 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 			else
 				flt->type = BOX_FLOAT_RIGHT;
 
-			box_add_child(props.inline_container, flt);
-			box_add_child(flt, box);
+			box__add_child(props.inline_container, flt);
+			box__add_child(flt, box);
 		} else {
 			/* Non-floated block-level box: add to containing block
 			 * if there is one. If we're the root box, then there
 			 * won't be. */
 			if (props.containing_block != NULL)
-				box_add_child(props.containing_block, box);
+				box__add_child(props.containing_block, box);
 		}
 	}
 
@@ -765,7 +765,7 @@ box_construct_element(struct box_construct_ctx *ctx, bool *convert_children)
 static void box_construct_element_after(dom_node *n, html_content *content)
 {
 	struct box_construct_props props;
-	struct box *box = box_for_node(n);
+	struct box *box = box_construct__box_for_node(n);
 
 	assert(box != NULL);
 
@@ -796,7 +796,7 @@ static void box_construct_element_after(dom_node *n, html_content *content)
 
 			props.inline_container->type = BOX_INLINE_CONTAINER;
 
-			box_add_child(props.containing_block,
+			box__add_child(props.containing_block,
 					props.inline_container);
 		}
 
@@ -809,7 +809,7 @@ static void box_construct_element_after(dom_node *n, html_content *content)
 
 			assert(props.inline_container != NULL);
 
-			box_add_child(props.inline_container, inline_end);
+			box__add_child(props.inline_container, inline_end);
 
 			box->inline_end = inline_end;
 			inline_end->inline_end = box;
@@ -861,11 +861,11 @@ next_node(dom_node *n, html_content *content, bool convert_children)
 		}
 
 		if (next != NULL) {
-			if (box_for_node(n) != NULL)
+			if (box_construct__box_for_node(n) != NULL)
 				box_construct_element_after(n, content);
 			dom_node_unref(n);
 		} else {
-			if (box_for_node(n) != NULL)
+			if (box_construct__box_for_node(n) != NULL)
 				box_construct_element_after(n, content);
 
 			while (box_is_root(n) == false) {
@@ -898,7 +898,7 @@ next_node(dom_node *n, html_content *content, bool convert_children)
 				n = parent;
 				parent = NULL;
 
-				if (box_for_node(n) != NULL) {
+				if (box_construct__box_for_node(n) != NULL) {
 					box_construct_element_after(
 							n, content);
 				}
@@ -922,7 +922,7 @@ next_node(dom_node *n, html_content *content, bool convert_children)
 					return NULL;
 				}
 
-				if (box_for_node(parent) != NULL) {
+				if (box_construct__box_for_node(parent) != NULL) {
 					box_construct_element_after(parent,
 							content);
 				}
@@ -1040,7 +1040,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 			props.inline_container->type = BOX_INLINE_CONTAINER;
 
-			box_add_child(props.containing_block,
+			box__add_child(props.containing_block,
 					props.inline_container);
 		}
 
@@ -1075,7 +1075,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 				css_computed_text_transform(
 					props.parent_style));
 
-		box_add_child(props.inline_container, box);
+		box__add_child(props.inline_container, box);
 
 		if (box->text[0] == ' ') {
 			box->length--;
@@ -1159,7 +1159,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 				props.inline_container->type =
 						BOX_INLINE_CONTAINER;
 
-				box_add_child(props.containing_block,
+				box__add_child(props.containing_block,
 						props.inline_container);
 			}
 
@@ -1183,7 +1183,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 
 			box->length = strlen(box->text);
 
-			box_add_child(props.inline_container, box);
+			box__add_child(props.inline_container, box);
 
 			current[len] = old;
 
@@ -1202,7 +1202,7 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 				props.inline_container->type =
 						BOX_INLINE_CONTAINER;
 
-				box_add_child(props.containing_block,
+				box__add_child(props.containing_block,
 						props.inline_container);
 
 				if (current[0] == '\r' && current[1] == '\n')
@@ -1344,7 +1344,7 @@ dom_to_box(dom_node *n,
 
 
 /* exported function documented in html/box_construct.h */
-nserror cancel_dom_to_box(void *box_conversion_context)
+nserror box_construct__cancel(void *box_conversion_context)
 {
 	struct box_construct_ctx *ctx = box_conversion_context;
 	nserror err;
@@ -1362,7 +1362,7 @@ nserror cancel_dom_to_box(void *box_conversion_context)
 
 
 /* exported function documented in html/box_construct.h */
-struct box *box_for_node(dom_node *n)
+struct box *box_construct__box_for_node(dom_node *n)
 {
 	struct box *box = NULL;
 	dom_exception err;
@@ -1377,7 +1377,7 @@ struct box *box_for_node(dom_node *n)
 
 /* exported function documented in html/box_construct.h */
 bool
-box_extract_link(const html_content *content,
+box_construct__extract_link(const html_content *content,
 		 const dom_string *dsrel,
 		 nsurl *base,
 		 nsurl **result)

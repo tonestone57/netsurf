@@ -287,7 +287,7 @@ dom_SCRIPT_showed_up(html_content *htmlc, dom_html_script_element *script)
 		return;
 	}
 
-	res = html_process_script(htmlc, (dom_node *) script);
+	res = html__process_script(htmlc, (dom_node *) script);
 	if (res == DOM_HUBBUB_OK) {
 		NSLOG(netsurf, DEEPDEBUG, "Inserted script has finished running");
 	} else {
@@ -561,7 +561,7 @@ static bool html_process_title(html_content *c, dom_node *node)
  */
 static void html_texty_element_update(html_content *htmlc, dom_node *node)
 {
-	struct box *box = box_for_node(node);
+	struct box *box = box_construct__box_for_node(node);
 	if (box == NULL) {
 		return; /* No Box (yet?) so no gadget to update */
 	}

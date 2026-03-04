@@ -194,7 +194,7 @@ static void box_textarea_callback(void *data, struct textarea_msg *msg)
 			break;
 		}
 
-		box_coords(box, &x, &y);
+		box__coords(box, &x, &y);
 
 		content__request_redraw((struct content *)html,
 				x + msg->data.redraw.x0,

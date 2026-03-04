@@ -20,7 +20,7 @@
  * \file
  * interface to HTML layout.
  *
- * The main interface to the layout code is layout_document(), which takes a
+ * The main interface to the layout code is layout__document(), which takes a
  * normalized box tree and assigns coordinates and dimensions to the boxes, and
  * also adds boxes to the tree (eg. when formatting lines of text).
  */
@@ -40,6 +40,6 @@ struct gui_layout_table;
  * \param height available height
  * \return true on success, false on memory exhaustion
  */
-bool layout_document(struct html_content *content, int width, int height);
+bool layout__document(struct html_content *content, int width, int height);
 
 #endif

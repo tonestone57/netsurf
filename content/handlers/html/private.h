@@ -213,7 +213,7 @@ typedef struct html_content {
 } html_content;
 
 /**
- * Render padding and margin box outlines in html_redraw().
+ * Render padding and margin box outlines in html__redraw().
  */
 extern bool html_redraw_debug;
 
@@ -234,7 +234,7 @@ void html__redraw_a_box(html_content *htmlc, struct box *box);
  *
  * \param htmlc Content to convert
  */
-void html_finish_conversion(html_content *htmlc);
+void html__finish_conversion(html_content *htmlc);
 
 
 /**
@@ -243,7 +243,7 @@ void html_finish_conversion(html_content *htmlc);
  * \param htmlc		html content to test
  * \return true iff the html content conversion can begin
  */
-bool html_can_begin_conversion(html_content *htmlc);
+bool html__can_begin_conversion(html_content *htmlc);
 
 
 /**
@@ -251,13 +251,13 @@ bool html_can_begin_conversion(html_content *htmlc);
  *
  * \param htmlc Content to convert
  */
-bool html_begin_conversion(html_content *htmlc);
+bool html__begin_conversion(html_content *htmlc);
 
 
 /**
  * execute some text as a script element
  */
-bool html_exec(struct content *c, const char *src, size_t srclen);
+bool html__exec(struct content *c, const char *src, size_t srclen);
 
 
 /**
@@ -270,7 +270,7 @@ bool html_exec(struct content *c, const char *src, size_t srclen);
  * \param allow_defer allow deferred execution, if not, only async scripts.
  * \return NSERROR_OK error code.
  */
-nserror html_script_exec(html_content *htmlc, bool allow_defer);
+nserror html__script_exec(html_content *htmlc, bool allow_defer);
 
 
 /**
@@ -279,39 +279,39 @@ nserror html_script_exec(html_content *htmlc, bool allow_defer);
  * \param htmlc html content.
  * \return NSERROR_OK or error code.
  */
-nserror html_script_free(html_content *htmlc);
+nserror html__script_free(html_content *htmlc);
 
 
 /**
  * Check if any of the scripts loaded were insecure
  */
-bool html_saw_insecure_scripts(html_content *htmlc);
+bool html__saw_insecure_scripts(html_content *htmlc);
 
 
 /**
  * Complete the HTML content state machine *iff* all scripts are finished
  */
-nserror html_proceed_to_done(html_content *html);
+nserror html__proceed_to_done(html_content *html);
 
 
 /* in html/redraw.c */
-bool html_redraw(struct content *c, struct content_redraw_data *data,
+bool html__redraw(struct content *c, struct content_redraw_data *data,
 		const struct rect *clip, const struct redraw_context *ctx);
 
 
 /* in html/redraw_border.c */
-bool html_redraw_borders(struct box *box, int x_parent, int y_parent,
+bool html__redraw_borders(struct box *box, int x_parent, int y_parent,
 		int p_width, int p_height, const struct rect *clip, float scale,
 		const struct redraw_context *ctx);
 
 
-bool html_redraw_inline_borders(struct box *box, struct rect b,
+bool html__redraw_inline_borders(struct box *box, struct rect b,
 		const struct rect *clip, float scale, bool first, bool last,
 		const struct redraw_context *ctx);
 
 
 /* in html/script.c */
-dom_hubbub_error html_process_script(void *ctx, dom_node *node);
+dom_hubbub_error html__process_script(void *ctx, dom_node *node);
 
 
 /* in html/forms.c */

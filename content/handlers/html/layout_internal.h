@@ -37,7 +37,7 @@
  * This function carries out layout of a block and its children, as described
  * in CSS 2.1 9.4.1.
  */
-bool layout_block_context(
+bool layout__block_context(
 		struct box *block,
 		int viewport_height,
 		html_content *content);
@@ -78,7 +78,7 @@ bool layout_flex(
  * \param  style            style giving width, height, margins, paddings,
  *                          and borders
  */
-void layout_find_dimensions_internal(
+void layout__find_dimensions_internal(
 		const css_unit_ctx *unit_len_ctx,
 		int available_width,
 		int viewport_height,
@@ -493,7 +493,7 @@ static inline void layout_find_dimensions(
 	    box->cached_root_style != unit_len_ctx->root_style ||
 	    box->cached_available_width != available_width ||
 	    box->cached_viewport_height != viewport_height) {
-		layout_find_dimensions_internal(unit_len_ctx, available_width,
+		layout__find_dimensions_internal(unit_len_ctx, available_width,
 				viewport_height, box, style);
 	}
 

@@ -158,7 +158,7 @@ box_create(css_select_results *styles,
 
 
 /* Exported function documented in html/box.h */
-void box_add_child(struct box *parent, struct box *child)
+void box__add_child(struct box *parent, struct box *child)
 {
 	assert(parent);
 	assert(child);
@@ -177,7 +177,7 @@ void box_add_child(struct box *parent, struct box *child)
 
 
 /* Exported function documented in html/box.h */
-void box_insert_sibling(struct box *box, struct box *new_box)
+void box__insert_sibling(struct box *box, struct box *new_box)
 {
 	new_box->parent = box->parent;
 	new_box->prev = box;
@@ -191,7 +191,7 @@ void box_insert_sibling(struct box *box, struct box *new_box)
 
 
 /* Exported function documented in html/box.h */
-void box_unlink_and_free(struct box *box)
+void box__unlink_and_free(struct box *box)
 {
 	struct box *parent = box->parent;
 	struct box *next = box->next;
@@ -209,28 +209,28 @@ void box_unlink_and_free(struct box *box)
 	if (next)
 		next->prev = prev;
 
-	box_free(box);
+	box__free(box);
 }
 
 
 /* Exported function documented in html/box.h */
-void box_free(struct box *box)
+void box__free(struct box *box)
 {
 	struct box *child, *next;
 
 	/* free children first */
 	for (child = box->children; child; child = next) {
 		next = child->next;
-		box_free(child);
+		box__free(child);
 	}
 
 	/* last this box */
-	box_free_box(box);
+	box__free_box(box);
 }
 
 
 /* Exported function documented in html/box.h */
-void box_free_box(struct box *box)
+void box__free_box(struct box *box)
 {
 	if (!(box->flags & CLONE)) {
 		if (box->gadget)

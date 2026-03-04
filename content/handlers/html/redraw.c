@@ -544,7 +544,7 @@ static bool html_redraw_file(int x, int y, int width, int height,
 	plot_font_style_t fstyle;
 	nserror res;
 
-	font_plot_style_from_css(unit_len_ctx, box->style, &fstyle);
+	font__plot_style_from_css(unit_len_ctx, box->style, &fstyle);
 	fstyle.background = background_colour;
 
 	if (box->gadget->value) {
@@ -1138,7 +1138,7 @@ static bool html_redraw_text_box(const html_content *html, struct box *box,
 	bool excluded = (box->object != NULL);
 	plot_font_style_t fstyle;
 
-	font_plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
+	font__plot_style_from_css(&html->unit_len_ctx, box->style, &fstyle);
 	fstyle.background = current_background_color;
 
 	if (!text_redraw(box->text,
@@ -1534,7 +1534,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 	       box->gadget->type == GADGET_TEXTBOX ||
 	       box->gadget->type == GADGET_PASSWORD))) &&
 	    (border_top || border_right || border_bottom || border_left)) {
-		if (!html_redraw_borders(box, x_parent, y_parent,
+		if (!html__redraw_borders(box, x_parent, y_parent,
 				padding_width, padding_height, &r,
 				scale, ctx))
 			return false;
@@ -1600,7 +1600,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 				/* restore previous graphics window */
 				if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 					return false;
-				if (!html_redraw_inline_borders(box, b, &r,
+				if (!html__redraw_inline_borders(box, b, &r,
 						scale, first, false, ctx))
 					return false;
 				/* reset coords */
@@ -1633,7 +1633,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
 		/* restore previous graphics window */
 		if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 			return false;
-		if (!html_redraw_inline_borders(box, b, &r, scale, first, true,
+		if (!html__redraw_inline_borders(box, b, &r, scale, first, true,
 				ctx))
 			return false;
 
@@ -1895,9 +1895,9 @@ bool html_redraw_box(const html_content *html, struct box *box,
 		bool has_y_scroll = (overflow_y == CSS_OVERFLOW_SCROLL);
 
 		has_x_scroll |= (overflow_x == CSS_OVERFLOW_AUTO) &&
-				box_hscrollbar_present(box);
+				box__hscrollbar_present(box);
 		has_y_scroll |= (overflow_y == CSS_OVERFLOW_AUTO) &&
-				box_vscrollbar_present(box);
+				box__vscrollbar_present(box);
 
 		res = box_handle_scrollbars((struct content *)html,
 					    box, has_x_scroll, has_y_scroll);
@@ -1941,7 +1941,7 @@ bool html_redraw_box(const html_content *html, struct box *box,
  * x, y, clip_[xy][01] are in target coordinates.
  */
 
-bool html_redraw(struct content *c, struct content_redraw_data *data,
+bool html__redraw(struct content *c, struct content_redraw_data *data,
 		const struct rect *clip, const struct redraw_context *ctx)
 {
 	html_content *html = (html_content *) c;
@@ -1986,7 +1986,7 @@ bool html_redraw(struct content *c, struct content_redraw_data *data,
 	if (select) {
 		int menu_x, menu_y;
 		box = html->visible_select_menu->box;
-		box_coords(box, &menu_x, &menu_y);
+		box__coords(box, &menu_x, &menu_y);
 
 		menu_x -= box->border[LEFT].width;
 		menu_y += box->height + box->border[BOTTOM].width +

@@ -132,7 +132,7 @@ static plot_font_flags_t plot_font_flags(enum css_font_style_e style,
 
 
 /* exported function documented in html/font.h */
-void font_plot_style_from_css(
+void font__plot_style_from_css(
 		const css_unit_ctx *unit_len_ctx,
 		const css_computed_style *css,
 		plot_font_style_t *fstyle)

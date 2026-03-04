@@ -56,7 +56,7 @@ static script_handler_t *select_script_handler(content_type ctype)
 
 
 /* exported internal interface documented in html/html_internal.h */
-nserror html_script_exec(html_content *c, bool allow_defer)
+nserror html__script_exec(html_content *c, bool allow_defer)
 {
 	unsigned int i;
 	struct html_script *s;
@@ -112,7 +112,7 @@ nserror html_script_exec(html_content *c, bool allow_defer)
 	}
 
 	if (have_run_something) {
-		return html_proceed_to_done(c);
+		return html__proceed_to_done(c);
 	}
 
 	return NSERROR_OK;
@@ -206,15 +206,15 @@ convert_script_async_cb(hlcache_handle *script,
 	/* if there are no active fetches remaining begin post parse
 	 * conversion
 	 */
-	if (html_can_begin_conversion(parent)) {
-		html_begin_conversion(parent);
+	if (html__can_begin_conversion(parent)) {
+		html__begin_conversion(parent);
 	}
 
 	/* if we have already started converting though, then we can handle the
 	 * scripts as they come in.
 	 */
 	else if (parent->conversion_begun) {
-		return html_script_exec(parent, false);
+		return html__script_exec(parent, false);
 	}
 
 	return NSERROR_OK;
@@ -269,8 +269,8 @@ convert_script_defer_cb(hlcache_handle *script,
 	/* if there are no active fetches remaining begin post parse
 	 * conversion
 	 */
-	if (html_can_begin_conversion(parent)) {
-		html_begin_conversion(parent);
+	if (html__can_begin_conversion(parent)) {
+		html__begin_conversion(parent);
 	}
 
 	return NSERROR_OK;
@@ -367,8 +367,8 @@ convert_script_sync_cb(hlcache_handle *script,
 	/* if there are no active fetches remaining begin post parse
 	 * conversion
 	 */
-	if (html_can_begin_conversion(parent)) {
-		html_begin_conversion(parent);
+	if (html__can_begin_conversion(parent)) {
+		html__begin_conversion(parent);
 	}
 
 	return NSERROR_OK;
@@ -563,7 +563,7 @@ exec_inline_script(html_content *c, dom_node *node, dom_string *mimetype)
  *
  */
 dom_hubbub_error
-html_process_script(void *ctx, dom_node *node)
+html__process_script(void *ctx, dom_node *node)
 {
 	html_content *c = (html_content *)ctx;
 	dom_exception exc; /* returned by libdom functions */
@@ -608,7 +608,7 @@ html_process_script(void *ctx, dom_node *node)
 }
 
 /* exported internal interface documented in html/html_internal.h */
-bool html_saw_insecure_scripts(html_content *htmlc)
+bool html__saw_insecure_scripts(html_content *htmlc)
 {
 	struct html_script *s;
 	unsigned int i;
@@ -633,7 +633,7 @@ bool html_saw_insecure_scripts(html_content *htmlc)
 }
 
 /* exported internal interface documented in html/html_internal.h */
-nserror html_script_free(html_content *html)
+nserror html__script_free(html_content *html)
 {
 	unsigned int i;
 

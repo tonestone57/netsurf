@@ -51,7 +51,7 @@ struct box * box_create(css_select_results *styles, css_computed_style *style, b
  * \param parent box giving birth
  * \param child box to link as last child of parent
  */
-void box_add_child(struct box *parent, struct box *child);
+void box__add_child(struct box *parent, struct box *child);
 
 
 /**
@@ -60,7 +60,7 @@ void box_add_child(struct box *parent, struct box *child);
  * \param box box already in tree
  * \param new_box box to link into tree as next sibling
  */
-void box_insert_sibling(struct box *box, struct box *new_box);
+void box__insert_sibling(struct box *box, struct box *new_box);
 
 
 /**
@@ -68,7 +68,7 @@ void box_insert_sibling(struct box *box, struct box *new_box);
  *
  * \param box box to unlink and free recursively.
  */
-void box_unlink_and_free(struct box *box);
+void box__unlink_and_free(struct box *box);
 
 
 /**
@@ -78,7 +78,7 @@ void box_unlink_and_free(struct box *box);
  *
  * The box and all its children is freed.
  */
-void box_free(struct box *box);
+void box__free(struct box *box);
 
 
 /**
@@ -86,7 +86,7 @@ void box_free(struct box *box);
  *
  * \param box box to free
  */
-void box_free_box(struct box *box);
+void box__free_box(struct box *box);
 
 
 /**
