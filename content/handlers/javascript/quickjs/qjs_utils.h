@@ -4,5 +4,6 @@
 #include <quickjs.h>
 
 void qjs_log_exception(JSContext *ctx, const char *prefix);
+void qjs_run_jobs(JSContext *ctx);
 
 #endif
