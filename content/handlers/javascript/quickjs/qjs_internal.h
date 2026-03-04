@@ -14,6 +14,8 @@ struct jsheap {
 	JSClassID location_class_id;
 	JSClassID history_class_id;
 	JSClassID navigator_class_id;
+	JSClassID url_class_id;
+	JSClassID urlsearchparams_class_id;
 	JSAtom node_map_atom;
 	JSAtom handler_map_atom;
 	JSAtom handler_listener_map_atom;

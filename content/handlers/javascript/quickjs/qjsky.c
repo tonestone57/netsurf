@@ -292,6 +292,12 @@ void qjsky_init_runtime(struct jsheap *heap)
 	JS_NewClassID(&heap->navigator_class_id);
 	JS_NewClass(heap->rt, heap->navigator_class_id, &qjsky_navigator_class);
 
+	JS_NewClassID(&heap->url_class_id);
+	JS_NewClass(heap->rt, heap->url_class_id, &qjsky_url_class);
+
+	JS_NewClassID(&heap->urlsearchparams_class_id);
+	JS_NewClass(heap->rt, heap->urlsearchparams_class_id, &qjsky_usp_class);
+
 	JS_SetRuntimeOpaque(heap->rt, heap);
 }
 

@@ -1,0 +1,280 @@
+/* URLSearchParams binding for browser using duktape
+ *
+ * Copyright 2024 Jules
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class URLSearchParams {
+	private void *params; /* Placeholder for actual structure */
+};
+
+prologue URLSearchParams()
+%{
+#include <string.h>
+#include <stdlib.h>
+#include "utils/utils.h"
+#include "utils/url.h"
+
+typedef struct param_entry {
+	char *key;
+	char *value;
+	struct param_entry *next;
+} param_entry_t;
+
+typedef struct {
+	param_entry_t *head;
+} param_list_t;
+
+static void free_params(param_list_t *list)
+{
+	param_entry_t *curr = list->head;
+	while (curr) {
+		param_entry_t *next = curr->next;
+		free(curr->key);
+		free(curr->value);
+		free(curr);
+		curr = next;
+	}
+	list->head = NULL;
+}
+
+static void parse_params(param_list_t *list, const char *s)
+{
+	if (!s || !*s) return;
+	if (*s == '?') s++;
+
+	char *copy = strdup(s);
+	char *saveptr;
+	char *pair = strtok_r(copy, "&", &saveptr);
+	while (pair) {
+		char *sep = strchr(pair, '=');
+		const char *key_enc, *val_enc;
+		if (sep) {
+			*sep = '\0';
+			key_enc = pair;
+			val_enc = sep + 1;
+		} else {
+			key_enc = pair;
+			val_enc = "";
+		}
+
+		char *key, *val;
+		char *ke = strdup(key_enc);
+		char *ve = strdup(val_enc);
+		for (char *p = ke; *p; p++) if (*p == '+') *p = ' ';
+		for (char *p = ve; *p; p++) if (*p == '+') *p = ' ';
+
+		if (url_unescape(ke, 0, NULL, &key) != NSERROR_OK) key = strdup(ke);
+		if (url_unescape(ve, 0, NULL, &val) != NSERROR_OK) val = strdup(ve);
+		free(ke);
+		free(ve);
+
+		param_entry_t *entry = calloc(1, sizeof(*entry));
+		entry->key = key;
+		entry->value = val;
+
+		/* Append to end */
+		if (!list->head) {
+			list->head = entry;
+		} else {
+			param_entry_t *last = list->head;
+			while (last->next) last = last->next;
+			last->next = entry;
+		}
+
+		pair = strtok_r(NULL, "&", &saveptr);
+	}
+	free(copy);
+}
+%}
+
+init URLSearchParams()
+%{
+	param_list_t *list = calloc(1, sizeof(*list));
+	priv->params = list;
+
+	if (duk_get_top(ctx) > 0) {
+		const char *s = duk_safe_to_string(ctx, 0);
+		parse_params(list, s);
+	}
+%}
+
+fini URLSearchParams()
+%{
+	param_list_t *list = priv->params;
+	free_params(list);
+	free(list);
+%}
+
+method URLSearchParams::append()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+	const char *val = duk_safe_to_string(ctx, 1);
+
+	param_entry_t *entry = calloc(1, sizeof(*entry));
+	entry->key = strdup(key);
+	entry->value = strdup(val);
+
+	if (!list->head) {
+		list->head = entry;
+	} else {
+		param_entry_t *last = list->head;
+		while (last->next) last = last->next;
+		last->next = entry;
+	}
+	return 0;
+%}
+
+method URLSearchParams::delete()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+
+	param_entry_t *curr = list->head;
+	param_entry_t *prev = NULL;
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			param_entry_t *to_free = curr;
+			if (prev) {
+				prev->next = curr->next;
+			} else {
+				list->head = curr->next;
+			}
+			curr = curr->next;
+			free(to_free->key);
+			free(to_free->value);
+			free(to_free);
+		} else {
+			prev = curr;
+			curr = curr->next;
+		}
+	}
+	return 0;
+%}
+
+method URLSearchParams::get()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+
+	param_entry_t *curr = list->head;
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			duk_push_string(ctx, curr->value);
+			return 1;
+		}
+		curr = curr->next;
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method URLSearchParams::getAll()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+
+	duk_push_array(ctx);
+	duk_uarridx_t i = 0;
+	param_entry_t *curr = list->head;
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			duk_push_string(ctx, curr->value);
+			duk_put_prop_index(ctx, -2, i++);
+		}
+		curr = curr->next;
+	}
+	return 1;
+%}
+
+method URLSearchParams::has()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+
+	param_entry_t *curr = list->head;
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			duk_push_boolean(ctx, true);
+			return 1;
+		}
+		curr = curr->next;
+	}
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+method URLSearchParams::set()
+%{
+	param_list_t *list = priv->params;
+	const char *key = duk_safe_to_string(ctx, 0);
+	const char *val = duk_safe_to_string(ctx, 1);
+
+	param_entry_t *curr = list->head;
+	param_entry_t *first_match = NULL;
+	param_entry_t *prev = NULL;
+
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			if (!first_match) {
+				first_match = curr;
+				free(curr->value);
+				curr->value = strdup(val);
+				prev = curr;
+				curr = curr->next;
+			} else {
+				param_entry_t *to_free = curr;
+				prev->next = curr->next;
+				curr = curr->next;
+				free(to_free->key);
+				free(to_free->value);
+				free(to_free);
+			}
+		} else {
+			prev = curr;
+			curr = curr->next;
+		}
+	}
+
+	if (!first_match) {
+		param_entry_t *entry = calloc(1, sizeof(*entry));
+		entry->key = strdup(key);
+		entry->value = strdup(val);
+		if (!list->head) {
+			list->head = entry;
+		} else {
+			prev->next = entry;
+		}
+	}
+	return 0;
+%}
+
+method URLSearchParams::toString()
+%{
+	param_list_t *list = priv->params;
+	param_entry_t *curr = list->head;
+
+	duk_push_string(ctx, "");
+	while (curr) {
+		if (duk_get_length(ctx, -1) > 0) {
+			duk_push_string(ctx, "&");
+			duk_concat(ctx, 2);
+		}
+		char *key_esc, *val_esc;
+		url_escape(curr->key, true, NULL, &key_esc);
+		url_escape(curr->value, true, NULL, &val_esc);
+
+		duk_push_sprintf(ctx, "%s=%s", key_esc, val_esc);
+		duk_concat(ctx, 2);
+
+		free(key_esc);
+		free(val_esc);
+		curr = curr->next;
+	}
+	return 1;
+%}
