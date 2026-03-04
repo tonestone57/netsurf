@@ -233,6 +233,8 @@ getter Document::characterSet()
 	struct html_content *htmlc;
 	dom_exception err;
 
+	if (priv == NULL || priv->parent.node == NULL) { duk_push_string(ctx, "UTF-8"); return 1; }
+
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
@@ -248,6 +250,8 @@ getter Document::charset()
 %{
 	dom_exception err;
 	struct html_content *htmlc;
+
+	if (priv == NULL || priv->parent.node == NULL) { duk_push_string(ctx, "UTF-8"); return 1; }
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
@@ -265,6 +269,8 @@ getter Document::inputEncoding()
 	dom_exception err;
 	struct html_content *htmlc;
 
+	if (priv == NULL || priv->parent.node == NULL) { duk_push_string(ctx, "UTF-8"); return 1; }
+
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
@@ -280,6 +286,8 @@ getter Document::contentType()
 %{
 	struct html_content *htmlc;
 	dom_exception err;
+
+	if (priv == NULL || priv->parent.node == NULL) { duk_push_string(ctx, "application/xml"); return 1; }
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
@@ -298,6 +306,8 @@ getter Document::title()
 	dom_exception err;
 	dom_string *title_str;
 	dom_node *title_node = NULL;
+
+	if (priv == NULL || priv->parent.node == NULL) return 0;
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
@@ -342,6 +352,8 @@ setter Document::title()
 	duk_size_t text_len;
 	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
 	dom_string *text_str;
+
+	if (priv == NULL || priv->parent.node == NULL) return 0;
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
@@ -469,6 +481,8 @@ getter Document::lastModified()
 	dom_exception err;
 	const char *last_mod;
 
+	if (priv == NULL || priv->parent.node == NULL) return 0;
+
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
@@ -497,6 +511,8 @@ getter Document::readyState()
 %{
 	struct html_content *htmlc;
 	dom_exception err;
+
+	if (priv == NULL || priv->parent.node == NULL) return 0;
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
@@ -1227,6 +1243,8 @@ getter Document::cookie()
 	struct html_content *htmlc;
 	dom_exception err;
 
+	if (priv == NULL || priv->parent.node == NULL) return 0;
+
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,
 				     &htmlc);
@@ -1253,6 +1271,8 @@ setter Document::cookie()
 	dom_exception err;
 
 	const char * cookie_str = duk_safe_to_string(ctx, 0);
+
+	if (priv == NULL || priv->parent.node == NULL) return 0;
 
 	err = dom_node_get_user_data(priv->parent.node,
 				     corestring_dom___ns_key_html_content_data,

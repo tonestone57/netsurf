@@ -234,8 +234,6 @@ static duk_ret_t dukky_window_closedown_thread(duk_context *ctx)
 	}
 
 	priv->closed_down = true;
-	priv->win = NULL;
-	priv->htmlc = NULL;
 
 	NSLOG(dukky, DEEPDEBUG, "Closing down thread");
 	while (priv->schedule_ring != NULL) {
@@ -817,6 +815,9 @@ method Window::setTimeout()
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
 
+	if (priv->closed_down == true) {
+		return 0; /* coerced to undefined */
+	}
 
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);
@@ -835,6 +836,9 @@ method Window::setInterval()
 	duk_idx_t argc = duk_get_top(ctx);
 	duk_int_t timeout = 10;
 
+	if (priv->closed_down == true) {
+		return 0; /* coerced to undefined */
+	}
 
 	if (argc >= 2) {
 		timeout = duk_get_int(ctx, 1);

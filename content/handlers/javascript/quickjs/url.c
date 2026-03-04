@@ -265,9 +265,11 @@ static JSValue qjsky_usp_toString(JSContext *ctx, JSValueConst this_val, int arg
 	JSValue res = JS_NewString(ctx, "");
 	qjsky_usp_entry_t *curr = usp->entries;
 	while (curr) {
-		if (JS_ToBool(ctx, JS_GetPropertyStr(ctx, res, "length"))) {
+		JSValue len_val = JS_GetPropertyStr(ctx, res, "length");
+		if (JS_ToBool(ctx, len_val)) {
 			res = JS_ConcatString(ctx, res, JS_NewString(ctx, "&"));
 		}
+		JS_FreeValue(ctx, len_val);
 
 		char *key_esc, *val_esc;
 		url_escape(curr->key, true, NULL, &key_esc);

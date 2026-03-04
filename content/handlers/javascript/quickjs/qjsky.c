@@ -24,7 +24,6 @@ typedef struct qjsky_timer_s {
 	struct qjsky_timer_s *r_prev;
 } qjsky_timer_t;
 
-
 static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
@@ -39,11 +38,6 @@ static void qjsky_node_finalizer(JSRuntime *rt, JSValue val)
 	}
 }
 
-static JSClassDef qjsky_node_class = {
-	"Node",
-	.finalizer = qjsky_node_finalizer,
-};
-
 static void qjsky_event_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
@@ -52,11 +46,6 @@ static void qjsky_event_finalizer(JSRuntime *rt, JSValue val)
 		dom_event_unref(evt);
 	}
 }
-
-static JSClassDef qjsky_event_class = {
-	"Event",
-	.finalizer = qjsky_event_finalizer,
-};
 
 static void qjsky_uievent_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -67,11 +56,6 @@ static void qjsky_uievent_finalizer(JSRuntime *rt, JSValue val)
 	}
 }
 
-static JSClassDef qjsky_uievent_class = {
-	"UIEvent",
-	.finalizer = qjsky_uievent_finalizer,
-};
-
 static void qjsky_mouseevent_finalizer(JSRuntime *rt, JSValue val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(rt);
@@ -80,11 +64,6 @@ static void qjsky_mouseevent_finalizer(JSRuntime *rt, JSValue val)
 		dom_event_unref(evt);
 	}
 }
-
-static JSClassDef qjsky_mouseevent_class = {
-	"MouseEvent",
-	.finalizer = qjsky_mouseevent_finalizer,
-};
 
 static void qjsky_keyboardevent_finalizer(JSRuntime *rt, JSValue val)
 {
@@ -95,41 +74,17 @@ static void qjsky_keyboardevent_finalizer(JSRuntime *rt, JSValue val)
 	}
 }
 
-static JSClassDef qjsky_keyboardevent_class = {
-	"KeyboardEvent",
-	.finalizer = qjsky_keyboardevent_finalizer,
-};
-
-dom_string *qjsky_js_value_to_dom_string(JSContext *ctx, JSValue val)
-{
-	size_t len;
-	const char *str = JS_ToCStringLen(ctx, &len, val);
-	if (!str) return NULL;
-	dom_string *ds;
-	if (dom_string_create((const uint8_t *)str, len, &ds) != DOM_NO_ERR) { JS_FreeCString(ctx, str); return NULL; }
-	JS_FreeCString(ctx, str);
-	return ds;
-}
-
-JSValue qjsky_dom_string_to_js_value(JSContext *ctx, dom_string *str)
-{
-	if (!str) return JS_NULL;
-	return JS_NewStringLen(ctx, (const char *)dom_string_data(str), dom_string_byte_length(str));
-}
-
 static JSValue qjsky_event_get_type(JSContext *ctx, JSValueConst this_val)
 {
 	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
 	struct dom_event *evt = JS_GetOpaque2(ctx, this_val, heap->event_class_id);
 	if (!evt) return JS_EXCEPTION;
-	dom_string *type = NULL;
+	dom_string *type;
 	dom_event_get_type(evt, &type);
 	JSValue val = qjsky_dom_string_to_js_value(ctx, type);
-	if (type) dom_string_unref(type);
+	dom_string_unref(type);
 	return val;
 }
-
-JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node);
 
 static JSValue qjsky_event_get_target(JSContext *ctx, JSValueConst this_val)
 {
@@ -877,6 +832,40 @@ static JSValue qjsky_window_alert(JSContext *ctx, JSValueConst this_val, int arg
 	return JS_UNDEFINED;
 }
 
+JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
+{
+	if (!node) return JS_NULL;
+
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	void *wrapper_ptr;
+	dom_exception exc;
+
+	exc = dom_node_get_user_data(node, heap->node_js_wrapper_key, &wrapper_ptr);
+	if (exc == DOM_NO_ERR && wrapper_ptr != NULL) {
+		return JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, wrapper_ptr));
+	}
+
+	JSValue obj = JS_NewObjectClass(ctx, heap->node_class_id);
+	if (JS_IsException(obj)) return obj;
+
+	JS_SetOpaque(obj, node);
+	dom_node_ref(node);
+
+	JS_SetProperty(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx));
+	JS_SetProperty(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx));
+
+	void *dummy;
+	dom_node_set_user_data(node, heap->node_js_wrapper_key, JS_VALUE_GET_OBJ(obj), NULL, &dummy);
+
+	return obj;
+}
+
+struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val)
+{
+	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
+	return JS_GetOpaque(val, heap->node_class_id);
+}
+
 extern JSClassDef qjsky_xhr_class;
 extern JSClassDef qjsky_location_class;
 extern JSClassDef qjsky_history_class;
@@ -934,7 +923,6 @@ void qjsky_init_runtime(struct jsheap *heap)
 	JS_SetRuntimeOpaque(heap->rt, heap);
 }
 
-
 void qjsky_fini_runtime(struct jsheap *heap)
 {
 	if (heap->node_js_wrapper_key) {
@@ -952,8 +940,6 @@ void qjsky_init_context(JSContext *ctx)
 
 	/* Initialize Node prototype */
 	JSValue node_proto = JS_NewObject(ctx);
-	/* In a full implementation, we would add Node methods here.
-	 * For now, we at least set the class prototype. */
 	JS_SetClassProto(ctx, heap->node_class_id, node_proto);
 
 	/* Ensure Map is available */
@@ -988,6 +974,7 @@ void qjsky_init_context(JSContext *ctx)
 		heap->keyboardevent_proto_atom = JS_ValueToAtom(ctx, sym);
 		JS_FreeValue(ctx, sym);
 	}
+
 	/* Initialize Event prototypes and inheritance */
 	JSValue event_proto = JS_NewObject(ctx);
 	JS_SetPropertyFunctionList(ctx, event_proto, qjsky_event_proto_funcs, sizeof(qjsky_event_proto_funcs)/sizeof(qjsky_event_proto_funcs[0]));
@@ -1019,47 +1006,6 @@ void qjsky_init_context(JSContext *ctx)
 	JS_SetProperty(ctx, global, heap->keyboardevent_proto_atom, keyboardevent_proto);
 
 	JS_FreeValue(ctx, global);
-}
-
-JSValue qjsky_push_node(JSContext *ctx, struct dom_node *node)
-{
-	if (!node) return JS_NULL;
-
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-	void *wrapper_ptr;
-	dom_exception exc;
-
-	exc = dom_node_get_user_data(node, heap->node_js_wrapper_key, &wrapper_ptr);
-	if (exc == DOM_NO_ERR && wrapper_ptr != NULL) {
-		/* Return existing wrapper (weak mapping) */
-		return JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, wrapper_ptr));
-	}
-
-	/* Create new wrapper */
-	JSValue obj = JS_NewObjectClass(ctx, heap->node_class_id);
-	if (JS_IsException(obj)) return obj;
-
-	JS_SetOpaque(obj, node);
-	dom_node_ref(node);
-
-	/* Attach private maps for handlers and listeners */
-	JS_SetProperty(ctx, obj, heap->handler_map_atom, JS_NewObject(ctx));
-	JS_SetProperty(ctx, obj, heap->handler_listener_map_atom, JS_NewObject(ctx));
-
-	/* Store weak reference in native node: we store the raw object pointer
-	 * but DO NOT increment JS refcount. The finalizer will clear it. */
-	void *dummy;
-	if (dom_node_set_user_data(node, heap->node_js_wrapper_key, JS_VALUE_GET_OBJ(obj), NULL, &dummy) != DOM_NO_ERR) {
-		/* Fallback: just continue without caching */
-	}
-
-	return obj;
-}
-
-struct dom_node *qjsky_get_node(JSContext *ctx, JSValue val)
-{
-	struct jsheap *heap = JS_GetRuntimeOpaque(JS_GetRuntime(ctx));
-	return JS_GetOpaque(val, heap->node_class_id);
 }
 
 void qjsky_init_window(JSContext *ctx)

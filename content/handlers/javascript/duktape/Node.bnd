@@ -31,6 +31,7 @@ getter Node::nodeType()
 %{
 	dom_exception exc;
 	dom_node_type ntype;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_node_type(priv->node, &ntype);
 	if (exc != DOM_NO_ERR) return 0;
 	duk_push_uint(ctx, (duk_uint_t)ntype);
@@ -41,6 +42,7 @@ getter Node::nodeName()
 %{
 	dom_exception exc;
 	dom_string *str = NULL;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_node_name(priv->node, &str);
 	if (exc != DOM_NO_ERR) return 0;
 	duk_push_lstring(ctx, dom_string_data(str), dom_string_byte_length(str));
@@ -52,6 +54,7 @@ getter Node::baseURI()
 %{
 	dom_exception exc;
 	dom_string *base = NULL;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_base(priv->node, &base);
 	if (exc != DOM_NO_ERR) return 0;
 	assert(base != NULL);
@@ -64,6 +67,7 @@ getter Node::ownerDocument()
 %{
 	dom_exception exc;
 	dom_node *doc;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_owner_document(priv->node, &doc);
 	if (exc != DOM_NO_ERR) return 0;
 	if (doc == NULL) return 0;
@@ -76,6 +80,7 @@ getter Node::parentNode()
 %{
 	dom_exception exc;
 	dom_node *pnode = NULL;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_parent_node(priv->node, &pnode);
 	if (exc != DOM_NO_ERR) return 0;
 	dukky_push_node(ctx, pnode);
@@ -88,6 +93,7 @@ getter Node::parentElement()
 	dom_exception exc;
 	dom_node *pnode = NULL;
 	dom_node_type ntype = DOM_NODE_TYPE_COUNT + 1;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_parent_node(priv->node, &pnode);
 	if (exc != DOM_NO_ERR) return 0;
 	if (pnode != NULL) {
@@ -103,6 +109,7 @@ getter Node::namespaceURI()
 %{
 	dom_exception exc;
 	dom_string *uri;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_namespace(priv->node, &uri);
 	if (exc != DOM_NO_ERR) return 0;
 	if (uri == NULL) {
@@ -118,6 +125,7 @@ getter Node::prefix()
 %{
 	dom_exception exc;
 	dom_string *pfx;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_prefix(priv->node, &pfx);
 	if (exc != DOM_NO_ERR) return 0;
 	if (pfx == NULL) {
@@ -133,6 +141,7 @@ getter Node::localName()
 %{
 	dom_exception exc;
 	dom_string *name;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_local_name(priv->node, &name);
 	if (exc != DOM_NO_ERR) return 0;
 	if (name == NULL) {
@@ -148,6 +157,7 @@ method Node::hasChildNodes()
 %{
 	dom_exception exc;
 	bool res;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_has_child_nodes(priv->node, &res);
 	if (exc != DOM_NO_ERR) return 0;
 	duk_push_boolean(ctx, res);
@@ -158,6 +168,7 @@ method Node::hasAttributes()
 %{
 	dom_exception exc;
 	bool res;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_has_attributes(priv->node, &res);
 	if (exc != DOM_NO_ERR) return 0;
 	duk_push_boolean(ctx, res);
@@ -168,6 +179,7 @@ getter Node::childNodes()
 %{
 	dom_exception exc;
 	dom_nodelist *nlist = NULL;
+	if (priv == NULL || priv->node == NULL) return 0;
 	duk_set_top(ctx, 0);
 	duk_push_this(ctx);
 	duk_get_prop_string(ctx, 0, MAGIC(childNodes));
@@ -196,6 +208,7 @@ getter Node::firstChild()
 %{
 	dom_exception exc;
 	dom_node *n;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_first_child(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
 	if (dukky_push_node(ctx, n) == false) {
@@ -210,6 +223,7 @@ getter Node::lastChild()
 %{
 	dom_exception exc;
 	dom_node *n;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_last_child(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
 	if (dukky_push_node(ctx, n) == false) {
@@ -224,6 +238,7 @@ getter Node::previousSibling()
 %{
 	dom_exception exc;
 	dom_node *n;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_previous_sibling(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
 	if (dukky_push_node(ctx, n) == false) {
@@ -238,6 +253,7 @@ getter Node::nextSibling()
 %{
 	dom_exception exc;
 	dom_node *n;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_get_next_sibling(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
 	if (dukky_push_node(ctx, n) == false) {
@@ -252,6 +268,8 @@ getter Node::nodeValue()
 %{
 	dom_exception exc;
 	dom_string *content;
+
+	if (priv == NULL || priv->node == NULL) return 0;
 
 	exc = dom_node_get_node_value(priv->node, &content);
 	if (exc != DOM_NO_ERR) {
@@ -272,6 +290,9 @@ setter Node::nodeValue()
 	dom_string *content;
 	duk_size_t slen;
 	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	exc = dom_string_create((const uint8_t *)s, slen, &content);
 	if (exc != DOM_NO_ERR) return 0;
 	exc = dom_node_set_node_value(priv->node, content);
@@ -284,6 +305,8 @@ getter Node::textContent()
 %{
 	dom_exception exc;
 	dom_string *content;
+
+	if (priv == NULL || priv->node == NULL) return 0;
 
 	exc = dom_node_get_text_content(priv->node, &content);
 	if (exc != DOM_NO_ERR) {
@@ -304,6 +327,9 @@ setter Node::textContent()
 	dom_string *content;
 	duk_size_t slen;
 	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	exc = dom_string_create((const uint8_t *)s, slen, &content);
 	if (exc != DOM_NO_ERR) return 0;
 	exc = dom_node_set_text_content(priv->node, content);
@@ -314,6 +340,7 @@ setter Node::textContent()
 method Node::normalize()
 %{
 	dom_exception exc;
+	if (priv == NULL || priv->node == NULL) return 0;
 	exc = dom_node_normalize(priv->node);
 	if (exc != DOM_NO_ERR) return 0;
 	return 0;
@@ -324,6 +351,8 @@ method Node::cloneNode()
 	dom_exception exc;
 	bool deep;
 	dom_node *clone;
+
+	if (priv == NULL || priv->node == NULL) return 0;
 
 	deep = duk_to_boolean(ctx, 0);
 
@@ -340,6 +369,8 @@ method Node::isEqualNode()
 	dom_exception exc;
 	bool result;
 
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -355,6 +386,8 @@ method Node::isEqualNode()
 method Node::isSameNode()
 %{
 	bool result;
+
+	if (priv == NULL || priv->node == NULL) return 0;
 
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) {
 		duk_push_boolean(ctx, false);
@@ -374,6 +407,8 @@ method Node::compareDocumentPosition()
 %{
 	dom_exception exc;
 	uint16_t ret;
+
+	if (priv == NULL || priv->node == NULL) return 0;
 
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
@@ -396,6 +431,8 @@ method Node::contains()
 	dom_exception exc;
 	bool result;
 
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -415,6 +452,9 @@ method Node::lookupPrefix()
 	dom_string *ns, *pfx;
 	duk_size_t size;
 	const char *s = duk_safe_to_lstring(ctx, 0, &size);
+
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	exc = dom_string_create((const uint8_t *)s, size, &ns);
 	if (exc != DOM_NO_ERR) return 0;
 	exc = dom_node_lookup_prefix(priv->node, ns, &pfx);
@@ -432,6 +472,9 @@ method Node::lookupNamespaceURI()
 	dom_string *ns, *pfx;
 	duk_size_t size;
 	const char *s = duk_safe_to_lstring(ctx, 0, &size);
+
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	exc = dom_string_create((const uint8_t *)s, size, &pfx);
 	if (exc != DOM_NO_ERR) return 0;
 	exc = dom_node_lookup_namespace(priv->node, pfx, &ns);
@@ -451,6 +494,9 @@ method Node::isDefaultNamespace()
 	duk_size_t size;
 	const char *s = duk_safe_to_lstring(ctx, 0, &size);
 	bool ret;
+
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	exc = dom_string_create((const uint8_t *)s, size, &ns);
 	if (exc != DOM_NO_ERR) return 0;
 	exc = dom_node_is_default_namespace(priv->node, ns, &ret);
@@ -462,6 +508,8 @@ method Node::isDefaultNamespace()
 
 method Node::insertBefore()
 %{
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -491,6 +539,8 @@ method Node::insertBefore()
 
 method Node::appendChild()
 %{
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -511,6 +561,8 @@ method Node::appendChild()
 
 method Node::replaceChild()
 %{
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
@@ -536,6 +588,8 @@ method Node::replaceChild()
 
 method Node::removeChild()
 %{
+	if (priv == NULL || priv->node == NULL) return 0;
+
 	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
