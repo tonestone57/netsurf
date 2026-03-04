@@ -11,9 +11,9 @@ static JSValue qjsky_storage_getItem(JSContext *ctx, JSValueConst this_val, int 
 	/* Use JS_GetPropertyInternal to avoid potential prototype pollution or methods shadowing */
 	JSValue val = JS_GetProperty(ctx, this_val, prop);
 	JS_FreeAtom(ctx, prop);
-	if (JS_IsFunction(ctx, val)) {
+	if (JS_IsFunction(ctx, val) || JS_IsUndefined(val)) {
 		JS_FreeValue(ctx, val);
-		return JS_UNDEFINED;
+		return JS_NULL;
 	}
 	return val;
 }
