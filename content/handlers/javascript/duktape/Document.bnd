@@ -1,4 +1,3 @@
-#define Document_characterSet_getter dukky_document_characterSet_getter
 /* document binding for browser using duktape and libdom
  *
  * Copyright 2015 Vincent Sanders <vince@netsurf-browser.org>
@@ -247,12 +246,34 @@ getter Document::characterSet()
 
 getter Document::charset()
 %{
-	return Document_characterSet_getter(ctx);
+	dom_exception err;
+	struct html_content *htmlc;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
 %}
 
 getter Document::inputEncoding()
 %{
-	return Document_characterSet_getter(ctx);
+	dom_exception err;
+	struct html_content *htmlc;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
 %}
 
 getter Document::contentType()
