@@ -8,6 +8,7 @@ struct jsheap;
 
 /* Per-runtime initialization */
 void qjsky_init_runtime(struct jsheap *heap);
+void qjsky_fini_runtime(struct jsheap *heap);
 
 /* Per-context initialization */
 void qjsky_init_context(JSContext *ctx);

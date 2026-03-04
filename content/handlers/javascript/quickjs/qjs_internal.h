@@ -25,6 +25,7 @@ struct jsheap {
 	JSAtom uievent_proto_atom;
 	JSAtom mouseevent_proto_atom;
 	JSAtom keyboardevent_proto_atom;
+	struct dom_string *node_js_wrapper_key;
 	void *timer_ring;
 	int next_timer_handle;
 };

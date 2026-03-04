@@ -74,6 +74,8 @@ void js_destroyheap(struct jsheap *heap)
 	if (heap->keyboardevent_proto_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->keyboardevent_proto_atom);
 
+	qjsky_fini_runtime(heap);
+
 	JS_FreeRuntime(heap->rt);
 	free(heap);
 }
