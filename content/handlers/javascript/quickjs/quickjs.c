@@ -15,6 +15,7 @@
 #include "content/handlers/javascript/quickjs/url.h"
 #include "content/handlers/javascript/quickjs/screen.h"
 #include "content/handlers/javascript/quickjs/barprop.h"
+#include "content/handlers/javascript/quickjs/storage.h"
 #include "content/handlers/html/html.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
@@ -104,6 +105,7 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_barprop(thread->ctx);
 	qjsky_init_url(thread->ctx);
 	qjsky_init_urlsearchparams(thread->ctx);
+	qjsky_init_storage(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -156,6 +158,9 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	JS_SetPropertyStr(thread->ctx, global, "scrollbars", qjsky_create_barprop(thread->ctx));
 	JS_SetPropertyStr(thread->ctx, global, "statusbar", qjsky_create_barprop(thread->ctx));
 	JS_SetPropertyStr(thread->ctx, global, "toolbar", qjsky_create_barprop(thread->ctx));
+
+	JS_SetPropertyStr(thread->ctx, global, "localStorage", qjsky_create_storage(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "sessionStorage", qjsky_create_storage(thread->ctx));
 
 	JSValue url_proto = JS_GetClassProto(thread->ctx, heap->url_class_id);
 	JSValue url_ctor = JS_NewCFunction2(thread->ctx, qjsky_url_ctor, "URL", 1, JS_CFUNC_constructor, 0);
