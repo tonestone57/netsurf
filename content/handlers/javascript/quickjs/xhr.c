@@ -32,7 +32,7 @@ static void qjsky_xhr_set_status(qjsky_xhr_t *xhr)
 	snprintf(key, sizeof(key), "HTTP%03d", xhr->status);
 	const char *msg_str = messages_get(key);
 	free(xhr->status_text);
-	xhr->status_text = strdup(msg_str);
+	xhr->status_text = strdup(msg_str ? msg_str : "Unknown");
 }
 
 static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)

@@ -2,7 +2,7 @@
 # NetSurf QuickJS source file inclusion
 #
 
-S_JAVASCRIPT += quickjs/quickjs.c quickjs/qjsky.c quickjs/xhr.c quickjs/location.c quickjs/history.c quickjs/navigator.c quickjs/url.c quickjs/qjs_utils.c
+S_JAVASCRIPT += quickjs/quickjs.c quickjs/qjsky.c quickjs/xhr.c quickjs/location.c quickjs/history.c quickjs/navigator.c quickjs/screen.c quickjs/barprop.c quickjs/url.c quickjs/qjs_utils.c
 
 # Rule to invoke nsgenbind with the QuickJS backend.
 # Note: This requires an updated version of nsgenbind that supports -t qjs_libdom.

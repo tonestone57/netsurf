@@ -13,6 +13,8 @@
 #include "content/handlers/javascript/quickjs/history.h"
 #include "content/handlers/javascript/quickjs/navigator.h"
 #include "content/handlers/javascript/quickjs/url.h"
+#include "content/handlers/javascript/quickjs/screen.h"
+#include "content/handlers/javascript/quickjs/barprop.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -24,12 +26,10 @@
 
 void js_initialise(void)
 {
-	/* Global initialization if needed */
 }
 
 void js_finalise(void)
 {
-	/* Global cleanup if needed */
 }
 
 nserror js_newheap(int timeout, struct jsheap **heap_out)
@@ -43,7 +43,6 @@ nserror js_newheap(int timeout, struct jsheap **heap_out)
 		return NSERROR_NOMEM;
 	}
 
-	/* Limit memory usage (e.g., 64MB) */
 	JS_SetMemoryLimit(heap->rt, 64 * 1024 * 1024);
 	JS_SetMaxStackSize(heap->rt, 1024 * 1024);
 
@@ -58,9 +57,6 @@ nserror js_newheap(int timeout, struct jsheap **heap_out)
 void js_destroyheap(struct jsheap *heap)
 {
 	if (heap == NULL) return;
-
-	JS_FreeClassID(heap->rt, heap->url_class_id);
-	JS_FreeClassID(heap->rt, heap->urlsearchparams_class_id);
 
 	if (heap->node_map_atom != JS_ATOM_NULL)
 		JS_FreeAtomRT(heap->rt, heap->node_map_atom);
@@ -97,19 +93,19 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 
 	JS_SetContextOpaque(thread->ctx, thread);
 
-	/* NetSurf-specific builtins */
 	qjsky_init_context(thread->ctx);
 	qjsky_init_console(thread->ctx);
 	qjsky_init_window(thread->ctx);
 	qjsky_init_location(thread->ctx);
 	qjsky_init_history(thread->ctx);
 	qjsky_init_navigator(thread->ctx);
+	qjsky_init_screen(thread->ctx);
+	qjsky_init_barprop(thread->ctx);
 	qjsky_init_url(thread->ctx);
 	qjsky_init_urlsearchparams(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
-	/* Load polyfill.js */
 	JSValue polyfill_val = JS_Eval(thread->ctx, (const char *)polyfill_js, polyfill_js_len, "polyfill.js", JS_EVAL_TYPE_GLOBAL);
 	if (JS_IsException(polyfill_val)) {
 		qjs_log_exception(thread->ctx, "Failed to load polyfill.js");
@@ -119,7 +115,6 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	}
 	JS_FreeValue(thread->ctx, polyfill_val);
 
-	/* Load generics.js */
 	JSValue generics_val = JS_Eval(thread->ctx, (const char *)generics_js, generics_js_len, "generics.js", JS_EVAL_TYPE_GLOBAL);
 	if (JS_IsException(generics_val)) {
 		qjs_log_exception(thread->ctx, "Failed to load generics.js");
@@ -129,31 +124,38 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	}
 	JS_FreeValue(thread->ctx, generics_val);
 
-	/* Attach global instances */
 	JSValue global = JS_GetGlobalObject(thread->ctx);
 
-	/* window.location */
 	nsurl *url = NULL;
 	if (thread->doc_priv) {
 		url = llcache_handle_get_url(((struct content *)thread->doc_priv)->llcache);
 	}
 	JSValue loc_obj = qjsky_create_location(thread->ctx, url);
 	JS_SetPropertyStr(thread->ctx, global, "location", JS_DupValue(thread->ctx, loc_obj));
-	/* TODO: document.location */
 	JS_FreeValue(thread->ctx, loc_obj);
 
-	/* window.history */
 	JSValue hist_obj = qjsky_create_history(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "history", hist_obj);
 
-	/* window self-reference */
-	JS_SetPropertyStr(thread->ctx, global, "window", JS_DupValue(thread->ctx, global));
-
-	/* window.navigator */
 	JSValue nav_obj = qjsky_create_navigator(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "navigator", nav_obj);
 
-	/* URL and URLSearchParams constructors */
+	JSValue screen_obj = qjsky_create_screen(thread->ctx);
+	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
+
+	if (thread->doc_priv) {
+		struct dom_document *doc = ((struct html_content *)thread->doc_priv)->document;
+		JSValue doc_obj = qjsky_push_node(thread->ctx, (struct dom_node *)doc);
+		JS_SetPropertyStr(thread->ctx, global, "document", doc_obj);
+	}
+
+	JS_SetPropertyStr(thread->ctx, global, "locationbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "menubar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "personalbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "scrollbars", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "statusbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "toolbar", qjsky_create_barprop(thread->ctx));
+
 	JSValue url_proto = JS_GetClassProto(thread->ctx, heap->url_class_id);
 	JSValue url_ctor = JS_NewCFunction2(thread->ctx, qjsky_url_ctor, "URL", 1, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(thread->ctx, url_ctor, url_proto);
@@ -211,12 +213,9 @@ bool js_exec(struct jsthread *thread, const uint8_t *txt, size_t txtlen, const c
 	return true;
 }
 
-/* Event Handlers */
-
 bool js_fire_event(struct jsthread *thread, const char *type, struct dom_document *doc, struct dom_node *target)
 {
 	if (target != NULL) {
-		/* General event firing logic */
 		JSValue node_val = qjsky_push_node(thread->ctx, target);
 		JSValue global = JS_GetGlobalObject(thread->ctx);
 		JSValue event_ctor = JS_GetPropertyStr(thread->ctx, global, "Event");
@@ -241,12 +240,6 @@ bool js_fire_event(struct jsthread *thread, const char *type, struct dom_documen
 
 		return true;
 	}
-
-	if (strcmp(type, "load") == 0) {
-		/* Special case for Window.onload */
-		/* Simple dispatch for now */
-	}
-
 	return true;
 }
 
@@ -300,7 +293,6 @@ void js_handle_new_element(struct jsthread *thread, struct dom_element *node)
 
 void js_event_cleanup(struct jsthread *thread, struct dom_event *evt)
 {
-	/* Implementation of cleanup if needed */
 }
 
 bool
@@ -310,6 +302,5 @@ js_dom_event_add_listener(jsthread *thread,
 			  struct dom_string *event_type_dom,
 			  void *js_funcval)
 {
-	/* Bridge for manually adding event listeners from the core */
 	return false;
 }

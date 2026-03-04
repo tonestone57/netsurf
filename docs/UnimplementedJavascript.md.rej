@@ -1,7 +1,0 @@
-diff a/docs/UnimplementedJavascript.md b/docs/UnimplementedJavascript.md	(rejected hunks)
-@@ -1545,5 +1513,5 @@ method | EventListener::handleEvent();
- method | CustomEvent::initCustomEvent();
- getter | CustomEvent::detail(any);
-
-- 1539 unimplemented bindings
-+ 1507 unimplemented bindings
