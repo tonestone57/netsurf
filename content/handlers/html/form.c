@@ -973,7 +973,7 @@ form__dom_to_data_button(dom_html_button_element *button_element,
  * \param form  The form
  * \return Pointer to charset name (on heap, caller should free) or NULL
  */
-static char *form__acceptable_charset(struct form *form)
+static char *form_acceptable_charset(struct form *form)
 {
 	char *temp, *c;
 
@@ -1075,7 +1075,7 @@ form__dom_to_data(struct form *form,
 	}
 
 	/** \todo Replace this call with something DOMish */
-	charset = form__acceptable_charset(form);
+	charset = form_acceptable_charset(form);
 	if (charset == NULL) {
 		NSLOG(netsurf, INFO, "failed to find charset");
 		return NSERROR_NOMEM;

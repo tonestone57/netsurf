@@ -257,7 +257,7 @@ static void html__box_convert_done(html_content *c, bool success)
 		return;
 	}
 
-	/* extract image maps - can't do this sensibly in box_construct__dom_to_box */
+	/* extract image maps - can't do this sensibly in dom_to_box */
 	err = imagemap_extract(c);
 	if (err != NSERROR_OK) {
 		NSLOG(netsurf, INFO, "imagemap extraction failed");
@@ -401,7 +401,7 @@ void html_finish_conversion(html_content *htmlc)
 
 	html__get_dimensions(htmlc);
 
-	error = box_construct__dom_to_box(html, htmlc, html__box_convert_done, &htmlc->box_conversion_context);
+	error = dom_to_box(html, htmlc, html__box_convert_done, &htmlc->box_conversion_context);
 	if (error != NSERROR_OK) {
 		NSLOG(netsurf, INFO, "box conversion failed");
 		dom_node_unref(html);
@@ -941,7 +941,7 @@ html_begin_conversion(html_content *htmlc)
 	dom_string_unref(node_name);
 
 	/* Retrieve forms from parser */
-	htmlc->forms = forms__get_forms(htmlc->encoding,
+	htmlc->forms = html_forms_get_forms(htmlc->encoding,
 			(dom_html_document *) htmlc->document);
 	for (f = htmlc->forms; f != NULL; f = f->prev) {
 		nsurl *action;
@@ -1068,7 +1068,7 @@ static void html__reformat(struct content *c, int width, int height)
 			INTTOFIX(height), htmlc->unit_len_ctx.device_dpi);
 	htmlc->unit_len_ctx.root_style = htmlc->layout->style;
 
-	layout__document(htmlc, width, height);
+	layout_document(htmlc, width, height);
 	layout = htmlc->layout;
 
 	/* width and height are at least margin box of document */
@@ -1208,7 +1208,7 @@ static void html__destroy(struct content *c)
 
 	/* If we're still converting a layout, cancel it */
 	if (html->box_conversion_context != NULL) {
-		if (box_construct__cancel(html->box_conversion_context) != NSERROR_OK) {
+		if (cancel_dom_to_box(html->box_conversion_context) != NSERROR_OK) {
 			NSLOG(netsurf, CRITICAL, "WARNING, Unable to cancel conversion context, browser may crash");
 		}
 	}
@@ -2369,7 +2369,7 @@ static const content_handler html_content_handler = {
 	.mouse_track = html_mouse_track,
 	.mouse_action = html_mouse_action,
 	.keypress = html_keypress,
-	.redraw = redraw__document,
+	.redraw = html_redraw,
 	.open = html__open,
 	.close = html__close,
 	.get_selection = html__get_selection,

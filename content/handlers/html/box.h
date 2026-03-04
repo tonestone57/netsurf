@@ -453,7 +453,7 @@ struct box {
 	struct browser_window *iframe;
 
 	/**
-	 * Cached results from layout__find_dimensions.
+	 * Cached results from layout_find_dimensions.
 	 */
 	const css_computed_style *cached_style;
 	css_fixed cached_font_size;

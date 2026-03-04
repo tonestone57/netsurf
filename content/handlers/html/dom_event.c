@@ -561,7 +561,7 @@ static bool dom_event__process_title(html_content *c, dom_node *node)
  */
 static void dom_event__texty_element_update(html_content *htmlc, dom_node *node)
 {
-	struct box *box = box_for_node(node);
+	struct box *box = box_construct__box_for_node(node);
 	if (box == NULL) {
 		return; /* No Box (yet?) so no gadget to update */
 	}

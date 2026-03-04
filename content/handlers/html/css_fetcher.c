@@ -83,7 +83,7 @@ static bool css_fetcher__can_fetch(const nsurl *url)
 	return true;
 }
 
-static void *css_fetcher__setup(struct fetch *parent_fetch, nsurl *url,
+static void *html_css_fetcher_setup(struct fetch *parent_fetch, nsurl *url,
 		 bool only_2xx, bool downgrade_tls, const char *post_urlenc,
 		 const struct fetch_multipart_data *post_multipart,
 		 const char **headers)
@@ -288,7 +288,7 @@ nserror html_css_fetcher_register(void)
 	const struct fetcher_operation_table html_css_fetcher_ops = {
 		.initialise = css_fetcher__initialise,
 		.acceptable = css_fetcher__can_fetch,
-		.setup = css_fetcher__setup,
+		.setup = html_css_fetcher_setup,
 		.start = css_fetcher__start,
 		.abort = css_fetcher__abort,
 		.free = css_fetcher__free,

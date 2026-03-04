@@ -441,7 +441,7 @@ redraw_border__plot(const int side,
  * \return true if successful, false otherwise
  */
 bool
-redraw__borders(struct box *box,
+html_redraw_borders(struct box *box,
 		    int x_parent,
 		    int y_parent,
 		    int p_width,
@@ -704,7 +704,7 @@ redraw__borders(struct box *box,
  * \return true if successful, false otherwise
  */
 bool
-redraw__inline_borders(struct box *box,
+html_redraw_inline_borders(struct box *box,
 			   struct rect b,
 			   const struct rect *clip,
 			   float scale,

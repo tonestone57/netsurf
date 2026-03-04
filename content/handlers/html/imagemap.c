@@ -368,7 +368,7 @@ imagemap__addtolist(const struct html_content *c,
 	else
 		goto bad_out;
 
-	if (box_construct__extract_link(c, href, base_url, &new_map->url) == false)
+	if (box_extract_link(c, href, base_url, &new_map->url) == false)
 		goto bad_out;
 
 	if (new_map->url == NULL) {

@@ -213,7 +213,7 @@ typedef struct html_content {
 } html_content;
 
 /**
- * Render padding and margin box outlines in redraw__document().
+ * Render padding and margin box outlines in html_redraw().
  */
 extern bool html_redraw_debug;
 
@@ -295,17 +295,17 @@ nserror html_proceed_to_done(html_content *html);
 
 
 /* in html/redraw.c */
-bool redraw__document(struct content *c, struct content_redraw_data *data,
+bool html_redraw(struct content *c, struct content_redraw_data *data,
 		const struct rect *clip, const struct redraw_context *ctx);
 
 
 /* in html/redraw_border.c */
-bool redraw__borders(struct box *box, int x_parent, int y_parent,
+bool html_redraw_borders(struct box *box, int x_parent, int y_parent,
 		int p_width, int p_height, const struct rect *clip, float scale,
 		const struct redraw_context *ctx);
 
 
-bool redraw__inline_borders(struct box *box, struct rect b,
+bool html_redraw_inline_borders(struct box *box, struct rect b,
 		const struct rect *clip, float scale, bool first, bool last,
 		const struct redraw_context *ctx);
 
@@ -315,8 +315,8 @@ dom_hubbub_error html_process_script(void *ctx, dom_node *node);
 
 
 /* in html/forms.c */
-struct form *forms__get_forms(const char *docenc, dom_html_document *doc);
-struct form_control *forms__get_control_for_node(struct form *forms,
+struct form *html_forms_get_forms(const char *docenc, dom_html_document *doc);
+struct form_control *html_forms_get_control_for_node(struct form *forms,
 		dom_node *node);
 
 

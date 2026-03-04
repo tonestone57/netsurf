@@ -1309,7 +1309,7 @@ static void box_construct__convert(struct box_construct_ctx *ctx)
 
 /* exported function documented in html/box_construct.h */
 nserror
-box_construct__dom_to_box(dom_node *n,
+dom_to_box(dom_node *n,
 	   html_content *c,
 	   box_construct_complete_cb cb,
 	   void **box_conversion_context)
@@ -1344,7 +1344,7 @@ box_construct__dom_to_box(dom_node *n,
 
 
 /* exported function documented in html/box_construct.h */
-nserror box_construct__cancel(void *box_conversion_context)
+nserror cancel_dom_to_box(void *box_conversion_context)
 {
 	struct box_construct_ctx *ctx = box_conversion_context;
 	nserror err;
@@ -1377,7 +1377,7 @@ struct box *box_construct__box_for_node(dom_node *n)
 
 /* exported function documented in html/box_construct.h */
 bool
-box_construct__extract_link(const html_content *content,
+box_extract_link(const html_content *content,
 		 const dom_string *dsrel,
 		 nsurl *base,
 		 nsurl **result)

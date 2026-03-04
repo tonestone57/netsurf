@@ -46,7 +46,7 @@
 typedef bool (script_handler_t)(struct jsthread *jsthread, const uint8_t *data, size_t size, const char *name);
 
 
-static script_handler_t *script__select_handler(content_type ctype)
+static script_handler_t *select_script_handler(content_type ctype)
 {
 	if (ctype == CONTENT_JS) {
 		return js_exec;
@@ -84,7 +84,7 @@ nserror html_script_exec(html_content *c, bool allow_defer)
 				continue;
 
 			/* ensure script handler for content type */
-			script_handler = script__select_handler(
+			script_handler = select_script_handler(
 					content_get_type(s->data.handle));
 			if (script_handler == NULL)
 				continue; /* unsupported type */
@@ -317,7 +317,7 @@ script__convert_sync_cb(hlcache_handle *script,
 		s->already_started = true;
 
 		/* attempt to execute script */
-		script_handler = script__select_handler(content_get_type(s->data.handle));
+		script_handler = select_script_handler(content_get_type(s->data.handle));
 		if (script_handler != NULL && parent->jsthread != NULL) {
 			/* script has a handler */
 			const uint8_t *data;
@@ -544,7 +544,7 @@ script__exec_inline(html_content *c, dom_node *node, dom_string *mimetype)
 		return DOM_HUBBUB_DOM;
 	}
 
-	script_handler = script__select_handler(content_factory_type_from_mime_type(lwcmimetype));
+	script_handler = select_script_handler(content_factory_type_from_mime_type(lwcmimetype));
 	lwc_string_unref(lwcmimetype);
 
 	if (script_handler != NULL) {

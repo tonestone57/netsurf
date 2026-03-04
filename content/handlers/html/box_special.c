@@ -386,7 +386,7 @@ box_special__create_frameset(struct content_html_frames *f,
 			url = NULL;
 			err = dom_element_get_attribute(c, corestring_dom_src, &s);
 			if (err == DOM_NO_ERR && s != NULL) {
-				box_construct__extract_link(content, s, content->base_url,
+				box_extract_link(content, s, content->base_url,
 						 &url);
 				dom_string_unref(s);
 			}
@@ -692,7 +692,7 @@ box_special__a(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_href, &s);
 	if (err == DOM_NO_ERR && s != NULL) {
-		ok = box_construct__extract_link(content, s, content->base_url, &url);
+		ok = box_extract_link(content, s, content->base_url, &url);
 		dom_string_unref(s);
 		if (!ok)
 			return false;
@@ -801,7 +801,7 @@ box_special__button(dom_node *n,
 {
 	struct form_control *gadget;
 
-	gadget = forms__get_control_for_node(content->forms, n);
+	gadget = html_forms_get_control_for_node(content->forms, n);
 	if (!gadget)
 		return false;
 
@@ -883,7 +883,7 @@ box_special__embed(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &src);
 	if (err != DOM_NO_ERR || src == NULL)
 		return true;
-	if (box_construct__extract_link(content, src, content->base_url,
+	if (box_extract_link(content, src, content->base_url,
 			     &params->data) == false) {
 		dom_string_unref(src);
 		return false;
@@ -1049,7 +1049,7 @@ box_special__iframe(dom_node *n,
 	err = dom_element_get_attribute(n, corestring_dom_src, &s);
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
-	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
+	if (box_extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1195,7 +1195,7 @@ box_special__image(dom_node *n,
 	if (err != DOM_NO_ERR || s == NULL)
 		return true;
 
-	if (box_construct__extract_link(content, s, content->base_url, &url) == false) {
+	if (box_extract_link(content, s, content->base_url, &url) == false) {
 		dom_string_unref(s);
 		return false;
 	}
@@ -1241,7 +1241,7 @@ box_special__input(dom_node *n,
 	nsurl *url;
 	nserror error;
 
-	gadget = forms__get_control_for_node(content->forms, n);
+	gadget = html_forms_get_control_for_node(content->forms, n);
 	if (gadget == NULL) {
 		return false;
 	}
@@ -1439,7 +1439,7 @@ box_special__object(dom_node *n,
 	 * (codebase is the base for the other two) */
 	err = dom_element_get_attribute(n, corestring_dom_codebase, &codebase);
 	if (err == DOM_NO_ERR && codebase != NULL) {
-		if (box_construct__extract_link(content, codebase,	content->base_url,
+		if (box_extract_link(content, codebase,	content->base_url,
 				&params->codebase) == false) {
 			dom_string_unref(codebase);
 			return false;
@@ -1451,7 +1451,7 @@ box_special__object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_classid, &classid);
 	if (err == DOM_NO_ERR && classid != NULL) {
-		if (box_construct__extract_link(content, classid,
+		if (box_extract_link(content, classid,
 				params->codebase, &params->classid) == false) {
 			dom_string_unref(classid);
 			return false;
@@ -1461,7 +1461,7 @@ box_special__object(dom_node *n,
 
 	err = dom_element_get_attribute(n, corestring_dom_data, &data);
 	if (err == DOM_NO_ERR && data != NULL) {
-		if (box_construct__extract_link(content, data,
+		if (box_extract_link(content, data,
 				params->codebase, &params->data) == false) {
 			dom_string_unref(data);
 			return false;
@@ -1670,7 +1670,7 @@ box_special__select(dom_node *n,
 	dom_node *next, *next2;
 	dom_exception err;
 
-	gadget = forms__get_control_for_node(content->forms, n);
+	gadget = html_forms_get_control_for_node(content->forms, n);
 	if (gadget == NULL)
 		return false;
 
@@ -1827,7 +1827,7 @@ static bool box_special__textarea(dom_node *n,
 			bool *convert_children)
 {
 	/* Get the form_control for the DOM node */
-	box->gadget = forms__get_control_for_node(content->forms, n);
+	box->gadget = html_forms_get_control_for_node(content->forms, n);
 	if (box->gadget == NULL)
 		return false;
 

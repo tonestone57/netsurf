@@ -1054,7 +1054,7 @@ void table_used_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *ce
 	}
 
 	/* Finally, ensure that any borders configured as
-	 * hidden or none have zero width. (c.f. layout__find_dimensions) */
+	 * hidden or none have zero width. (c.f. layout_find_dimensions) */
 	for (side = 0; side != 4; side++) {
 		if (cell->border[side].style == CSS_BORDER_STYLE_HIDDEN ||
 		    cell->border[side].style ==

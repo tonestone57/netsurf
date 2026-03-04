@@ -1159,7 +1159,7 @@ static bool redraw__text_box(const html_content *html, struct box *box,
 	return true;
 }
 
-bool redraw__box(const html_content *html, struct box *box,
+bool html_redraw_box(const html_content *html, struct box *box,
 		int x_parent, int y_parent,
 		const struct rect *clip, float scale,
 		colour current_background_color,
@@ -1190,7 +1190,7 @@ static bool redraw__box_children(const html_content *html, struct box *box,
 	for (c = box->children; c; c = c->next) {
 
 		if (c->type != BOX_FLOAT_LEFT && c->type != BOX_FLOAT_RIGHT)
-			if (!redraw__box(html, c,
+			if (!html_redraw_box(html, c,
 					x_parent + box->x -
 					scrollbar_get_offset(box->scroll_x),
 					y_parent + box->y -
@@ -1200,7 +1200,7 @@ static bool redraw__box_children(const html_content *html, struct box *box,
 				return false;
 	}
 	for (c = box->float_children; c; c = c->next_float)
-		if (!redraw__box(html, c,
+		if (!html_redraw_box(html, c,
 				x_parent + box->x -
 				scrollbar_get_offset(box->scroll_x),
 				y_parent + box->y -
@@ -1228,7 +1228,7 @@ static bool redraw__box_children(const html_content *html, struct box *box,
  * x, y, clip_[xy][01] are in target coordinates.
  */
 
-bool redraw__box(const html_content *html, struct box *box,
+bool html_redraw_box(const html_content *html, struct box *box,
 		int x_parent, int y_parent,
 		const struct rect *clip, const float scale,
 		colour current_background_color,
@@ -1534,7 +1534,7 @@ bool redraw__box(const html_content *html, struct box *box,
 	       box->gadget->type == GADGET_TEXTBOX ||
 	       box->gadget->type == GADGET_PASSWORD))) &&
 	    (border_top || border_right || border_bottom || border_left)) {
-		if (!redraw__borders(box, x_parent, y_parent,
+		if (!html_redraw_borders(box, x_parent, y_parent,
 				padding_width, padding_height, &r,
 				scale, ctx))
 			return false;
@@ -1600,7 +1600,7 @@ bool redraw__box(const html_content *html, struct box *box,
 				/* restore previous graphics window */
 				if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 					return false;
-				if (!redraw__inline_borders(box, b, &r,
+				if (!html_redraw_inline_borders(box, b, &r,
 						scale, first, false, ctx))
 					return false;
 				/* reset coords */
@@ -1633,7 +1633,7 @@ bool redraw__box(const html_content *html, struct box *box,
 		/* restore previous graphics window */
 		if (ctx->plot->clip(ctx, &r) != NSERROR_OK)
 			return false;
-		if (!redraw__inline_borders(box, b, &r, scale, first, true,
+		if (!html_redraw_inline_borders(box, b, &r, scale, first, true,
 				ctx))
 			return false;
 
@@ -1871,7 +1871,7 @@ bool redraw__box(const html_content *html, struct box *box,
 
 	/* list marker */
 	if (box->list_marker) {
-		if (!redraw__box(html, box->list_marker,
+		if (!html_redraw_box(html, box->list_marker,
 				x_parent + box->x -
 				scrollbar_get_offset(box->scroll_x),
 				y_parent + box->y -
@@ -1941,7 +1941,7 @@ bool redraw__box(const html_content *html, struct box *box,
  * x, y, clip_[xy][01] are in target coordinates.
  */
 
-bool redraw__document(struct content *c, struct content_redraw_data *data,
+bool html_redraw(struct content *c, struct content_redraw_data *data,
 		const struct rect *clip, const struct redraw_context *ctx)
 {
 	html_content *html = (html_content *) c;
@@ -1979,7 +1979,7 @@ bool redraw__document(struct content *c, struct content_redraw_data *data,
 
 		result &= (ctx->plot->rectangle(ctx, &pstyle_fill_bg, clip) == NSERROR_OK);
 
-		result &= redraw__box(html, box, data->x, data->y, clip,
+		result &= html_redraw_box(html, box, data->x, data->y, clip,
 				data->scale, pstyle_fill_bg.fill_colour, ctx);
 	}
 
