@@ -125,6 +125,8 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	}
 	JS_FreeValue(thread->ctx, generics_val);
 
+	qjs_run_jobs(thread->ctx);
+
 	JSValue global = JS_GetGlobalObject(thread->ctx);
 
 	nsurl *url = NULL;
@@ -187,19 +189,6 @@ void js_destroythread(struct jsthread *thread)
 	if (thread == NULL) return;
 	JS_FreeContext(thread->ctx);
 	free(thread);
-}
-
-static void qjs_run_jobs(JSContext *ctx)
-{
-	JSContext *ctx1;
-	int err;
-	for (;;) {
-		err = JS_ExecutePendingJob(JS_GetRuntime(ctx), &ctx1);
-		if (err <= 0) {
-			if (err < 0) qjs_log_exception(ctx1, "Pending job error");
-			break;
-		}
-	}
 }
 
 bool js_exec(struct jsthread *thread, const uint8_t *txt, size_t txtlen, const char *name)

@@ -64,8 +64,7 @@ static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
 	JS_FreeValue(xhr->ctx, event_ctor);
 	JS_FreeValue(xhr->ctx, global);
 
-	JSContext *ctx1;
-	while (JS_ExecutePendingJob(JS_GetRuntime(xhr->ctx), &ctx1) > 0);
+	qjs_run_jobs(xhr->ctx);
 }
 
 static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
