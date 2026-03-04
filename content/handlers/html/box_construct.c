@@ -318,6 +318,7 @@ box_construct_generate(dom_node *n,
 	struct box *gen = NULL;
 	enum css_display_e computed_display;
 	const css_computed_content_item *c_item;
+	uint8_t content_type;
 
 	/* Nothing to generate if the parent box is not a block */
 	if (box->type != BOX_BLOCK)
@@ -326,19 +327,37 @@ box_construct_generate(dom_node *n,
 	/* To determine if an element has a pseudo element, we select
 	 * for it and test to see if the returned style's content
 	 * property is set to normal. */
-	if (style == NULL ||
-			css_computed_content(style, &c_item) ==
-			CSS_CONTENT_NORMAL) {
-		/* No pseudo element */
+	content_type = css_computed_content(style, &c_item);
+	if (content_type != CSS_CONTENT_SET) {
+		/* No pseudo element content */
 		return;
 	}
 
-	/* create box for this element */
-	computed_display = ns_computed_display(style, box_is_root(n));
-	if (computed_display == CSS_DISPLAY_BLOCK ||
-			computed_display == CSS_DISPLAY_TABLE) {
-		/* currently only support block level boxes */
+	computed_display = ns_computed_display(style, false);
+	if (computed_display == CSS_DISPLAY_NONE)
+		return;
 
+	box_type type = box_map[computed_display];
+
+	if (type == BOX_INLINE || type == BOX_INLINE_BLOCK || type == BOX_BR) {
+		struct box *inline_container;
+		if (box->last && box->last->type == BOX_INLINE_CONTAINER) {
+			inline_container = box->last;
+		} else {
+			inline_container = box_create(NULL, (css_computed_style *) box->style,
+					false, NULL, NULL, NULL, NULL, content->bctx);
+			if (inline_container == NULL)
+				return;
+			inline_container->type = BOX_INLINE_CONTAINER;
+			box_add_child(box, inline_container);
+		}
+		gen = box_create(NULL, (css_computed_style *) style,
+				false, NULL, NULL, NULL, NULL, content->bctx);
+		if (gen == NULL)
+			return;
+		gen->type = type;
+		box_add_child(inline_container, gen);
+	} else {
 		/** \todo Not wise to drop const from the computed style */
 		gen = box_create(NULL, (css_computed_style *) style,
 				false, NULL, NULL, NULL, NULL, content->bctx);
@@ -346,11 +365,82 @@ box_construct_generate(dom_node *n,
 			return;
 		}
 
-		/* set box type from computed display */
-		gen->type = box_map[ns_computed_display(
-				style, box_is_root(n))];
-
+		gen->type = type;
 		box_add_child(box, gen);
+	}
+
+	/* handle content items */
+	struct box *container = gen;
+	if (gen->type != BOX_INLINE && gen->type != BOX_BR) {
+		struct box *inline_container = box_create(NULL,
+				(css_computed_style *) style,
+				false, NULL, NULL, NULL, NULL,
+				content->bctx);
+		if (inline_container != NULL) {
+			inline_container->type = BOX_INLINE_CONTAINER;
+			box_add_child(gen, inline_container);
+			container = inline_container;
+		}
+	}
+
+	while (c_item->type != CSS_COMPUTED_CONTENT_NONE) {
+		if (c_item->type == CSS_COMPUTED_CONTENT_STRING ||
+				c_item->type == CSS_COMPUTED_CONTENT_ATTR) {
+			char *text = NULL;
+			if (c_item->type == CSS_COMPUTED_CONTENT_STRING) {
+				text = talloc_strdup(content->bctx,
+						lwc_string_data(c_item->data.string));
+			} else {
+				dom_string *attr_name;
+				dom_string *attr_value = NULL;
+				if (dom_string_create_interned((const uint8_t *)
+						lwc_string_data(c_item->data.attr),
+						lwc_string_length(c_item->data.attr),
+						&attr_name) == DOM_NO_ERR) {
+					dom_element_get_attribute((dom_element *)n,
+							attr_name, &attr_value);
+					dom_string_unref(attr_name);
+				}
+				if (attr_value != NULL) {
+					text = talloc_strdup(content->bctx,
+							dom_string_data(attr_value));
+					dom_string_unref(attr_value);
+				}
+			}
+
+			if (text != NULL) {
+				struct box *text_box = box_create(NULL,
+						(css_computed_style *) style,
+						false, NULL, NULL, NULL, NULL,
+						content->bctx);
+				if (text_box != NULL) {
+					text_box->type = BOX_TEXT;
+					text_box->text = text;
+					text_box->length = strlen(text);
+					box_add_child(container, text_box);
+				} else {
+					talloc_free(text);
+				}
+			}
+		} else if (c_item->type == CSS_COMPUTED_CONTENT_URI) {
+			nsurl *url;
+			if (nsurl_create(lwc_string_data(c_item->data.uri),
+					&url) == NSERROR_OK) {
+				struct box *img_box = box_create(NULL,
+						(css_computed_style *) style,
+						false, NULL, NULL, NULL, NULL,
+						content->bctx);
+				if (img_box != NULL) {
+					img_box->type = BOX_INLINE_BLOCK;
+					img_box->flags |= IS_REPLACED;
+					box_add_child(container, img_box);
+					html_fetch_object(content, url, img_box,
+							CONTENT_IMAGE, false);
+				}
+				nsurl_unref(url);
+			}
+		}
+		c_item++;
 	}
 }
 
@@ -1108,10 +1198,43 @@ static bool box_construct_text(struct box_construct_ctx *ctx)
 		memcpy(text, dom_string_data(content), text_len);
 		text[text_len] = '\0';
 
-		/* TODO: Handle tabs properly */
-		for (i = 0; i < text_len; i++)
-			if (text[i] == '\t')
-				text[i] = ' ';
+		/* Handle tabs properly by expanding to spaces */
+		size_t num_tabs = 0;
+		for (i = 0; i < text_len; i++) {
+			if (text[i] == '\t') {
+				num_tabs++;
+			}
+		}
+
+		if (num_tabs > 0) {
+			char *new_text = malloc(text_len + num_tabs * 7 + 1);
+			if (new_text == NULL) {
+				free(text);
+				return false;
+			}
+			size_t j = 0;
+			size_t col = 0;
+			for (i = 0; i < text_len; i++) {
+				if (text[i] == '\t') {
+					size_t num_spaces = 8 - (col % 8);
+					while (num_spaces--) {
+						new_text[j++] = ' ';
+						col++;
+					}
+				} else {
+					if (text[i] == '\n' || text[i] == '\r') {
+						col = 0;
+					} else if ((text[i] & 0xC0) != 0x80) {
+						col++;
+					}
+					new_text[j++] = text[i];
+				}
+			}
+			new_text[j] = '\0';
+			free(text);
+			text = new_text;
+			text_len = j;
+		}
 
 		if (css_computed_text_transform(props.parent_style) !=
 				CSS_TEXT_TRANSFORM_NONE)

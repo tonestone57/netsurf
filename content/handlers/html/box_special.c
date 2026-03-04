@@ -1037,13 +1037,6 @@ box_iframe(dom_node *n,
 			box_is_root(n)) == CSS_DISPLAY_NONE)
 		return true;
 
-	if (box->style &&
-	    css_computed_visibility(box->style) == CSS_VISIBILITY_HIDDEN) {
-		/* Don't create iframe discriptors for invisible iframes
-		 * TODO: handle hidden iframes at browser_window generation
-		 * time instead? */
-		return true;
-	}
 
 	/* get frame URL */
 	err = dom_element_get_attribute(n, corestring_dom_src, &s);
