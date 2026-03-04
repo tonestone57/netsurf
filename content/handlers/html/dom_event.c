@@ -263,7 +263,7 @@ dom_event__script_showed_up(html_content *htmlc, dom_html_script_element *script
 		return;
 	}
 
-	NSLOG(netsurf, DEEPDEBUG, "Encountered a script, node %p showed up", script);
+	NSLOG(netsurf, DEEPDEBUG, "Encountered a script, node %p showed up", (void *)script);
 
 	exc = dom_html_script_element_get_flags(script, &flags);
 	if (exc != DOM_NO_ERR) {
@@ -646,10 +646,7 @@ dom_event__default_action_node_inserted_cb(struct dom_event *evt, void *pw)
 				content_broadcast(&htmlc->base,
 						  CONTENT_MSG_GETTHREAD,
 						  &msg_data);
-				NSLOG(netsurf, INFO,
-				      "javascript context: %p (htmlc: %p)",
-				      htmlc->jsthread,
-				      htmlc);
+				NSLOG(netsurf, INFO, "javascript context: %p (htmlc: %p)", (void *)htmlc->jsthread, (void *)htmlc);
 			}
 			if (htmlc->jsthread != NULL) {
 				js_handle_new_element(htmlc->jsthread,
@@ -767,8 +764,7 @@ html_dom_event_fetcher(dom_string *type,
 		  dom_default_action_phase phase,
 		  void **pw)
 {
-	NSLOG(netsurf, DEEPDEBUG,
-	      "phase:%d type:%s", phase, dom_string_data(type));
+	NSLOG(netsurf, DEEPDEBUG, "phase:%d type:%s", phase, dom_string_data(type));
 
 	if (phase == DOM_DEFAULT_ACTION_END) {
 		if (dom_string_isequal(type, corestring_dom_DOMNodeInserted)) {

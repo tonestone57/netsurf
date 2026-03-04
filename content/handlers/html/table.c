@@ -966,18 +966,13 @@ table_calculate_column_types(const css_unit_ctx *unit_len_ctx, struct box *table
 
 #ifdef TABLE_DEBUG
 	for (i = 0; i != table->columns; i++)
-		NSLOG(netsurf, INFO,
-		      "table %p, column %u: type %s, width %i",
-		      table,
-		      i,
-		      ((const char *[]){
+		NSLOG(netsurf, INFO, "table %p, column %u: type %s, width %i", (void *)table, i, ((const char *[]){
 					"UNKNOWN",
 					"FIXED",
 					"AUTO",
 					"PERCENT",
 					"RELATIVE",
-				      })[col[i].type],
-		      col[i].width);
+				      })[col[i].type], col[i].width);
 #endif
 
 	return true;

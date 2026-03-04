@@ -193,8 +193,7 @@ form__fetch_data_list_add_sname(const char *name,
 	fetch_data->name = malloc(keysize + 1); /* allow for null */
 	if (fetch_data->name == NULL) {
 		free(fetch_data);
-		NSLOG(netsurf, INFO,
-		      "keyname allocation failure for %s%s", name, ksfx);
+		NSLOG(netsurf, INFO, "keyname allocation failure for %s%s", name, ksfx);
 		return NSERROR_NOMEM;
 	}
 	snprintf(fetch_data->name, keysize + 1, "%s%s", name, ksfx);
@@ -318,8 +317,7 @@ form__dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 	exp = dom_html_text_area_element_get_disabled(text_area_element,
 						      &element_disabled);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get text area disabled property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get text area disabled property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -332,8 +330,7 @@ form__dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 	exp = dom_html_text_area_element_get_name(text_area_element,
 						  &inputname);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get text area name property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get text area name property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -346,8 +343,7 @@ form__dom_to_data_textarea(dom_html_text_area_element *text_area_element,
 	exp = dom_html_text_area_element_get_value(text_area_element,
 						   &inputvalue);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get text area content. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get text area content. exp %d", exp);
 		dom_string_unref(inputname);
 		return NSERROR_DOM;
 	}
@@ -438,8 +434,7 @@ form__dom_to_data_select(dom_html_select_element *select_element,
 	exp = dom_html_select_element_get_disabled(select_element,
 						   &element_disabled);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get select disabled property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get select disabled property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -451,8 +446,7 @@ form__dom_to_data_select(dom_html_select_element *select_element,
 	/* obtain name property */
 	exp = dom_html_select_element_get_name(select_element, &inputname);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get select name property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get select name property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -763,8 +757,7 @@ form__dom_to_data_input(dom_html_input_element *input_element,
 	exp = dom_html_input_element_get_disabled(input_element,
 						  &element_disabled);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get input disabled property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get input disabled property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -776,8 +769,7 @@ form__dom_to_data_input(dom_html_input_element *input_element,
 	/* obtain name property */
 	exp = dom_html_input_element_get_name(input_element, &inputname);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get input name property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get input name property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -889,8 +881,7 @@ form__dom_to_data_button(dom_html_button_element *button_element,
 	exp = dom_html_button_element_get_disabled(button_element,
 						   &element_disabled);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Unable to get disabled property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Unable to get disabled property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -935,8 +926,7 @@ form__dom_to_data_button(dom_html_button_element *button_element,
 	/* obtain name property */
 	exp = dom_html_button_element_get_name(button_element, &inputname);
 	if (exp != DOM_NO_ERR) {
-		NSLOG(netsurf, INFO,
-		      "Could not get button name property. exp %d", exp);
+		NSLOG(netsurf, INFO, "Could not get button name property. exp %d", exp);
 		return NSERROR_DOM;
 	}
 
@@ -1154,9 +1144,7 @@ form__dom_to_data(struct form *form,
 
 		} else {
 			/* Form element is not handled */
-			NSLOG(netsurf, INFO,
-			      "Unhandled element type: %*s",
-			      (int)dom_string_byte_length(nodename),
+			NSLOG(netsurf, INFO, "Unhandled element type: %*s", (int)dom_string_byte_length(nodename),
 			      dom_string_data(nodename));
 			res = NSERROR_DOM;
 
@@ -1457,8 +1445,7 @@ void form_free_control(struct form_control *control)
 	struct form_control *c;
 	assert(control != NULL);
 
-	NSLOG(netsurf, INFO, "Control:%p name:%p value:%p initial:%p",
-	      control, control->name, control->value, control->initial_value);
+	NSLOG(netsurf, INFO, "Control:%p name:%p value:%p initial:%p", (void *)control, (void *)control->name, (void *)control->value, (void *)control->initial_value);
 	free(control->name);
 	free(control->value);
 	free(control->initial_value);
@@ -1472,9 +1459,7 @@ void form_free_control(struct form_control *control)
 		for (option = control->data.select.items; option;
 				option = next) {
 			next = option->next;
-			NSLOG(netsurf, INFO,
-			      "select option:%p text:%p value:%p", option,
-			      option->text, option->value);
+			NSLOG(netsurf, INFO, "select option:%p text:%p value:%p", (void *)option, (void *)option->text, (void *)option->value);
 			free(option->text);
 			free(option->value);
 			free(option);

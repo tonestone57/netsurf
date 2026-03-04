@@ -161,7 +161,7 @@ box_normalise__table_row(struct box *row,
 	ctx.root_style = root->style;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "row %p", row);
+	NSLOG(netsurf, INFO, "row %p", (void *)row);
 #endif
 
 	for (child = row->children; child != NULL; child = next_child) {
@@ -274,7 +274,7 @@ box_normalise__table_row(struct box *row,
 	col_info->num_rows++;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "row %p done", row);
+	NSLOG(netsurf, INFO, "row %p done", (void *)row);
 #endif
 
 	return true;
@@ -300,7 +300,7 @@ box_normalise__table_row_group(struct box *row_group,
 	ctx.root_style = root->style;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "row_group %p", row_group);
+	NSLOG(netsurf, INFO, "row_group %p", (void *)row_group);
 #endif
 
 	/* Clear spanning information for new row group */
@@ -440,7 +440,7 @@ box_normalise__table_row_group(struct box *row_group,
 	row_group->rows = group_row_count;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "row_group %p done", row_group);
+	NSLOG(netsurf, INFO, "row_group %p done", (void *)row_group);
 #endif
 
 	return true;
@@ -636,7 +636,7 @@ box_normalise__table(struct box *table, const struct box *root, html_content * c
 	ctx.root_style = root->style;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "table %p", table);
+	NSLOG(netsurf, INFO, "table %p", (void *)table);
 #endif
 
 	col_info.num_columns = 1;
@@ -816,7 +816,7 @@ box_normalise__table(struct box *table, const struct box *root, html_content * c
 	free(col_info.spans);
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "table %p done", table);
+	NSLOG(netsurf, INFO, "table %p done", (void *)table);
 #endif
 
 	return true;
@@ -839,8 +839,7 @@ static bool box_normalise__flex(
 	ctx.root_style = root->style;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "flex_container %p, flex_container->type %u",
-			flex_container, flex_container->type);
+	NSLOG(netsurf, INFO, "flex_container %p, flex_container->type %u", (void *)flex_container, flex_container->type);
 #endif
 
 	assert(flex_container->type == BOX_FLEX ||
@@ -848,8 +847,7 @@ static bool box_normalise__flex(
 
 	for (child = flex_container->children; child != NULL; child = next_child) {
 #ifdef BOX_NORMALISE_DEBUG
-		NSLOG(netsurf, INFO, "child %p, child->type = %d",
-				child, child->type);
+		NSLOG(netsurf, INFO, "child %p, child->type = %d", (void *)child, child->type);
 #endif
 
 		next_child = child->next;	/* child may be destroyed */
@@ -1010,7 +1008,7 @@ box_normalise__inline_container(struct box *cont,
 	assert(cont->type == BOX_INLINE_CONTAINER);
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "cont %p", cont);
+	NSLOG(netsurf, INFO, "cont %p", (void *)cont);
 #endif
 
 	for (child = cont->children; child != NULL; child = next_child) {
@@ -1084,7 +1082,7 @@ box_normalise__inline_container(struct box *cont,
 	}
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "cont %p done", cont);
+	NSLOG(netsurf, INFO, "cont %p done", (void *)cont);
 #endif
 
 	return true;
@@ -1106,7 +1104,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 	ctx.root_style = root->style;
 
 #ifdef BOX_NORMALISE_DEBUG
-	NSLOG(netsurf, INFO, "block %p, block->type %u", block, block->type);
+	NSLOG(netsurf, INFO, "block %p, block->type %u", (void *)block, block->type);
 #endif
 
 	assert(block->type == BOX_BLOCK || block->type == BOX_INLINE_BLOCK ||
@@ -1114,8 +1112,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 
 	for (child = block->children; child != NULL; child = next_child) {
 #ifdef BOX_NORMALISE_DEBUG
-		NSLOG(netsurf, INFO, "child %p, child->type = %d", child,
-		      child->type);
+		NSLOG(netsurf, INFO, "child %p, child->type = %d", (void *)child, child->type);
 #endif
 
 		next_child = child->next;	/* child may be destroyed */

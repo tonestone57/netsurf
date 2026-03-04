@@ -539,8 +539,7 @@ static bool object__replace(struct content_html_object *object, nsurl *url)
 		/* remove existing object */
 		if (content_get_status(object->content) != CONTENT_STATUS_DONE) {
 			c->base.active--;
-			NSLOG(netsurf, INFO, "%d fetches active",
-			      c->base.active);
+			NSLOG(netsurf, INFO, "%d fetches active", c->base.active);
 		}
 
 		hlcache_handle_release(object->content);
@@ -647,8 +646,7 @@ nserror html_object_abort_objects(html_content *htmlc)
 			object->content = NULL;
 			if (object->box != NULL) {
 				htmlc->base.active--;
-				NSLOG(netsurf, INFO, "%d fetches active",
-				      htmlc->base.active);
+				NSLOG(netsurf, INFO, "%d fetches active", htmlc->base.active);
 			}
 			break;
 
@@ -690,7 +688,7 @@ nserror html_object_free_objects(html_content *html)
 		struct content_html_object *victim = html->object_list;
 
 		if (victim->content != NULL) {
-			NSLOG(netsurf, INFO, "object %p", victim->content);
+			NSLOG(netsurf, INFO, "object %p", (void *)victim->content);
 
 			if (content_get_type(victim->content) == CONTENT_HTML) {
 				guit->misc->schedule(-1, object__refresh, victim);

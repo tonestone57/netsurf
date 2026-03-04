@@ -852,8 +852,7 @@ interaction__gadget_mouse_action(html_content *html,
 						    form_select_menu_callback,
 						    c);
 			if (res != NSERROR_OK) {
-				NSLOG(netsurf, ERROR, "%s",
-				      messages_get_errorcode(res));
+				NSLOG(netsurf, ERROR, "%s", messages_get_errorcode(res));
 				html->visible_select_menu = NULL;
 			}
 			mas->result.pointer = BROWSER_POINTER_DEFAULT;

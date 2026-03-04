@@ -122,8 +122,7 @@ bool fire_generic_dom_event(dom_string *type, dom_node *target,
 		dom_event_unref(evt);
 		return false;
 	}
-	NSLOG(netsurf, INFO, "Dispatching '%*s' against %p",
-	      (int)dom_string_length(type), dom_string_data(type), target);
+	NSLOG(netsurf, INFO, "Dispatching '%*s' against %p", (int)dom_string_length(type), dom_string_data(type), (void *)target);
 	result = html__fire_dom_event(evt, target);
 	dom_event_unref(evt);
 	return result;
@@ -199,8 +198,7 @@ bool fire_dom_keyboard_event(dom_string *type, dom_node *target,
 		return false;
 	}
 
-	NSLOG(netsurf, INFO, "Dispatching '%*s' against %p",
-			(int)dom_string_length(type), dom_string_data(type), target);
+	NSLOG(netsurf, INFO, "Dispatching '%*s' against %p", (int)dom_string_length(type), dom_string_data(type), (void *)target);
 
 	result = html__fire_dom_event((dom_event *) evt, target);
 	dom_event_unref(evt);
@@ -219,7 +217,7 @@ static void html__box_convert_done(html_content *c, bool success)
 	dom_exception exc; /* returned by libdom functions */
 	dom_node *html;
 
-	NSLOG(netsurf, INFO, "DOM to box conversion complete (content %p)", c);
+	NSLOG(netsurf, INFO, "DOM to box conversion complete (content %p)", (void *)c);
 
 	c->box_conversion_context = NULL;
 
@@ -386,7 +384,7 @@ void html_finish_conversion(html_content *htmlc)
 	}
 
 	/* convert dom tree to box tree */
-	NSLOG(netsurf, INFO, "DOM to box (%p)", htmlc);
+	NSLOG(netsurf, INFO, "DOM to box (%p)", (void *)htmlc);
 	content_set_status(&htmlc->base, messages_get("Processing"));
 	msg_data.explicit_status_text = NULL;
 	content_broadcast(&htmlc->base, CONTENT_MSG_STATUS, &msg_data);
@@ -795,7 +793,7 @@ static bool html__convert(struct content *c)
 	}
 
 	htmlc->base.active--; /* the html fetch is no longer active */
-	NSLOG(netsurf, INFO, "%d fetches active (%p)", htmlc->base.active, c);
+	NSLOG(netsurf, INFO, "%d fetches active (%p)", htmlc->base.active, (void *)c);
 
 	/* The parse cannot be completed here because it may be paused
 	 * untill all the resources being fetched have completed.
@@ -851,7 +849,7 @@ html_begin_conversion(html_content *htmlc)
 	 * complete to avoid repeating the completion pointlessly.
 	 */
 	if (htmlc->parse_completed == false) {
-		NSLOG(netsurf, INFO, "Completing parse (%p)", htmlc);
+		NSLOG(netsurf, INFO, "Completing parse (%p)", (void *)htmlc);
 		/* complete parsing */
 		error = dom_hubbub_parser_completed(htmlc->parser);
 		if (error == DOM_HUBBUB_HUBBUB_ERR_PAUSED && htmlc->base.active > 0) {
@@ -874,15 +872,14 @@ html_begin_conversion(html_content *htmlc)
 	}
 
 	if (html_can_begin_conversion(htmlc) == false) {
-		NSLOG(netsurf, INFO, "Can't begin conversion (%p)", htmlc);
+		NSLOG(netsurf, INFO, "Can't begin conversion (%p)", (void *)htmlc);
 		/* We can't proceed (see commentary above) */
 		return true;
 	}
 
 	/* Give up processing if we've been aborted */
 	if (htmlc->aborted) {
-		NSLOG(netsurf, INFO, "Conversion aborted (%p) (active: %u)",
-		      htmlc, htmlc->base.active);
+		NSLOG(netsurf, INFO, "Conversion aborted (%p) (active: %u)", (void *)htmlc, htmlc->base.active);
 		content_set_error(&htmlc->base);
 		content_broadcast_error(&htmlc->base, NSERROR_STOPPED, NULL);
 		return false;
@@ -1039,8 +1036,7 @@ static void html__stop(struct content *c)
 		break;
 
 	default:
-		NSLOG(netsurf, INFO, "Unexpected status %d (%p)", c->status,
-		      c);
+		NSLOG(netsurf, INFO, "Unexpected status %d (%p)", c->status, (void *)c);
 		assert(0);
 	}
 }
@@ -1204,7 +1200,7 @@ static void html__destroy(struct content *c)
 	html_content *html = (html_content *) c;
 	struct form *f, *g;
 
-	NSLOG(netsurf, INFO, "content %p", c);
+	NSLOG(netsurf, INFO, "content %p", (void *)c);
 
 	/* If we're still converting a layout, cancel it */
 	if (html->box_conversion_context != NULL) {
@@ -1816,9 +1812,7 @@ static bool html__drop_file_at_point(struct content *c, int x, int y, char *file
 		ret = guit->utf8->local_to_utf8(buffer, file_len, &utf8_buff);
 		if (ret != NSERROR_OK) {
 			/* bad encoding shouldn't happen */
-			NSLOG(netsurf, ERROR,
-			      "local to utf8 encoding failed (%s)",
-			      messages_get_errorcode(ret));
+			NSLOG(netsurf, ERROR, "local to utf8 encoding failed (%s)", messages_get_errorcode(ret));
 			assert(ret != NSERROR_BAD_ENCODING);
 			free(buffer);
 			return true;

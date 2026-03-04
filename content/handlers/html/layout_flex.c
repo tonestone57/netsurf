@@ -276,8 +276,7 @@ static inline bool layout__flex_base_and_main_sizes(
 	int content_max_width = b->max_width;
 	int delta_outer_main = layout__delta_outer_main(ctx->flex, b);
 
-	NSLOG(flex, DEEPDEBUG, "box %p: delta_outer_main: %i",
-			(void *)b, delta_outer_main);
+	NSLOG(flex, DEEPDEBUG, "box %p: delta_outer_main: %i", (void *)b, delta_outer_main);
 
 	if (item->basis == CSS_FLEX_BASIS_SET) {
 		if (item->basis_unit == CSS_UNIT_PCT) {
@@ -336,8 +335,7 @@ static inline bool layout__flex_base_and_main_sizes(
 		item->main_size = item->min_main + delta_outer_main;
 	}
 
-	NSLOG(flex, DEEPDEBUG, "flex-item box: %p: base_size: %i, main_size %i",
-			(void *)b, item->base_size, item->main_size);
+	NSLOG(flex, DEEPDEBUG, "flex-item box: %p: base_size: %i, main_size %i", (void *)b, item->base_size, item->main_size);
 
 	return true;
 }
@@ -411,8 +409,7 @@ static void layout__flex_ctx_populate_item_data(
 				b->margin, b->padding, b->border);
 		b->float_container = NULL;
 
-		NSLOG(flex, DEEPDEBUG, "flex-item box: %p: width: %i",
-				(void *)b, b->width);
+		NSLOG(flex, DEEPDEBUG, "flex-item box: %p: width: %i", (void *)b, b->width);
 
 		item->box = b;
 		item->basis = css_computed_flex_basis(b->style,
@@ -478,8 +475,7 @@ static struct flex_line_data *layout__flex_build_line(struct flex_ctx *ctx,
 	line = &ctx->line.data[ctx->line.count];
 	line->first = item_index;
 
-	NSLOG(flex, DEEPDEBUG, "flex container %p: available main: %i",
-			(void *)ctx->flex, ctx->available_main);
+	NSLOG(flex, DEEPDEBUG, "flex container %p: available main: %i", (void *)ctx->flex, ctx->available_main);
 
 	while (item_index < ctx->item.count) {
 		struct flex_item_data *item = &ctx->item.data[item_index];
@@ -592,8 +588,7 @@ static inline int layout__flex_remaining_free_main(
 		}
 	}
 
-	NSLOG(flex, DEEPDEBUG, "Remaining free space: %i",
-			remaining_free_main);
+	NSLOG(flex, DEEPDEBUG, "Remaining free space: %i", remaining_free_main);
 
 	return remaining_free_main;
 }
@@ -617,8 +612,7 @@ static inline int layout__flex_get_min_max_violations(
 		struct flex_item_data *item = &ctx->item.data[i];
 		int target_main_size = item->target_main_size;
 
-		NSLOG(flex, DEEPDEBUG, "item %p: target_main_size: %i",
-					(void *)item->box, target_main_size);
+		NSLOG(flex, DEEPDEBUG, "item %p: target_main_size: %i", (void *)item->box, target_main_size);
 
 		if (item->freeze) {
 			continue;
@@ -628,22 +622,19 @@ static inline int layout__flex_get_min_max_violations(
 		    target_main_size > item->max_main) {
 			target_main_size = item->max_main;
 			item->max_violation = true;
-			NSLOG(flex, DEEPDEBUG, "Violation: max_main: %i",
-					item->max_main);
+			NSLOG(flex, DEEPDEBUG, "Violation: max_main: %i", item->max_main);
 		}
 
 		if (target_main_size < item->min_main) {
 			target_main_size = item->min_main;
 			item->min_violation = true;
-			NSLOG(flex, DEEPDEBUG, "Violation: min_main: %i",
-					item->min_main);
+			NSLOG(flex, DEEPDEBUG, "Violation: min_main: %i", item->min_main);
 		}
 
 		if (target_main_size < item->box->min_width) {
 			target_main_size = item->box->min_width;
 			item->min_violation = true;
-			NSLOG(flex, DEEPDEBUG, "Violation: box min_width: %i",
-					item->box->min_width);
+			NSLOG(flex, DEEPDEBUG, "Violation: box min_width: %i", item->box->min_width);
 		}
 
 		if (target_main_size < 0) {
@@ -772,11 +763,10 @@ static bool layout__flex_resolve_line(
 	grow = (line->main_size < available_main);
 	initial_free_main = available_main;
 
-	NSLOG(flex, DEEPDEBUG, "box %p: line %" PRIsizet ": first: %" PRIsizet ", count: %" PRIsizet,
+	NSLOG(flex, DEEPDEBUG, "box %p: line %" PRIsizet ": first: %" PRIsizet ", count: %" PRIsizet "",
 			(void *)ctx->flex, (size_t)(line - ctx->line.data),
 			line->first, line->count);
-	NSLOG(flex, DEEPDEBUG, "Line main_size: %i, available_main: %i",
-			line->main_size, available_main);
+	NSLOG(flex, DEEPDEBUG, "Line main_size: %i, available_main: %i", line->main_size, available_main);
 
 	for (size_t i = line->first; i < item_count; i++) {
 		struct flex_item_data *item = &ctx->item.data[i];
@@ -810,8 +800,7 @@ static bool layout__flex_resolve_line(
 		int remaining_free_main;
 		int total_violation;
 
-		NSLOG(flex, DEEPDEBUG, "flex-container: %p: Resolver pass",
-				(void *)ctx->flex);
+		NSLOG(flex, DEEPDEBUG, "flex-container: %p: Resolver pass", (void *)ctx->flex);
 
 		/* b */
 		remaining_free_main = layout__flex_remaining_free_main(ctx,
@@ -1218,9 +1207,7 @@ bool layout_flex(struct box *flex, int available_width,
 		return false;
 	}
 
-	NSLOG(flex, DEEPDEBUG, "box %p: %s, available_width %i, width: %i",
-			(void *)flex, ctx->horizontal ? "horizontal" : "vertical",
-			available_width, flex->width);
+	NSLOG(flex, DEEPDEBUG, "box %p: %s, available_width %i, width: %i", (void *)flex, ctx->horizontal ? "horizontal" : "vertical", available_width, flex->width);
 
 	layout_find_dimensions(
 			ctx->unit_len_ctx, available_width, -1,
@@ -1238,10 +1225,8 @@ bool layout_flex(struct box *flex, int available_width,
 		ctx->available_cross = available_width;
 	}
 
-	NSLOG(flex, DEEPDEBUG, "box %p: available_main: %i",
-			(void *)flex, ctx->available_main);
-	NSLOG(flex, DEEPDEBUG, "box %p: available_cross: %i",
-			(void *)flex, ctx->available_cross);
+	NSLOG(flex, DEEPDEBUG, "box %p: available_main: %i", (void *)flex, ctx->available_main);
+	NSLOG(flex, DEEPDEBUG, "box %p: available_cross: %i", (void *)flex, ctx->available_cross);
 
 	layout__flex_ctx_populate_item_data(ctx, flex, available_width);
 
@@ -1291,8 +1276,6 @@ bool layout_flex(struct box *flex, int available_width,
 cleanup:
 	layout__flex_ctx_destroy(ctx);
 
-	NSLOG(flex, DEEPDEBUG, "box %p: %s: w: %i, h: %i", (void *)flex,
-			success ? "success" : "failure",
-			flex->width, flex->height);
+	NSLOG(flex, DEEPDEBUG, "box %p: %s: w: %i, h: %i", (void *)flex, success ? "success" : "failure", flex->width, flex->height);
 	return success;
 }

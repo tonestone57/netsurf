@@ -118,8 +118,7 @@ css__convert_callback(hlcache_handle *css,
 		break;
 
 	case CONTENT_MSG_ERROR:
-		NSLOG(netsurf, INFO, "stylesheet %s failed: %s",
-		      nsurl_access(hlcache_handle_get_url(css)),
+		NSLOG(netsurf, INFO, "stylesheet %s failed: %s", nsurl_access(hlcache_handle_get_url(css)),
 		      event->data.errordata.errormsg);
 
 		hlcache_handle_release(css);
@@ -272,8 +271,7 @@ css__process_modified_style(html_content *c, struct html_stylesheet *s)
 	}
 
 	if (sheet != NULL) {
-		NSLOG(netsurf, INFO, "Updating sheet %p with %p", s->sheet,
-		      sheet);
+		NSLOG(netsurf, INFO, "Updating sheet %p with %p", (void *)s->sheet, (void *)sheet);
 
 		if (s->sheet != NULL) {
 			switch (content_get_status(s->sheet)) {
@@ -282,8 +280,7 @@ css__process_modified_style(html_content *c, struct html_stylesheet *s)
 			default:
 				hlcache_handle_abort(s->sheet);
 				c->base.active--;
-				NSLOG(netsurf, INFO, "%d fetches active",
-				      c->base.active);
+				NSLOG(netsurf, INFO, "%d fetches active", c->base.active);
 			}
 			hlcache_handle_release(s->sheet);
 		}
@@ -334,9 +331,7 @@ bool html_css_update_style(html_content *c, dom_node *style)
 		s = css__create_style_element(c, style);
 	}
 	if (s == NULL) {
-		NSLOG(netsurf, INFO,
-		      "Could not find or create inline stylesheet for %p",
-		      style);
+		NSLOG(netsurf, INFO, "Could not find or create inline stylesheet for %p", (void *)style);
 		return false;
 	}
 
@@ -469,8 +464,7 @@ bool html_css_process_link(html_content *htmlc, dom_node *node)
 	}
 	dom_string_unref(href);
 
-	NSLOG(netsurf, INFO, "linked stylesheet %i '%s'",
-	      htmlc->stylesheet_count, nsurl_access(joined));
+	NSLOG(netsurf, INFO, "linked stylesheet %i '%s'", htmlc->stylesheet_count, nsurl_access(joined));
 
 	/* extend stylesheets array to allow for new sheet */
 	stylesheets = realloc(htmlc->stylesheets,

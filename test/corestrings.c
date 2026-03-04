@@ -40,7 +40,7 @@
  *
  * This is used to test all the out of memory paths in initialisation.
  */
-#define CORESTRING_TEST_COUNT 525
+#define CORESTRING_TEST_COUNT 526
 
 START_TEST(corestrings_test)
 {

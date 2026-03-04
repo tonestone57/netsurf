@@ -457,7 +457,7 @@ static void layout__block_context_position_table(
 		int *y, int *x0)
 {
 	int x1;
-	struct box *left, *right;
+	struct box (void *)left, (void *)right;
 
 	*y = cy;
 	while (1) {
@@ -515,7 +515,7 @@ static void layout__block_context_bfc_margins(
 		int *lm, int *rm)
 {
 	int x0, x1, top;
-	struct box *left, *right;
+	struct box (void *)left, (void *)right;
 
 	top = cy + max_pos_margin - max_neg_margin;
 	top = (top > y) ? top : y;
@@ -952,7 +952,7 @@ layout__minmax_line(struct box *first,
 
 		assert(layout__box_is_inline_content(b));
 
-		NSLOG(layout, DEBUG, "%p: min %i, max %i", b, min, max);
+		NSLOG(layout, DEBUG, "%p: min %i, max %i", (void *)b, min, max);
 
 		if (b->type == BOX_BR) {
 			b = b->next;
@@ -1258,7 +1258,7 @@ layout__minmax_line(struct box *first,
 	*line_min = min;
 	*line_max = max;
 
-	NSLOG(layout, DEBUG,  "line_min %i, line_max %i", min, max);
+	NSLOG(layout, DEBUG, "line_min %i, line_max %i", min, max);
 
 	assert(b != first);
 	assert(0 <= *line_min);
@@ -1794,8 +1794,7 @@ layout__find_sides(struct box *fl,
 		}
 	}
 
-	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, left %p, right %p", *x0, *x1,
-	      *left, *right);
+	NSLOG(layout, DEBUG, "x0 %i, x1 %i, left %p, right %p", *x0, *x1, (void *)left, (void *)right);
 }
 
 
@@ -2257,20 +2256,13 @@ bool layout_table(
 	/* calculate width required by cells */
 	for (i = 0; i != columns; i++) {
 
-		NSLOG(layout, DEBUG,
-		      "table %p, column %u: type %s, width %i, min %i, max %i",
-		      table,
-		      i,
-		      ((const char *[]){
+		NSLOG(layout, DEBUG, "table %p, column %u: type %s, width %i, min %i, max %i", (void *)table, i, ((const char *[]){
 			      "UNKNOWN",
 				      "FIXED",
 				      "AUTO",
 				      "PERCENT",
 				      "RELATIVE",
-				      })[col[i].type],
-		      col[i].width,
-		      col[i].min,
-		      col[i].max);
+				      })[col[i].type], col[i].width, col[i].min, col[i].max);
 
 
 		if (col[i].positioned) {
@@ -2289,13 +2281,12 @@ bool layout_table(
 		} else
 			required_width += col[i].min;
 
-		NSLOG(layout, DEBUG,  "required_width %i", required_width);
+		NSLOG(layout, DEBUG, "required_width %i", required_width);
 	}
 	required_width += (columns + 1 - positioned_columns) *
 			border_spacing_h;
 
-	NSLOG(layout, DEBUG,
-	      "width %i, min %i, max %i, auto %i, required %i", table_width,
+	NSLOG(layout, DEBUG, "width %i, min %i, max %i, auto %i, required %i", table_width,
 	      table->min_width, table->max_width, auto_width, required_width);
 
 	if (auto_width < required_width) {
@@ -2837,8 +2828,7 @@ static bool layout__block_object(struct box *block)
 			block->type == BOX_TABLE_CELL);
 	assert(block->object);
 
-	NSLOG(layout, DEBUG,  "block %p, object %p, width %i", block,
-	      hlcache_handle_get_url(block->object), block->width);
+	NSLOG(layout, DEBUG, "block %p, object %p, width %i", (void *)block, (void *)hlcache_handle_get_url(block->object), block->width);
 
 	layout__block_object_reformat(block, block->width);
 
@@ -3287,11 +3277,11 @@ static void layout__add_float_to_container(struct box *cont, struct box *b)
  * \param  content     memory pool for any new boxes
  * \param  fstyle      style for text in text box
  * \param  split_box   box with text to split
- * \param  new_length  new length for text in split_box, after splitting
- * \param  new_width   new width for text in split_box, after splitting
+ * \param  new_length  new length for text in (void *)split_box, after splitting
+ * \param  new_width   new width for text in (void *)split_box, after splitting
  * \return  true on success, false on memory exhaustion
  *
- * A new box is created and inserted into the box tree after split_box,
+ * A new box is created and inserted into the box tree after (void *)split_box,
  * containing the text after new_length excluding the initial space character.
  */
 static bool
@@ -3322,8 +3312,8 @@ layout__text_box_split(html_content *content,
 	if (!space)
 		space_width = 0;
 
-	/* Create clone of split_box, c2 */
-	c2 = talloc_memdup(content->bctx, split_box, sizeof *c2);
+	/* Create clone of (void *)split_box, c2 */
+	c2 = talloc_memdup(content->bctx, (void *)split_box, sizeof *c2);
 	if (!c2)
 		return false;
 	c2->flags |= CLONE;
@@ -3353,13 +3343,13 @@ layout__text_box_split(html_content *content,
 
 	NSLOG(layout, DEBUG,
 	      "split_box %p len: %" PRIsizet " \"%.*s\"",
-	      split_box,
+	      (void *)split_box,
 	      split_box->length,
 	      (int)split_box->length,
 	      split_box->text);
 	NSLOG(layout, DEBUG,
 	      "  new_box %p len: %" PRIsizet " \"%.*s\"",
-	      c2,
+	      (void *)c2,
 	      c2->length,
 	      (int)c2->length,
 	      c2->text);
@@ -3536,9 +3526,7 @@ layout__place_float_below(struct box *c, int width, int cx, int y, struct box *c
 	yy = y > cont->cached_place_below_level ?
 			y : cont->cached_place_below_level;
 
-	NSLOG(layout, DEBUG,
-	      "c %p, width %i, cx %i, y %i, cont %p", c,
-	      width, cx, y, cont);
+	NSLOG(layout, DEBUG, "c %p, width %i, cx %i, y %i, cont %p", (void *)c, width, cx, y, (void *)cont);
 
 	do {
 		y = yy;
@@ -3658,15 +3646,7 @@ layout__line(struct box *first,
 	const struct gui_layout_table *font_func = content->font_func;
 	plot_font_style_t fstyle;
 
-	NSLOG(layout, DEBUG,
-	      "first %p, first->text '%.*s', width %i, y %i, cx %i, cy %i",
-	      first,
-	      (int)first->length,
-	      first->text,
-	      *width,
-	      *y,
-	      cx,
-	      cy);
+	NSLOG(layout, DEBUG, "first %p, first->text '%.*s', width %i, y %i, cx %i, cy %i", (void *)first, (int)first->length, first->text, *width, *y, cx, cy);
 
 	/* find sides at top of line */
 	x0 += cx;
@@ -3693,7 +3673,7 @@ layout__line(struct box *first,
 	 * body executed at least once
 	 * keep in sync with the loop in layout__minmax_line() */
 
-	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
+	NSLOG(layout, DEBUG, "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
 
 	int text_indent = 0;
 	if (indent)
@@ -3709,7 +3689,7 @@ layout__line(struct box *first,
 
 		assert(layout__box_is_inline_content(b));
 
-		NSLOG(layout, DEBUG,  "pass 1: b %p, x %i", b, x);
+		NSLOG(layout, DEBUG, "pass 1: b %p, x %i", (void *)b, x);
 
 		if (b->type == BOX_BR)
 			break;
@@ -3923,7 +3903,7 @@ layout__line(struct box *first,
 
 	/* pass 2: place boxes in line: loop body executed at least once */
 
-	NSLOG(layout, DEBUG,  "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
+	NSLOG(layout, DEBUG, "x0 %i, x1 %i, x1 - x0 %i", x0, x1, x1 - x0);
 
 	if (indent)
 		text_indent = layout__text_indent(&content->unit_len_ctx,
@@ -3937,7 +3917,7 @@ layout__line(struct box *first,
 			text_indent = 0;
 		}
 
-		NSLOG(layout, DEBUG,  "pass 2: b %p, x %i", b, x);
+		NSLOG(layout, DEBUG, "pass 2: b %p, x %i", (void *)b, x);
 
 		if (layout__box_is_absolute(b)) {
 			b->x = x + space_after;
@@ -4000,7 +3980,7 @@ layout__line(struct box *first,
 
 		} else {
 			/* float */
-			NSLOG(layout, DEBUG,  "float %p", b);
+			NSLOG(layout, DEBUG, "float %p", (void *)b);
 
 			d = b->children;
 			d->float_children = 0;
@@ -4010,11 +3990,7 @@ layout__line(struct box *first,
 			if (!layout__float(d, *width, content))
 				return false;
 
-			NSLOG(layout, DEBUG,
-			      "%p : %d %d",
-			      d,
-			      d->margin[TOP],
-			      d->border[TOP].width);
+			NSLOG(layout, DEBUG, "%p : %d %d", (void *)d, d->margin[TOP], d->border[TOP].width);
 
 			d->x = d->margin[LEFT] + d->border[LEFT].width;
 			d->y = d->margin[TOP] + d->border[TOP].width;
@@ -4148,16 +4124,15 @@ layout__line(struct box *first,
 			w = split_box->width;
 
 
-		NSLOG(layout, DEBUG,
-		      "splitting: split_box %p \"%.*s\", spilt %"PRIsizet
-		      ", w %i, left %p, right %p, inline_count %u",
-		      split_box,
+			NSLOG(layout, DEBUG, "splitting: split_box %p \"%.*s\", split %" PRIsizet
+			      ", w %i, left %p, right %p, inline_count %u",
+		      (void *)split_box,
 		      (int)split_box->length,
 		      split_box->text,
 		      split,
 		      w,
-		      left,
-		      right,
+			      (void *)left,
+			      (void *)right,
 		      inline_count);
 
 		if ((split == 0 || x1 - x0 <= x + space_before + w) &&
@@ -4171,7 +4146,7 @@ layout__line(struct box *first,
 			} else {
 				/* cut off first word for this line */
 				if (!layout__text_box_split(content, &fstyle,
-						split_box, split, w))
+						(void *)split_box, split, w))
 					return false;
 				b = split_box->next;
 			}
@@ -4187,16 +4162,13 @@ layout__line(struct box *first,
 			used_height = 0;
 			if (left) {
 
-				NSLOG(layout, DEBUG,
-				      "cy %i, left->y %i, left->height %i",
-				      cy,
+				NSLOG(layout, DEBUG, "cy %i, left->y %i, left->height %i", cy,
 				      left->y,
 				      left->height);
 
 				used_height = left->y + left->height - cy + 1;
 
-				NSLOG(layout, DEBUG,  "used_height %i",
-				      used_height);
+				NSLOG(layout, DEBUG, "used_height %i", used_height);
 
 			}
 			if (right && used_height <
@@ -4222,13 +4194,13 @@ layout__line(struct box *first,
 			assert(split != 0);
 
 			NSLOG(layout, DEBUG,
-			      "'%.*s' %i %"PRIsizet" %i",
+			      "'%.*s' %i %" PRIsizet " %i",
 			      (int)split_box->length, split_box->text,
 			      x1 - x0, split, w);
 
 			if (split != split_box->length) {
 				if (!layout__text_box_split(content, &fstyle,
-						split_box, split, w))
+						(void *)split_box, split, w))
 					return false;
 				b = split_box->next;
 			}
@@ -4315,13 +4287,7 @@ static bool layout__inline_container(struct box *inline_container, int width,
 
 	assert(inline_container->type == BOX_INLINE_CONTAINER);
 
-	NSLOG(layout, DEBUG,
-	      "inline_container %p, width %i, cont %p, cx %i, cy %i",
-	      inline_container,
-	      width,
-	      cont,
-	      cx,
-	      cy);
+	NSLOG(layout, DEBUG, "inline_container %p, width %i, cont %p, cx %i, cy %i", (void *)inline_container, width, (void *)cont, cx, cy);
 
 
 	has_text_children = false;
@@ -4350,7 +4316,7 @@ static bool layout__inline_container(struct box *inline_container, int width,
 	 */
 	for (c = inline_container->children; c; ) {
 
-		NSLOG(layout, DEBUG, "c %p", c);
+		NSLOG(layout, DEBUG, "c %p", (void *)c);
 
 		curwidth = inline_container->width;
 		if (!layout__line(c, &curwidth, &y, cx, cy + y, cont, first_line,
@@ -4609,8 +4575,7 @@ bool layout_block_context(
 			goto advance_to_next_box;
 		}
 
-		NSLOG(layout, DEBUG,  "box %p, cx %i, cy %i, width %i",
-				box, cx, cy, box->width);
+		NSLOG(layout, DEBUG, "box %p, cx %i, cy %i, width %i", (void *)box, cx, cy, box->width);
 
 		/* Layout (except tables). */
 		if (box->object || box->type == BOX_INLINE_CONTAINER) {
@@ -5395,9 +5360,7 @@ layout__absolute(struct box *box,
 	box->float_container = NULL;
 
 	/* 10.3.7 */
-	NSLOG(layout, DEBUG,
-	      "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i",
-	      left, margin[LEFT], border[LEFT].width, padding[LEFT], width,
+	NSLOG(layout, DEBUG, "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i", left, margin[LEFT], border[LEFT].width, padding[LEFT], width,
 	      padding[RIGHT], border[RIGHT].width, margin[RIGHT], right,
 	      containing_block->width);
 
@@ -5563,9 +5526,7 @@ layout__absolute(struct box *box,
 		}
 	}
 
-	NSLOG(layout, DEBUG,
-	      "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i",
-	      left, margin[LEFT], border[LEFT].width, padding[LEFT], width,
+	NSLOG(layout, DEBUG, "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i", left, margin[LEFT], border[LEFT].width, padding[LEFT], width,
 	      padding[RIGHT], border[RIGHT].width, margin[RIGHT], right,
 	      containing_block->width);
 
@@ -5606,9 +5567,7 @@ layout__absolute(struct box *box,
 	}
 
 	/* 10.6.4 */
-	NSLOG(layout, DEBUG,
-	      "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i",
-	      top, margin[TOP], border[TOP].width, padding[TOP], height,
+	NSLOG(layout, DEBUG, "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i", top, margin[TOP], border[TOP].width, padding[TOP], height,
 	      padding[BOTTOM], border[BOTTOM].width, margin[BOTTOM], bottom,
 	      containing_block->height);
 
@@ -5696,9 +5655,7 @@ layout__absolute(struct box *box,
 		}
 	}
 
-	NSLOG(layout, DEBUG,
-	      "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i",
-	      top, margin[TOP], border[TOP].width, padding[TOP], height,
+	NSLOG(layout, DEBUG, "%i + %i + %i + %i + %i + %i + %i + %i + %i = %i", top, margin[TOP], border[TOP].width, padding[TOP], height,
 	      padding[BOTTOM], border[BOTTOM].width, margin[BOTTOM], bottom,
 	      containing_block->height);
 
@@ -5855,7 +5812,7 @@ static void layout__compute_relative_offset(
 		bottom = -top;
 	}
 
-	NSLOG(layout, DEBUG,  "left %i, right %i, top %i, bottom %i", left,
+	NSLOG(layout, DEBUG, "left %i, right %i, top %i, bottom %i", left,
 	      right, top, bottom);
 
 	*x = left;
@@ -6188,8 +6145,7 @@ bool layout_document(html_content *content, int width, int height)
 	struct box *doc = content->layout;
 	const struct gui_layout_table *font_func = content->font_func;
 
-	NSLOG(layout, DEBUG, "Doing layout to %ix%i of %s",
-			width, height, nsurl_access(content_get_url(
+	NSLOG(layout, DEBUG, "Doing layout to %ix%i of %s", width, height, nsurl_access(content_get_url(
 					&content->base)));
 
 	layout__minmax_block(doc, font_func, content);

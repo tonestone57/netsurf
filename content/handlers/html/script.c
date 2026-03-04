@@ -188,8 +188,7 @@ script__convert_async_cb(hlcache_handle *script,
 		break;
 
 	case CONTENT_MSG_ERROR:
-		NSLOG(netsurf, INFO, "script %s failed: %s",
-		      nsurl_access(hlcache_handle_get_url(script)),
+		NSLOG(netsurf, INFO, "script %s failed: %s", nsurl_access(hlcache_handle_get_url(script)),
 		      event->data.errordata.errormsg);
 
 		hlcache_handle_release(script);
@@ -251,8 +250,7 @@ script__convert_defer_cb(hlcache_handle *script,
 		break;
 
 	case CONTENT_MSG_ERROR:
-		NSLOG(netsurf, INFO, "script %s failed: %s",
-		      nsurl_access(hlcache_handle_get_url(script)),
+		NSLOG(netsurf, INFO, "script %s failed: %s", nsurl_access(hlcache_handle_get_url(script)),
 		      event->data.errordata.errormsg);
 
 		hlcache_handle_release(script);
@@ -338,8 +336,7 @@ script__convert_sync_cb(hlcache_handle *script,
 		break;
 
 	case CONTENT_MSG_ERROR:
-		NSLOG(netsurf, INFO, "script %s failed: %s",
-		      nsurl_access(hlcache_handle_get_url(script)),
+		NSLOG(netsurf, INFO, "script %s failed: %s", nsurl_access(hlcache_handle_get_url(script)),
 		      event->data.errordata.errormsg);
 
 		hlcache_handle_release(script);
@@ -579,15 +576,14 @@ html_process_script(void *ctx, dom_node *node)
 
 		msg_data.jsthread = &c->jsthread;
 		content_broadcast(&c->base, CONTENT_MSG_GETTHREAD, &msg_data);
-		NSLOG(netsurf, INFO, "javascript context %p ", c->jsthread);
+		NSLOG(netsurf, INFO, "javascript context %p ", (void *)c->jsthread);
 		if (c->jsthread == NULL) {
 			/* no context and it could not be created, abort */
 			return DOM_HUBBUB_OK;
 		}
 	}
 
-	NSLOG(netsurf, INFO, "content %p parser %p node %p", c, c->parser,
-	      node);
+	NSLOG(netsurf, INFO, "content %p parser %p node %p", (void *)c, (void *)c->parser, (void *)node);
 
 	exc = dom_element_get_attribute(node, corestring_dom_type, &mimetype);
 	if (exc != DOM_NO_ERR || mimetype == NULL) {
