@@ -162,10 +162,10 @@ static int layout__get_box_baseline(struct box *box, bool last)
 				continue;
 			b = layout__get_box_baseline(c, last);
 			if (b != -1) {
-				/* In NetSurf layout, child y (c->y) is distance from
-				 * parent origin (typically padding top) to child origin
-				 * (padding top). b is baseline from child content top.
-				 * Parent content top from its origin is padding[TOP]. */
+				/* b is the child's baseline relative to its content-top.
+				 * In NetSurf, content-top is at padding[TOP].
+				 * Recursive baseline must be parent content-top relative.
+				 * Child padding-box origin is at parent origin + c->y. */
 				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
 			}
 		}

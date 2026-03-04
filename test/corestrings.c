@@ -39,8 +39,12 @@
  * The number of corestrings.
  *
  * This is used to test all the out of memory paths in initialisation.
+ *
+ * Note: This value must be updated when new strings are added to
+ * corestringlist.h. Recent additions for QuickJS and BarProp support
+ * have increased the required allocation count.
  */
-#define CORESTRING_TEST_COUNT 523
+#define CORESTRING_TEST_COUNT 550
 
 START_TEST(corestrings_test)
 {
