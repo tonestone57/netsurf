@@ -127,6 +127,63 @@ find_sides(struct box *fl,
 	   struct box **right);
 
 /**
+ * Calculate the baseline of a box relative to its content top.
+ *
+ * \param  box   box to find baseline of
+ * \param  last  whether to use the last child's baseline (inline-block)
+ *               or the first child's (table-cell)
+ * \return  distance from top of content box to baseline, or -1 if none found
+ */
+static int layout__get_box_baseline(struct box *box, bool last)
+{
+	struct box *c;
+	int b;
+
+	if (box->type == BOX_TEXT || box->type == BOX_BR) {
+		return box->height * 3 / 4;
+	}
+
+	/* Boxes with non-visible overflow behave as replaced elements for
+	 * baseline calculation. (CSS 2.1 Section 10.8.1) */
+	if (layout__box_is_replace(box) ||
+			(box->style && css_computed_overflow_y(box->style) !=
+					CSS_OVERFLOW_VISIBLE)) {
+		return box->height + box->padding[BOTTOM] +
+				box->border[BOTTOM].width + box->margin[BOTTOM];
+	}
+
+	if (box->type == BOX_TABLE_ROW) {
+		return box->descendant_y0;
+	}
+
+	if (last) {
+		for (c = box->last; c; c = c->prev) {
+			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
+				continue;
+			b = layout__get_box_baseline(c, last);
+			if (b != -1) {
+				/* In NetSurf layout, child y (c->y) is distance from
+				 * parent origin (typically padding top) to child origin
+				 * (padding top). b is baseline from child content top.
+				 * Parent content top from its origin is padding[TOP]. */
+				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
+			}
+		}
+	} else {
+		for (c = box->children; c; c = c->next) {
+			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
+				continue;
+			b = layout__get_box_baseline(c, last);
+			if (b != -1) {
+				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
+			}
+		}
+	}
+
+	return -1;
+}
+
+/**
  * Apply vertical margin if necessary.
  *
  * \param  box             box to apply margin to
@@ -228,62 +285,7 @@ static void layout_line_set_positions(struct box *first, struct box *last,
 
 
 
-/**
- * Calculate the baseline of a box relative to its content top.
- *
- * \param  box   box to find baseline of
- * \param  last  whether to use the last child's baseline (inline-block)
- *               or the first child's (table-cell)
- * \return  distance from top of content box to baseline, or -1 if none found
- */
-static int layout__get_box_baseline(struct box *box, bool last)
-{
-	struct box *c;
-	int b;
 
-	if (box->type == BOX_TEXT || box->type == BOX_BR) {
-		return box->height * 3 / 4;
-	}
-
-	/* Boxes with non-visible overflow behave as replaced elements for
-	 * baseline calculation. (CSS 2.1 Section 10.8.1) */
-	if (layout__box_is_replace(box) ||
-			(box->style && css_computed_overflow_y(box->style) !=
-					CSS_OVERFLOW_VISIBLE)) {
-		return box->height + box->padding[BOTTOM] +
-				box->border[BOTTOM].width + box->margin[BOTTOM];
-	}
-
-	if (box->type == BOX_TABLE_ROW) {
-		return box->descendant_y0;
-	}
-
-	if (last) {
-		for (c = box->last; c; c = c->prev) {
-			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
-				continue;
-			b = layout__get_box_baseline(c, last);
-			if (b != -1) {
-				/* b is the child's baseline relative to its content-top.
-				 * In NetSurf, content-top is at padding[TOP].
-				 * Recursive baseline must be parent content-top relative.
-				 * Child padding-box origin is at parent origin + c->y. */
-				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
-			}
-		}
-	} else {
-		for (c = box->children; c; c = c->next) {
-			if (layout__box_is_absolute(c) || layout__box_is_float_box(c))
-				continue;
-			b = layout__get_box_baseline(c, last);
-			if (b != -1) {
-				return (c->y + c->padding[TOP] + b) - box->padding[TOP];
-			}
-		}
-	}
-
-	return -1;
-}
 
 /**
  * Handle vertical-align by adjusting box y values.
@@ -2561,9 +2563,7 @@ bool layout_table(
 				if (c->height < row_height)
 					c->height = row_height;
 
-				if (row_height < row_ascent + row_descent)
-					row_height = row_ascent + row_descent;
-				row->descendant_y0 = row_ascent;
+
 
 				/* also consider cell's min-height */
 				if (css_computed_min_height(c->style, &value, &unit) ==
@@ -2597,6 +2597,9 @@ bool layout_table(
 						c->height -
 						c->border[BOTTOM].width;
 			}
+			if (row_height < row_ascent + row_descent)
+				row_height = row_ascent + row_descent;
+			row->descendant_y0 = row_ascent;
 			for (i = 0; i != columns; i++)
 				if (row_span[i] != 0)
 					row_span[i]--;
