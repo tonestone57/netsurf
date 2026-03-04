@@ -1,3 +1,4 @@
+#define Document_characterSet_getter dukky_document_characterSet_getter
 /* document binding for browser using duktape and libdom
  *
  * Copyright 2015 Vincent Sanders <vince@netsurf-browser.org>
@@ -21,22 +22,6 @@ prologue Document()
 #include <time.h>
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
-
-static int dukky_document_push_characterSet(duk_context *ctx, node_private_t *priv)
-{
-	struct html_content *htmlc;
-	dom_exception err;
-
-	err = dom_node_get_user_data(priv->node,
-				     corestring_dom___ns_key_html_content_data,
-				     &htmlc);
-	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
-		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
-		return 1;
-	}
-	duk_push_string(ctx, "UTF-8");
-	return 1;
-}
 
 static int dukky_document_push_url(duk_context *ctx, node_private_t *priv)
 {
@@ -246,17 +231,28 @@ method Document::createAttribute()
 
 getter Document::characterSet()
 %{
-	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
+	struct html_content *htmlc;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if ((err == DOM_NO_ERR) && (htmlc != NULL)) {
+		duk_push_string(ctx, htmlc->encoding ? htmlc->encoding : "UTF-8");
+		return 1;
+	}
+	duk_push_string(ctx, "UTF-8");
+	return 1;
 %}
 
 getter Document::charset()
 %{
-	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
+	return Document_characterSet_getter(ctx);
 %}
 
 getter Document::inputEncoding()
 %{
-	return dukky_document_push_characterSet(ctx, (node_private_t *)priv);
+	return Document_characterSet_getter(ctx);
 %}
 
 getter Document::contentType()
