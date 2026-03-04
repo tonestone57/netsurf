@@ -327,6 +327,10 @@ box_construct_generate(dom_node *n,
 	/* To determine if an element has a pseudo element, we select
 	 * for it and test to see if the returned style's content
 	 * property is set to normal. */
+	if (style == NULL) {
+		return;
+	}
+
 	content_type = css_computed_content(style, &c_item);
 	if (content_type != CSS_CONTENT_SET) {
 		/* No pseudo element content */
