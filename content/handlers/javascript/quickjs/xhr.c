@@ -37,7 +37,6 @@ static void qjsky_xhr_set_status(qjsky_xhr_t *xhr)
 
 static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
 {
-	/* 1. Call onreadystatechange handler */
 	JSValue onready = JS_GetPropertyStr(xhr->ctx, this_val, "__onreadystatechange");
 	if (JS_IsFunction(xhr->ctx, onready)) {
 		JSValue ret = JS_Call(xhr->ctx, onready, this_val, 0, NULL);
@@ -46,7 +45,6 @@ static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
 	}
 	JS_FreeValue(xhr->ctx, onready);
 
-	/* 2. Dispatch readystatechange event */
 	JSValue global = JS_GetGlobalObject(xhr->ctx);
 	JSValue event_ctor = JS_GetPropertyStr(xhr->ctx, global, "Event");
 	if (JS_IsFunction(xhr->ctx, event_ctor)) {
@@ -66,7 +64,6 @@ static void qjsky_xhr_on_state_change(qjsky_xhr_t *xhr, JSValueConst this_val)
 	JS_FreeValue(xhr->ctx, event_ctor);
 	JS_FreeValue(xhr->ctx, global);
 
-	/* Run pending jobs */
 	JSContext *ctx1;
 	while (JS_ExecutePendingJob(JS_GetRuntime(xhr->ctx), &ctx1) > 0);
 }
@@ -78,7 +75,7 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 	case FETCH_HEADER:
 		if (xhr->ready_state < 2) {
 			qjsky_xhr_set_status(xhr);
-			xhr->ready_state = 2; /* HEADERS_RECEIVED */
+			xhr->ready_state = 2;
 			qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 		}
 		break;
@@ -93,28 +90,31 @@ static void qjsky_xhr_fetch_callback(const fetch_msg *msg, void *p)
 			}
 
 			if (xhr->ready_state < 3) {
-				xhr->ready_state = 3; /* LOADING */
+				xhr->ready_state = 3;
 				qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 			}
 		}
 		break;
 	case FETCH_FINISHED:
 		qjsky_xhr_set_status(xhr);
-		xhr->ready_state = 4; /* DONE */
+		xhr->ready_state = 4;
 		qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 
-		/* Cleanup flight state */
-		JSValue obj = xhr->xhr_obj;
-		xhr->xhr_obj = JS_UNDEFINED;
-		JS_FreeValue(xhr->ctx, obj);
+		{
+			JSValue obj = xhr->xhr_obj;
+			xhr->xhr_obj = JS_UNDEFINED;
+			JS_FreeValue(xhr->ctx, obj);
+		}
 		break;
 	case FETCH_ERROR:
-		xhr->ready_state = 4; /* DONE */
+		xhr->ready_state = 4;
 		qjsky_xhr_on_state_change(xhr, xhr->xhr_obj);
 
-		JSValue obj_err = xhr->xhr_obj;
-		xhr->xhr_obj = JS_UNDEFINED;
-		JS_FreeValue(xhr->ctx, obj_err);
+		{
+			JSValue obj_err = xhr->xhr_obj;
+			xhr->xhr_obj = JS_UNDEFINED;
+			JS_FreeValue(xhr->ctx, obj_err);
+		}
 		break;
 	default:
 		break;
@@ -153,7 +153,7 @@ static JSValue qjsky_xhr_ctor(JSContext *ctx, JSValueConst new_target, int argc,
 	}
 	xhr->ctx = ctx;
 	xhr->xhr_obj = JS_UNDEFINED;
-	xhr->ready_state = 0; /* UNSENT */
+	xhr->ready_state = 0;
 
 	JS_SetOpaque(obj, xhr);
 
@@ -193,7 +193,7 @@ static JSValue qjsky_xhr_open(JSContext *ctx, JSValueConst this_val, int argc, J
 	JS_FreeCString(ctx, method);
 	JS_FreeCString(ctx, url_str);
 
-	xhr->ready_state = 1; /* OPENED */
+	xhr->ready_state = 1;
 	qjsky_xhr_on_state_change(xhr, this_val);
 
 	return JS_UNDEFINED;
@@ -287,7 +287,6 @@ void qjsky_init_xhr(JSContext *ctx)
 	JSValue ctor = JS_NewCFunction2(ctx, qjsky_xhr_ctor, "XMLHttpRequest", 0, JS_CFUNC_constructor, 0);
 	JS_SetConstructor(ctx, ctor, proto);
 
-	/* Constants */
 	JS_DefinePropertyValueStr(ctx, ctor, "UNSENT", JS_NewInt32(ctx, 0), JS_PROP_ENUMERABLE);
 	JS_DefinePropertyValueStr(ctx, ctor, "OPENED", JS_NewInt32(ctx, 1), JS_PROP_ENUMERABLE);
 	JS_DefinePropertyValueStr(ctx, ctor, "HEADERS_RECEIVED", JS_NewInt32(ctx, 2), JS_PROP_ENUMERABLE);
