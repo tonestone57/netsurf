@@ -69,11 +69,35 @@ static JSValue qjsky_storage_get_length(JSContext *ctx, JSValueConst this_val)
 	return JS_NewUint32(ctx, len);
 }
 
+static JSValue qjsky_storage_key(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+	if (argc < 1) return JS_EXCEPTION;
+	uint32_t index;
+	if (JS_ToUint32(ctx, &index, argv[0])) return JS_EXCEPTION;
+
+	JSPropertyEnum *tab;
+	uint32_t len;
+	if (JS_GetOwnPropertyNames(ctx, &tab, &len, this_val, JS_GPN_STRING_MASK) < 0)
+		return JS_EXCEPTION;
+
+	JSValue res = JS_NULL;
+	if (index < len) {
+		res = JS_AtomToValue(ctx, tab[index].atom);
+	}
+
+	for (uint32_t i = 0; i < len; i++) {
+		JS_FreeAtom(ctx, tab[i].atom);
+	}
+	js_free(ctx, tab);
+	return res;
+}
+
 static const JSCFunctionListEntry qjsky_storage_proto_funcs[] = {
 	JS_CFUNC_DEF("getItem", 1, qjsky_storage_getItem),
 	JS_CFUNC_DEF("setItem", 2, qjsky_storage_setItem),
 	JS_CFUNC_DEF("removeItem", 1, qjsky_storage_removeItem),
 	JS_CFUNC_DEF("clear", 0, qjsky_storage_clear),
+	JS_CFUNC_DEF("key", 1, qjsky_storage_key),
 	JS_CGETSET_DEF("length", qjsky_storage_get_length, NULL),
 };
 

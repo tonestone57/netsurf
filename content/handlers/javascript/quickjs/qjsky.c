@@ -783,6 +783,25 @@ static JSValue qjsky_event_target_addEventListener(JSContext *ctx, JSValueConst 
 	JS_ToUint32(ctx, &len, len_val);
 	JS_FreeValue(ctx, len_val);
 
+	/* Check for duplicate */
+	for (uint32_t i = 0; i < len; i++) {
+		JSValue entry = JS_GetPropertyUint32(ctx, listeners, i);
+		JSValue f = JS_GetPropertyStr(ctx, entry, "func");
+		JSValue c = JS_GetPropertyStr(ctx, entry, "capture");
+		bool cb = JS_ToBool(ctx, c);
+		bool match = (JS_StrictEquality(ctx, f, func) && cb == capture);
+		JS_FreeValue(ctx, c);
+		JS_FreeValue(ctx, f);
+		JS_FreeValue(ctx, entry);
+		if (match) {
+			JS_FreeValue(ctx, listeners);
+			JS_FreeAtom(ctx, prop);
+			JS_FreeValue(ctx, handler_listener_map);
+			dom_string_unref(name);
+			return JS_UNDEFINED;
+		}
+	}
+
 	JSValue entry = JS_NewObject(ctx);
 	JS_SetPropertyStr(ctx, entry, "func", JS_DupValue(ctx, func));
 	JS_SetPropertyStr(ctx, entry, "capture", JS_NewBool(ctx, capture));
