@@ -12,6 +12,9 @@
 #include "content/handlers/javascript/quickjs/location.h"
 #include "content/handlers/javascript/quickjs/history.h"
 #include "content/handlers/javascript/quickjs/navigator.h"
+#include "content/handlers/javascript/quickjs/screen.h"
+#include "content/handlers/javascript/quickjs/barprop.h"
+#include "content/handlers/html/html.h"
 #include "content/content_protected.h"
 #include "content/hlcache.h"
 
@@ -100,6 +103,8 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	qjsky_init_location(thread->ctx);
 	qjsky_init_history(thread->ctx);
 	qjsky_init_navigator(thread->ctx);
+	qjsky_init_screen(thread->ctx);
+	qjsky_init_barprop(thread->ctx);
 	qjsky_timer_init(thread->ctx);
 	qjsky_init_xhr(thread->ctx);
 
@@ -140,12 +145,28 @@ nserror js_newthread(struct jsheap *heap, void *win_priv, void *doc_priv, struct
 	JSValue hist_obj = qjsky_create_history(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "history", hist_obj);
 
-	/* window self-reference */
-	JS_SetPropertyStr(thread->ctx, global, "window", JS_DupValue(thread->ctx, global));
-
 	/* window.navigator */
 	JSValue nav_obj = qjsky_create_navigator(thread->ctx);
 	JS_SetPropertyStr(thread->ctx, global, "navigator", nav_obj);
+
+	/* window.screen */
+	JSValue screen_obj = qjsky_create_screen(thread->ctx);
+	JS_SetPropertyStr(thread->ctx, global, "screen", screen_obj);
+
+	/* window.document */
+	if (thread->doc_priv) {
+		struct dom_document *doc = ((struct html_content *)thread->doc_priv)->document;
+		JSValue doc_obj = qjsky_push_node(thread->ctx, (struct dom_node *)doc);
+		JS_SetPropertyStr(thread->ctx, global, "document", doc_obj);
+	}
+
+	/* window.BarProps */
+	JS_SetPropertyStr(thread->ctx, global, "locationbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "menubar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "personalbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "scrollbars", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "statusbar", qjsky_create_barprop(thread->ctx));
+	JS_SetPropertyStr(thread->ctx, global, "toolbar", qjsky_create_barprop(thread->ctx));
 
 	JS_FreeValue(thread->ctx, global);
 
